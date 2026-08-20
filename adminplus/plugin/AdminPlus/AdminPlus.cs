@@ -6,12 +6,12 @@ using CounterStrikeSharp.API.Modules.Utils;
 
 namespace AdminPlus;
 
-public class AdminPlus : BasePlugin
+public partial class AdminPlus : BasePlugin
 {
     public override string ModuleName        => "LEGACY-X AdminPlus";
-    public override string ModuleVersion     => "1.1.0-legacyx";
+    public override string ModuleVersion     => "1.2.0-legacyx";
     public override string ModuleAuthor      => "LEGACY-X Community / upstream dede177";
-    public override string ModuleDescription => "LEGACY-X production web admin panel command bridge";
+    public override string ModuleDescription => "LEGACY-X production admin bridge with exact 5v5 match flow";
 
     public override void Load(bool hotReload)
     {
