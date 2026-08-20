@@ -316,6 +316,8 @@ namespace MatchZy
         {
             SetupLiveFlagsAndCfg();
             StartDemoRecording();
+            OnLegacyXMatchCoreLive();
+            StartLegacyXMatchOverlay();
 
             // Storing 0-0 score backup file as lastBackupFileName, so that .stop functions properly in first round.
             lastBackupFileName = $"matchzy_{liveMatchId}_{matchConfig.CurrentMapNumber}_round00.txt";
@@ -324,9 +326,7 @@ namespace MatchZy
             // This is to reload the map once it is over so that all flags are reset accordingly
             Server.ExecuteCommand("mp_match_end_restart true");
 
-            PrintToAllChat($"{ChatColors.Olive}LIVE!");
-            PrintToAllChat($"{ChatColors.Lime}LIVE!");
-            PrintToAllChat($"{ChatColors.Green}LIVE!");
+            PrintToAllChat($"{ChatColors.Green}LIVE{ChatColors.Default} — Match #{LegacyXDisplayMatchNumber()}");
 
             var goingLiveEvent = new GoingLiveEvent
             {
@@ -373,6 +373,7 @@ namespace MatchZy
         {
             try
             {
+                KillLegacyXMatchOverlay();
                 // We stop demo recording if a live match was restarted
                 if (matchStarted && isDemoRecording)
                 {
@@ -768,6 +769,7 @@ namespace MatchZy
 
             string seriesType = "BO" + matchConfig.NumMaps.ToString();
             liveMatchId = database.InitMatch(matchzyTeam1.teamName, matchzyTeam2.teamName, "-", isMatchSetup, liveMatchId, matchConfig.CurrentMapNumber, seriesType, matchConfig);
+            BeginLegacyXMatchCore();
             SetupRoundBackupFile();
 
             GetSpawns();
@@ -1265,8 +1267,14 @@ namespace MatchZy
                     SendPlayerNotAdminMessage(player);
                     return;
                 }
+                if (!CanLegacyXMatchCoreResume(out var coreReason))
+                {
+                    ReplyToUserCommand(player, coreReason);
+                    return;
+                }
                 PrintToAllChat(Localizer["matchzy.pause.adminunpausedthematch"]);
                 UnpauseMatch();
+                OnLegacyXMatchCoreResumed();
 
                 if (player == null)
                 {

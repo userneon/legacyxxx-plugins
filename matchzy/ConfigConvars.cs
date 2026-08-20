@@ -35,6 +35,14 @@ namespace MatchZy
         public FakeConVar<string> legacyXMapPool = new("legacyx_map_pool", "Comma-separated installed maps used for random non-repeat rotation", "de_ancient,de_anubis,de_dust2,de_inferno,de_mirage,de_nuke,de_overpass,de_vertigo");
         public FakeConVar<float> legacyXMapTransitionDelay = new("legacyx_map_transition_delay", "Seconds to show PLEASE WAIT before the soft map change", 3.0f);
         public FakeConVar<string> legacyXRankSeason = new("legacyx_rank_season", "LEGACY-X rank season slug sent with final MatchZy map results", "season-1");
+        public FakeConVar<bool> legacyXMatchCoreEnabled = new("legacyx_match_core_enabled", "Enable backend-authoritative LEGACY-X Match Core lifecycle guard. Default: false", false);
+        public FakeConVar<string> legacyXMatchCoreApiUrl = new("legacyx_match_core_api_url", "Private AdminPlus Match Core event endpoint. Leave empty to disable.", "");
+        public FakeConVar<string> legacyXMatchCorePluginSecret = new("legacyx_match_core_plugin_secret", "Private Match Core plugin secret. Never commit a real value.", "");
+        public FakeConVar<string> legacyXMatchCoreServerId = new("legacyx_match_core_server_id", "Registered LEGACY-X server identifier sent to Match Core.", "legacyx-match-1");
+        public FakeConVar<int> legacyXMatchCoreReconnectWindow = new("legacyx_match_core_reconnect_window", "Original participant reconnect grace window in seconds. Default: 300", 300);
+        public FakeConVar<float> legacyXMatchCoreFillTimeout = new("legacyx_match_core_fill_timeout", "Seconds until staff receives a temporary fill reminder. Default: 120", 120.0f);
+        public FakeConVar<bool> legacyXQuietOverlayEnabled = new("legacyx_quiet_overlay_enabled", "Show quiet LEGACY-X center overlays for welcome and match identity. Default: true", true);
+        public FakeConVar<float> legacyXMatchOverlayDuration = new("legacyx_match_overlay_duration", "Seconds to keep the LIVE Match ID center overlay active. Default: 300", 300.0f);
 
         [ConsoleCommand("matchzy_whitelist_enabled_default", "Whether Whitelist is enabled by default or not. Default value: false")]
         public void MatchZyWLConvar(CCSPlayerController? player, CommandInfo command)

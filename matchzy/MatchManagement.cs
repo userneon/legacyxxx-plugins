@@ -597,6 +597,8 @@ namespace MatchZy
             }
 
             string winnerTeam = (winnerName == null) ? "none" : matchzyTeam1.seriesScore > matchzyTeam2.seriesScore ? "team1" : "team2";
+            OnLegacyXMatchCoreFinal(winnerTeam, team1Score, team2Score);
+            ShowLegacyXPostMatchSummary(winnerTeam);
 
             var seriesResultEvent = new MatchZySeriesResultEvent()
             {

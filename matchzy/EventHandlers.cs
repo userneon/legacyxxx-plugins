@@ -36,19 +36,21 @@ public partial class MatchZy
                 }
             }
 
-            if (player.UserId.HasValue)
-            {
-                playerData[player.UserId.Value] = player;
-                connectedPlayers++;
+                if (player.UserId.HasValue)
+                {
+                    playerData[player.UserId.Value] = player;
+                    connectedPlayers++;
                 if (readyAvailable && !matchStarted)
                 {
                     playerReadyStatus[player.UserId.Value] = false;
                 }
                 else
                 {
-                    playerReadyStatus[player.UserId.Value] = true;
+                        playerReadyStatus[player.UserId.Value] = true;
+                    }
                 }
-            }
+                OnLegacyXMatchCoreConnect(player);
+                ShowLegacyXWelcome(player);
             // May not be required, but just to be on safe side so that player data is properly updated in dictionaries
             // Update: Commenting the below function as it was being called multiple times on map change.
             // UpdatePlayersMap();
@@ -80,6 +82,7 @@ public partial class MatchZy
             CCSPlayerController? player = @event.Userid;
 
             if (!IsPlayerValid(player)) return HookResult.Continue;
+            OnLegacyXMatchCoreDisconnect(player!);
             if (!player!.UserId.HasValue) return HookResult.Continue;
             int userId = player.UserId.Value;
 

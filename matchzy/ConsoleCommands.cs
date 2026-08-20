@@ -268,19 +268,31 @@ namespace MatchZy
                 }
                 if ((bool)unpauseData["t"] && (bool)unpauseData["ct"])
                 {
+                    if (!CanLegacyXMatchCoreResume(out var coreReason))
+                    {
+                        PrintToAllChat($"{ChatColors.LightYellow}{coreReason}{ChatColors.Default}");
+                        return;
+                    }
                     PrintToAllChat(Localizer["matchzy.pause.teamsunpausedthematch"]);
                     Server.ExecuteCommand("mp_unpause_match;");
                     isPaused = false;
                     unpauseData["ct"] = false;
                     unpauseData["t"] = false;
+                    OnLegacyXMatchCoreResumed();
                 }
                 else if (unpauseTeamName == "Admin")
                 {
+                    if (!CanLegacyXMatchCoreResume(out var coreReason))
+                    {
+                        PrintToAllChat($"{ChatColors.LightYellow}{coreReason}{ChatColors.Default}");
+                        return;
+                    }
                     PrintToAllChat(Localizer["matchzy.pause.adminunpausedthematch"]);
                     Server.ExecuteCommand("mp_unpause_match;");
                     isPaused = false;
                     unpauseData["ct"] = false;
                     unpauseData["t"] = false;
+                    OnLegacyXMatchCoreResumed();
                 }
                 else
                 {

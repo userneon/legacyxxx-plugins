@@ -1,0 +1,6 @@
+// Copy this file to legacyx-match-core.private.cfg, set the real secret, and execute it after MatchZy/config.cfg.
+// Do not commit the populated private cfg.
+legacyx_match_core_enabled true
+legacyx_match_core_api_url "http://127.0.0.1:3001/api/plugin/match-core/events"
+legacyx_match_core_plugin_secret "replace_with_MATCH_CORE_PLUGIN_SECRET"
+legacyx_match_core_server_id "legacyx-match-1"
