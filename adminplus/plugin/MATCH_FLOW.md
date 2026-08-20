@@ -10,6 +10,14 @@ css_unready     Cancel the caller's ready state
 css_match_status Show CT/T/ready state
 ```
 
+To make the in-game ENTER key submit ready without overwriting the player's default binding globally, the LEGACY-X match server may publish this optional bind instruction in its rules/Discord setup:
+
+```text
+bind ENTER css_ready
+```
+
+The server should show `ENTER = READY` in the lobby instructions. The plugin does not silently overwrite existing client keybinds.
+
 Ready болсон ч player count яг 5v5 биш бол match эхлэхгүй. Spectator болон bot-ууд active match player count-д орохгүй. Match эхлэх үед warmup дуусч, `mp_restartgame 1`-ээр шинэ match state үүснэ.
 
 ## Match end behavior
