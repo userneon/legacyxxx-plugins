@@ -30,6 +30,11 @@ legacyxxx-plugins/
 │   ├── LegacyXCommunity.csproj
 │   ├── config/LegacyXCommunity.json.example
 │   └── README.md
+├── reconnect/                        # Last Played and safe reconnect command
+│   ├── LegacyXReconnect.cs
+│   ├── LegacyXReconnect.csproj
+│   ├── config/LegacyXReconnect.json.example
+│   └── README.md
 ├── .gitignore
 ├── MATCHZY_LEGACYX_CHANGELOG.md
 ├── AFKMANAGER_LEGACYX_CHANGELOG.md
@@ -44,6 +49,7 @@ legacyxxx-plugins/
 | `afkmanager/` | AFK warning, C4 transfer and spectator transfer policy | Skips MatchZy warmup; does not own map/match lifecycle |
 | `adminplus/` | API-triggered player/server/admin commands | Do not install its old match lifecycle file together with MatchZy |
 | `community/` | Player-facing XP, level, rank and clan lookup | Read-only; backend owns all progression and clan writes |
+| `reconnect/` | Private Last Played session events and `css_reconnect` | Observes connect/disconnect only; never owns MatchZy lifecycle |
 
 Database audit, RCON bridge, Discord webhook, rank scoring and API are in the separate [`legacyxxx-backend`](https://github.com/userneon/legacyxxx-backend) repository. AdminPlus is frontendless; UI source is intentionally not in this repository.
 
@@ -75,6 +81,10 @@ dotnet build --configuration Release
 # Community
 cd ../../../community
 dotnet build --configuration Release
+
+# Reconnect
+cd ../reconnect
+dotnet build --configuration Release
 ```
 
 Artifacts:
@@ -84,6 +94,7 @@ matchzy/bin/Release/net8.0/MatchZy.dll
 afkmanager/bin/Release/net8.0/AFKManager.dll
 adminplus/plugin/AdminPlus/bin/Release/net8.0/AdminPlus.dll
 community/bin/Release/net8.0/LegacyXCommunity.dll
+reconnect/bin/Release/net8.0/LegacyXReconnect.dll
 ```
 
 ## Deployment
@@ -95,11 +106,13 @@ csgo/addons/counterstrikesharp/plugins/MatchZy/MatchZy.dll
 csgo/addons/counterstrikesharp/plugins/AFKManager/AFKManager.dll
 csgo/addons/counterstrikesharp/plugins/AdminPlus/AdminPlus.dll
 csgo/addons/counterstrikesharp/plugins/LegacyXCommunity/LegacyXCommunity.dll
+csgo/addons/counterstrikesharp/plugins/LegacyXReconnect/LegacyXReconnect.dll
 csgo/addons/counterstrikesharp/configs/plugins/AFKManager/AFKManager.json
 csgo/cfg/MatchZy/config.cfg
 csgo/cfg/MatchZy/*.cfg
 csgo/cfg/MatchZy/*.json
 csgo/addons/counterstrikesharp/configs/plugins/LegacyXCommunity/LegacyXCommunity.json
+csgo/addons/counterstrikesharp/configs/plugins/LegacyXReconnect/LegacyXReconnect.json
 ```
 
 Only install one owner for match-end lifecycle. If MatchZy is enabled on a Match server, do not install a separate AdminPlus `MatchFlow` event handler. AFK Manager skips MatchZy warmup and must not register a second map changer. AdminPlus remains the frontendless action bridge, while MatchZy owns 5v5 readiness, rank payloads and map transitions.
@@ -132,6 +145,7 @@ No `.env`, RCON secret, webhook URL, database password or API token belongs in t
 - [LEGACY-X AFK Manager customization report](AFKMANAGER_LEGACYX_CHANGELOG.md)
 - [LEGACY-X Community EXP & Clan changelog](COMMUNITY_LEGACYX_CHANGELOG.md)
 - [LEGACY-X Community plugin](community/README.md)
+- [LEGACY-X Reconnect plugin](reconnect/README.md)
 - [LEGACY-X AdminPlus](adminplus/plugin/AdminPlus/)
 - [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp)
 - [Upstream MatchZy](https://github.com/shobhit-pathak/MatchZy)
