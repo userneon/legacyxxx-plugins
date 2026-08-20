@@ -25,6 +25,11 @@ legacyxxx-plugins/
 │   ├── AFKManager.csproj
 │   ├── config/AFKManager.json        # LEGACY-X config sample
 │   └── README.md
+├── community/                        # XP/level/rank/clan profile commands
+│   ├── LegacyXCommunity.cs
+│   ├── LegacyXCommunity.csproj
+│   ├── config/LegacyXCommunity.json.example
+│   └── README.md
 ├── .gitignore
 ├── MATCHZY_LEGACYX_CHANGELOG.md
 ├── AFKMANAGER_LEGACYX_CHANGELOG.md
@@ -38,6 +43,7 @@ legacyxxx-plugins/
 | `matchzy/` | Competitive match lifecycle, ready gate, demo/stats, practice, map rotation and final rank payload | Use this for Match server; it owns `EventCsWinPanelMatch` and emits final `map_result` |
 | `afkmanager/` | AFK warning, C4 transfer and spectator transfer policy | Skips MatchZy warmup; does not own map/match lifecycle |
 | `adminplus/` | API-triggered player/server/admin commands | Do not install its old match lifecycle file together with MatchZy |
+| `community/` | Player-facing XP, level, rank and clan lookup | Read-only; backend owns all progression and clan writes |
 
 Database audit, RCON bridge, Discord webhook, rank scoring and API are in the separate [`legacyxxx-backend`](https://github.com/userneon/legacyxxx-backend) repository. AdminPlus is frontendless; UI source is intentionally not in this repository.
 
@@ -47,7 +53,7 @@ The customized MatchZy preset starts a match only when there are **exactly 5 Cou
 
 When a match ends, result/demo/stat persistence is allowed to complete, then the plugin shows a `PLEASE WAIT` message, clears MatchZy state and performs a soft `changelevel` to a random installed map that is different from the current map. The CS2 process is not hard-restarted.
 
-The same final map result includes the two five-player rosters, SteamID64 identities, winner, score and player stats. It is delivered with a server-only `x-plugin-secret` to the AdminPlus API, which applies an idempotent season rank update. See [`matchzy/RANK_BRIDGE.md`](matchzy/RANK_BRIDGE.md).
+The same final map result includes the two five-player rosters, SteamID64 identities, winner, score and player stats. It is delivered with a server-only `x-plugin-secret` to the AdminPlus API, which applies idempotent rank, XP/level and clan season updates. See [`matchzy/RANK_BRIDGE.md`](matchzy/RANK_BRIDGE.md).
 
 ## Build
 
@@ -65,6 +71,10 @@ dotnet build --configuration Release
 # AdminPlus
 cd ../adminplus/plugin/AdminPlus
 dotnet build --configuration Release
+
+# Community
+cd ../../../community
+dotnet build --configuration Release
 ```
 
 Artifacts:
@@ -73,6 +83,7 @@ Artifacts:
 matchzy/bin/Release/net8.0/MatchZy.dll
 afkmanager/bin/Release/net8.0/AFKManager.dll
 adminplus/plugin/AdminPlus/bin/Release/net8.0/AdminPlus.dll
+community/bin/Release/net8.0/LegacyXCommunity.dll
 ```
 
 ## Deployment
@@ -83,10 +94,12 @@ Install each plugin in its own CounterStrikeSharp directory and copy the corresp
 csgo/addons/counterstrikesharp/plugins/MatchZy/MatchZy.dll
 csgo/addons/counterstrikesharp/plugins/AFKManager/AFKManager.dll
 csgo/addons/counterstrikesharp/plugins/AdminPlus/AdminPlus.dll
+csgo/addons/counterstrikesharp/plugins/LegacyXCommunity/LegacyXCommunity.dll
 csgo/addons/counterstrikesharp/configs/plugins/AFKManager/AFKManager.json
 csgo/cfg/MatchZy/config.cfg
 csgo/cfg/MatchZy/*.cfg
 csgo/cfg/MatchZy/*.json
+csgo/addons/counterstrikesharp/configs/plugins/LegacyXCommunity/LegacyXCommunity.json
 ```
 
 Only install one owner for match-end lifecycle. If MatchZy is enabled on a Match server, do not install a separate AdminPlus `MatchFlow` event handler. AFK Manager skips MatchZy warmup and must not register a second map changer. AdminPlus remains the frontendless action bridge, while MatchZy owns 5v5 readiness, rank payloads and map transitions.
@@ -117,6 +130,8 @@ No `.env`, RCON secret, webhook URL, database password or API token belongs in t
 - [LEGACY-X MatchZy Rank Bridge](matchzy/RANK_BRIDGE.md)
 - [LEGACY-X AFK Manager](afkmanager/README.md)
 - [LEGACY-X AFK Manager customization report](AFKMANAGER_LEGACYX_CHANGELOG.md)
+- [LEGACY-X Community EXP & Clan changelog](COMMUNITY_LEGACYX_CHANGELOG.md)
+- [LEGACY-X Community plugin](community/README.md)
 - [LEGACY-X AdminPlus](adminplus/plugin/AdminPlus/)
 - [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp)
 - [Upstream MatchZy](https://github.com/shobhit-pathak/MatchZy)
