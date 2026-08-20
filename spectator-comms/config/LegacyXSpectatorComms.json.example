@@ -1,0 +1,8 @@
+{
+  "Enabled": true,
+  "EnforceTextIsolation": true,
+  "EnforceCompetitiveVoiceCvars": true,
+  "BlockLivingGlobalChat": true,
+  "PreservePluginCommands": true,
+  "ChatPrefix": "{Lime}[LEGACY-X]{Default}"
+}

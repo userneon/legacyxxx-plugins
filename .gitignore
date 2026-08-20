@@ -8,3 +8,4 @@ obj/
 *.log
 community/config/LegacyXCommunity.json
 reconnect/config/LegacyXReconnect.json
+spectator-comms/config/LegacyXSpectatorComms.json
