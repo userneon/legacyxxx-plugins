@@ -8,13 +8,14 @@
 legacyxxx-plugins/
 ├── adminplus/
 │   └── plugin/AdminPlus/
-│       ├── AdminPlus.cs             # dashboard/admin command bridge
+│       ├── AdminPlus.cs             # API-triggered admin command bridge
 │       ├── AdminPlus.csproj
 │       └── bin/                     # ignored build output
 ├── matchzy/
 │   ├── *.cs                         # LEGACY-X MatchZy source
 │   ├── MatchZy.csproj
 │   ├── LegacyXCustomization.cs      # strict gate/map lifecycle
+│   ├── RANK_BRIDGE.md               # plugin → API → database rank contract
 │   ├── cfg/MatchZy/                  # production config presets
 │   ├── lang/                         # MatchZy language files
 │   ├── spawns/                       # coach/spawn data
@@ -34,17 +35,19 @@ legacyxxx-plugins/
 
 | Module | Responsibility | Production note |
 |---|---|---|
-| `matchzy/` | Competitive match lifecycle, ready gate, demo/stats, practice, map rotation | Use this for Match server; it owns `EventCsWinPanelMatch` |
+| `matchzy/` | Competitive match lifecycle, ready gate, demo/stats, practice, map rotation and final rank payload | Use this for Match server; it owns `EventCsWinPanelMatch` and emits final `map_result` |
 | `afkmanager/` | AFK warning, C4 transfer and spectator transfer policy | Skips MatchZy warmup; does not own map/match lifecycle |
-| `adminplus/` | Dashboard-triggered player/server/admin commands | Do not install its old match lifecycle file together with MatchZy |
+| `adminplus/` | API-triggered player/server/admin commands | Do not install its old match lifecycle file together with MatchZy |
 
-Database audit, RCON bridge, Discord webhook and API are in the separate [`legacyxxx-backend`](https://github.com/userneon/legacyxxx-backend) repository. Frontend source is intentionally not in this repository.
+Database audit, RCON bridge, Discord webhook, rank scoring and API are in the separate [`legacyxxx-backend`](https://github.com/userneon/legacyxxx-backend) repository. AdminPlus is frontendless; UI source is intentionally not in this repository.
 
 ## LEGACY-X MatchZy behavior
 
 The customized MatchZy preset starts a match only when there are **exactly 5 Counter-Terrorists and exactly 5 Terrorists**, and all ten active human players have readied. `6v5`, `5v6`, `6v6`, empty slots and force-ready do not start a production match.
 
 When a match ends, result/demo/stat persistence is allowed to complete, then the plugin shows a `PLEASE WAIT` message, clears MatchZy state and performs a soft `changelevel` to a random installed map that is different from the current map. The CS2 process is not hard-restarted.
+
+The same final map result includes the two five-player rosters, SteamID64 identities, winner, score and player stats. It is delivered with a server-only `x-plugin-secret` to the AdminPlus API, which applies an idempotent season rank update. See [`matchzy/RANK_BRIDGE.md`](matchzy/RANK_BRIDGE.md).
 
 ## Build
 
@@ -86,7 +89,7 @@ csgo/cfg/MatchZy/*.cfg
 csgo/cfg/MatchZy/*.json
 ```
 
-Only install one owner for match-end lifecycle. If MatchZy is enabled on a Match server, do not install a separate AdminPlus `MatchFlow` event handler. AFK Manager skips MatchZy warmup and must not register a second map changer. AdminPlus should remain the action bridge, while MatchZy owns 5v5 readiness and map transitions.
+Only install one owner for match-end lifecycle. If MatchZy is enabled on a Match server, do not install a separate AdminPlus `MatchFlow` event handler. AFK Manager skips MatchZy warmup and must not register a second map changer. AdminPlus remains the frontendless action bridge, while MatchZy owns 5v5 readiness, rank payloads and map transitions.
 
 ## Commands
 
@@ -105,12 +108,13 @@ AdminPlus commands include player info, team movement, respawn, money, weapons, 
 
 ## Security and secrets
 
-No `.env`, RCON secret, webhook URL, database password or API token belongs in this repository. Build output, local configs, `bin/`, `obj/`, `node_modules/` and secret files are ignored. Production secrets belong in `legacyxxx-backend` deployment configuration or the server secret store.
+No `.env`, RCON secret, webhook URL, database password or API token belongs in this repository. Build output, local configs, `bin/`, `obj/`, `node_modules/` and secret files are ignored. In particular, `cfg/MatchZy/*.private.cfg` is ignored: use the rank private cfg example and keep `x-plugin-secret` only on the CS2 server. Production secrets belong in `legacyxxx-backend` deployment configuration or the server secret store.
 
 ## References
 
 - [LEGACY-X MatchZy README](matchzy/README.md)
 - [LEGACY-X MatchZy customization notes](matchzy/README.md#legacy-x-customization)
+- [LEGACY-X MatchZy Rank Bridge](matchzy/RANK_BRIDGE.md)
 - [LEGACY-X AFK Manager](afkmanager/README.md)
 - [LEGACY-X AFK Manager customization report](AFKMANAGER_LEGACYX_CHANGELOG.md)
 - [LEGACY-X AdminPlus](adminplus/plugin/AdminPlus/)

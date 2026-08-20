@@ -2,3 +2,4 @@ obj/*
 bin/*
 /.vs
 MatchZy.sln
+cfg/MatchZy/*.private.cfg

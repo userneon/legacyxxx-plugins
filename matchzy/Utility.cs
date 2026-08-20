@@ -868,14 +868,18 @@ namespace MatchZy
             int team2SeriesScore = matchzyTeam2.seriesScore;
 
             string statsPath = Server.GameDirectory + "/csgo/MatchZy_Stats/" + liveMatchId.ToString();
+            (Dictionary<ulong, Dictionary<string, object>> _, List<StatsPlayer> playerStatsListTeam1, List<StatsPlayer> playerStatsListTeam2) = GetPlayerStatsDict();
 
             var mapResultEvent = new MapResultEvent
             {
                 MatchId = liveMatchId,
                 MapNumber = currentMapNumber,
+                EventId = $"matchzy:{liveMatchId}:{currentMapNumber}:map_result",
+                MapName = Server.MapName,
+                Season = legacyXRankSeason.Value,
                 Winner = new Winner(t1score > t2score && reverseTeamSides["CT"] == matchzyTeam1 ? "3" : "2", t1score > t2score ? "team1" : "team2"),
-                StatsTeam1 = new MatchZyStatsTeam(matchzyTeam1.id, matchzyTeam1.teamName, team1SeriesScore, t1score, 0, 0, new List<StatsPlayer>()),
-                StatsTeam2 = new MatchZyStatsTeam(matchzyTeam2.id, matchzyTeam2.teamName, team2SeriesScore, t2score, 0, 0, new List<StatsPlayer>())
+                StatsTeam1 = new MatchZyStatsTeam(matchzyTeam1.id, matchzyTeam1.teamName, team1SeriesScore, t1score, 0, 0, playerStatsListTeam1),
+                StatsTeam2 = new MatchZyStatsTeam(matchzyTeam2.id, matchzyTeam2.teamName, team2SeriesScore, t2score, 0, 0, playerStatsListTeam2)
             };
 
             Task.Run(async () =>

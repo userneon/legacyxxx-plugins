@@ -34,6 +34,7 @@ namespace MatchZy
         public FakeConVar<bool> legacyXRandomMapAfterMatch = new("legacyx_random_map_after_match", "LEGACY-X changes to a random different map after a series ends. Default: true", true);
         public FakeConVar<string> legacyXMapPool = new("legacyx_map_pool", "Comma-separated installed maps used for random non-repeat rotation", "de_ancient,de_anubis,de_dust2,de_inferno,de_mirage,de_nuke,de_overpass,de_vertigo");
         public FakeConVar<float> legacyXMapTransitionDelay = new("legacyx_map_transition_delay", "Seconds to show PLEASE WAIT before the soft map change", 3.0f);
+        public FakeConVar<string> legacyXRankSeason = new("legacyx_rank_season", "LEGACY-X rank season slug sent with final MatchZy map results", "season-1");
 
         [ConsoleCommand("matchzy_whitelist_enabled_default", "Whether Whitelist is enabled by default or not. Default value: false")]
         public void MatchZyWLConvar(CCSPlayerController? player, CommandInfo command)

@@ -167,6 +167,15 @@ public class MatchZyRoundEndedEvent : MatchZyTimedRoundEvent
 
 public class MapResultEvent : MatchZyMapEvent
 {
+    [JsonPropertyName("event_id")]
+    public required string EventId { get; init; }
+
+    [JsonPropertyName("map_name")]
+    public required string MapName { get; init; }
+
+    [JsonPropertyName("season")]
+    public required string Season { get; init; }
+
     [JsonPropertyName("winner")]
     public required Winner Winner { get; init; }
 
