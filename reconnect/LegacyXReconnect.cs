@@ -128,7 +128,7 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{Config.ApiBaseUrl}/api/plugin/reconnect/players/{player.SteamID}?exclude_server_id={Uri.EscapeDataString(Config.ServerId)}");
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{Config.ApiBaseUrl}/api/v1/plugin/reconnect/players/{player.SteamID}?exclude_server_id={Uri.EscapeDataString(Config.ServerId)}");
             request.Headers.Add("x-plugin-id", Config.PluginId);
             request.Headers.Add("x-plugin-secret", Config.PluginSecret);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -174,7 +174,7 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, $"{Config.ApiBaseUrl}/api/plugin/reconnect/events");
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{Config.ApiBaseUrl}/api/v1/plugin/reconnect/events");
             request.Headers.Add("x-plugin-id", Config.PluginId);
             request.Headers.Add("x-plugin-secret", Config.PluginSecret);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));

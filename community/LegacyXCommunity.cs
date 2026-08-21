@@ -68,7 +68,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         var steamId = player.SteamID.ToString();
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{Config.ApiBaseUrl}/api/plugin/matchzy/community/players/{steamId}");
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{Config.ApiBaseUrl}/api/v1/plugin/community/players/{steamId}");
             request.Headers.Add("x-plugin-id", Config.PluginId);
             request.Headers.Add("x-plugin-secret", Config.PluginSecret);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));

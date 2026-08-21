@@ -6,8 +6,8 @@ namespace MatchZy
 {
     public partial class MatchZy
     {
-        [ConsoleCommand("get5_remote_log_url", "If defined, all events are sent to this URL over HTTP. If no protocol is provided")]
-        [ConsoleCommand("matchzy_remote_log_url", "If defined, all events are sent to this URL over HTTP. If no protocol is provided")]
+        [ConsoleCommand("get5_remote_log_url", "LEGACY-X production target: https://api.legacyx.cc/api/v1/plugin/matchzy/events. All events are sent to this URL over HTTP.")]
+        [ConsoleCommand("matchzy_remote_log_url", "LEGACY-X production target: https://api.legacyx.cc/api/v1/plugin/matchzy/events. All events are sent to this URL over HTTP.")]
         public void RemoteLogURLCommand(CCSPlayerController? player, CommandInfo command)
         {
             if (player != null) return;

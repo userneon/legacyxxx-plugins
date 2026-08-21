@@ -2,6 +2,6 @@
   "Enabled": true,
   "ApiBaseUrl": "https://api.legacyx.cc",
   "PluginId": "legacyx-community",
-  "PluginSecret": "REPLACE_WITH_PLUGIN_INGEST_SECRET",
+  "PluginSecret": "REPLACE_WITH_LEGACYX_COMMUNITY_API_TOKEN",
   "ChatPrefix": "{Lime}[LEGACY-X]{Default}"
 }
