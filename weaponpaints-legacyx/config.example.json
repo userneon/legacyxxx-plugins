@@ -1,0 +1,32 @@
+{
+  "ConfigVersion": 10,
+  "SkinsLanguage": "en",
+  "ApiBaseUrl": "https://api.legacyx.cc",
+  "PluginId": "legacyx-skinbridge",
+  "PluginSecret": "REPLACE_WITH_SERVER_SCOPED_PLUGIN_TOKEN",
+  "ServerId": "legacyx-staging-5v5-01",
+  "ApiPollSeconds": 3,
+  "EnableInGameMenus": false,
+  "Website": "https://legacyx.cc/skinchanger",
+  "CmdRefreshCooldownSeconds": 3,
+  "Additional": {
+    "KnifeEnabled": true,
+    "GloveEnabled": true,
+    "MusicEnabled": true,
+    "AgentEnabled": true,
+    "SkinEnabled": true,
+    "PinsEnabled": true,
+    "CommandWpEnabled": false,
+    "CommandKnife": [],
+    "CommandMusic": [],
+    "CommandPin": [],
+    "CommandGlove": [],
+    "CommandAgent": [],
+    "CommandStattrak": [],
+    "CommandSkin": [],
+    "CommandSkinSelection": [],
+    "CommandRefresh": [],
+    "CommandKill": []
+  },
+  "MenuType": "selectable"
+}

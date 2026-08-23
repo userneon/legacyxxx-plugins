@@ -10,3 +10,5 @@ community/config/LegacyXCommunity.json
 reconnect/config/LegacyXReconnect.json
 spectator-comms/config/LegacyXSpectatorComms.json
 matchzy/cfg/MatchZy/legacyx-match-core.private.cfg
+weaponpaints-legacyx/config/*.json
+!weaponpaints-legacyx/config.example.json
