@@ -94,4 +94,27 @@ internal sealed class SkinchangerOptions
     [JsonPropertyName("seed")] public int? Seed { get; set; }
     [JsonPropertyName("statTrak")] public bool? StatTrak { get; set; }
     [JsonPropertyName("nameTag")] public string? NameTag { get; set; }
+    [JsonPropertyName("stickers")] public List<SkinchangerStickerOption> Stickers { get; set; } = [];
+    [JsonPropertyName("charm")] public SkinchangerCharmOption? Charm { get; set; }
+}
+
+internal sealed class SkinchangerStickerOption
+{
+    [JsonPropertyName("id")] public int? Id { get; set; }
+    [JsonPropertyName("slot")] public int Slot { get; set; }
+    [JsonPropertyName("schema")] public int? Schema { get; set; }
+    [JsonPropertyName("offsetX")] public float? OffsetX { get; set; }
+    [JsonPropertyName("offsetY")] public float? OffsetY { get; set; }
+    [JsonPropertyName("wear")] public float? Wear { get; set; }
+    [JsonPropertyName("scale")] public float? Scale { get; set; }
+    [JsonPropertyName("rotation")] public float? Rotation { get; set; }
+}
+
+internal sealed class SkinchangerCharmOption
+{
+    [JsonPropertyName("id")] public int? Id { get; set; }
+    [JsonPropertyName("offsetX")] public float? OffsetX { get; set; }
+    [JsonPropertyName("offsetY")] public float? OffsetY { get; set; }
+    [JsonPropertyName("offsetZ")] public float? OffsetZ { get; set; }
+    [JsonPropertyName("seed")] public int? Seed { get; set; }
 }

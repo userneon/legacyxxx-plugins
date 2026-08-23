@@ -14,6 +14,7 @@
 
 	public class StickerInfo
 	{
+		public int Slot { get; set; } = -1;
 		public uint Id { get; set; }
 		public uint Schema { get; set; }
 		public float OffsetX { get; set; }

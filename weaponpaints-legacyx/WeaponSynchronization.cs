@@ -84,14 +84,36 @@ internal sealed class WeaponSynchronization
                     foreach (var team in teams)
                     {
                         var teamWeapons = weapons.GetOrAdd(team, _ => new ConcurrentDictionary<int, WeaponInfo>());
-                        teamWeapons[entry.WeaponDefindex.Value] = new WeaponInfo
-                        {
-                            Paint = entry.PaintId ?? 0,
-                            Seed = entry.Options.Seed ?? 0,
-                            Wear = entry.Options.Wear ?? 0.0001f,
-                            StatTrak = entry.Options.StatTrak ?? false,
-                            Nametag = entry.Options.NameTag ?? string.Empty,
-                        };
+						teamWeapons[entry.WeaponDefindex.Value] = new WeaponInfo
+						{
+							Paint = entry.PaintId ?? 0,
+							Seed = entry.Options.Seed ?? 0,
+							Wear = entry.Options.Wear ?? 0.0001f,
+							StatTrak = entry.Options.StatTrak ?? false,
+							Nametag = entry.Options.NameTag ?? string.Empty,
+							Stickers = entry.Options.Stickers
+								.Where(sticker => sticker.Id is > 0 && sticker.Slot is >= 0 and <= 4)
+								.OrderBy(sticker => sticker.Slot)
+								.Select(sticker => new StickerInfo
+								{
+									Slot = sticker.Slot,
+									Id = (uint)sticker.Id!.Value,
+									Schema = (uint)(sticker.Schema ?? 1),
+									OffsetX = sticker.OffsetX ?? 0,
+									OffsetY = sticker.OffsetY ?? 0,
+									Wear = sticker.Wear ?? 0,
+									Scale = sticker.Scale ?? 1,
+									Rotation = sticker.Rotation ?? 0,
+								}).ToList(),
+							KeyChain = entry.Options.Charm?.Id is > 0 ? new KeyChainInfo
+							{
+								Id = (uint)entry.Options.Charm.Id.Value,
+								OffsetX = entry.Options.Charm.OffsetX ?? 0,
+								OffsetY = entry.Options.Charm.OffsetY ?? 0,
+								OffsetZ = entry.Options.Charm.OffsetZ ?? 0,
+								Seed = (uint)(entry.Options.Charm.Seed ?? 0),
+							} : null,
+						};
                     }
                     break;
                 case "knife":

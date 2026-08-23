@@ -167,9 +167,10 @@ namespace WeaponPaints
 			if (!HasChangedPaint(player ,weaponDefIndex, out var weaponInfo) || weaponInfo == null)
 				return;
 
-			foreach (var sticker in weaponInfo.Stickers)
-			{
-				int stickerSlot = weaponInfo.Stickers.IndexOf(sticker);
+				for (int index = 0; index < weaponInfo.Stickers.Count; index++)
+				{
+					var sticker = weaponInfo.Stickers[index];
+					int stickerSlot = sticker.Slot is >= 0 and <= 4 ? sticker.Slot : index;
 
 				CAttributeListSetOrAddAttributeValueByName.Invoke(weapon.AttributeManager.Item.NetworkedDynamicAttributes.Handle,
 					$"sticker slot {stickerSlot} id", ViewAsFloat(sticker.Id));
