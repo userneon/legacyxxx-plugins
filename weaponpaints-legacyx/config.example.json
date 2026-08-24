@@ -4,7 +4,7 @@
   "ApiBaseUrl": "https://api.legacyx.cc",
   "PluginId": "legacyx-skinbridge",
   "PluginSecret": "REPLACE_WITH_SERVER_SCOPED_PLUGIN_TOKEN",
-  "ServerId": "legacyx-staging-5v5-01",
+  "ServerId": "REPLACE_WITH_LEGACYX_SERVER_ID",
   "ApiPollSeconds": 3,
   "EnableInGameMenus": false,
   "Website": "https://legacyx.cc/skinchanger",
@@ -17,6 +17,7 @@
     "SkinEnabled": true,
     "PinsEnabled": true,
     "CommandWpEnabled": false,
+    "CommandKillEnabled": true,
     "CommandKnife": [],
     "CommandMusic": [],
     "CommandPin": [],
@@ -26,7 +27,10 @@
     "CommandSkin": [],
     "CommandSkinSelection": [],
     "CommandRefresh": [],
-    "CommandKill": []
+    "CommandKill": [],
+    "GiveRandomKnife": false,
+    "GiveRandomSkin": false,
+    "ShowSkinImage": true
   },
   "MenuType": "selectable"
 }

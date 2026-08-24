@@ -1,108 +1,81 @@
-# CS2 Weapon Paints
+# LEGACY-X SkinBridge
 
-## Description
-Unfinished, unoptimized and not fully functional ugly demo weapon paints plugin for **[CSSharp](https://docs.cssharp.dev/docs/guides/getting-started.html)**. 
+`LEGACY-X SkinBridge` is the CounterStrikeSharp Skinchanger bridge for LEGACY-X. It is an **API-only** plugin: a player saves a loadout on `legacyx.cc`, the Root API queues an apply job, and this plugin claims, applies, then acknowledges that job on the CS2 server.
 
-## Created [Discord server](https://discord.gg/d9CvaYPSFe) where you can discuss about plugin.
+> Data path: **Website → Root API → apply job → SkinBridge → CS2 runtime**. The plugin never connects directly to Supabase, MySQL, or a browser.
 
-### Consider to donate instead of buying from unknown sources.
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/E1E2G0P2O) or [![Donate on Steam](https://github.com/Nereziel/cs2-WeaponPaints/assets/32937653/a0d53822-4ca7-4caf-83b4-e1a9b5f8c94e)](https://steamcommunity.com/tradeoffer/new/?partner=41515647&token=gW2W-nXE)
+## What it supports
 
-## Features
-- Changes only paint, seed and wear on weapons, knives, gloves and agents
-- MySQL based
-- Data syncs on player connect
-- Added command **`!wp`** to refresh skins ***(with cooldown in seconds can be configured)***
-- Added command **`!ws`** to show website
-- Added command **`!knife`** to show menu with knives
-- Added command **`!gloves`** to show menu with gloves
-- Added command **`!agents`** to show menu with agents
-- Added command **`!pins`** to show menu with pins
-- Added command **`!music`** to show menu with music
-- Translations support, submit a PR if you want to share your translation
+SkinBridge applies the loadout categories sent by the Root API: weapon skins, knives, gloves, agents, music kits and pins. Team-scoped entries (`t`, `ct`, and both) are handled by the runtime bridge. Website-controlled loadouts work with in-game menus disabled; `!wp` and menu commands are intentionally disabled by default for LEGACY-X.
 
-## ⚙️ Requirements
-**Ensure all the following dependencies are installed before proceeding**
-- [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp)
-- [PlayerSettings](https://github.com/NickFox007/PlayerSettingsCS2) - Required by MenuManagerCS2
-- [AnyBaseLibCS2](https://github.com/NickFox007/AnyBaseLibCS2) - Required by PlayerSettings
-- [MenuManagerCS2](https://github.com/NickFox007/MenuManagerCS2)
-- MySQL database
+| Setting | Production default | Reason |
+|---|---:|---|
+| `EnableInGameMenus` | `false` | The LEGACY-X website is the loadout editor. |
+| `CommandWpEnabled` | `false` | The bridge claims API jobs automatically. |
+| `ApiPollSeconds` | `3` | Responsive without high-frequency API pressure; plugin clamps values to 1–30 seconds. |
+| `PluginId` | `legacyx-skinbridge` | Required by Root API identity checks. |
 
-## CS2 Server
-- Have working CounterStrikeSharp (**with RUNTIME!**)
-- Download from Release and copy plugin to plugins
-- Run server with plugin, **it will generate config if installed correctly!**
-- Edit `addons/counterstrikesharp/configs/`**`plugins/WeaponPaints/WeaponPaints.json`** include database credentials
-- In `addons/counterstrikesharp/configs/`**`core.json`** set **FollowCS2ServerGuidelines** to **`false`**
-- Copy from plugins folder gamedata file **`weaponpaints.json`** to folder **`addons/counterstrikesharp/gamedata/`**
+## Requirements
 
-## Plugin Configuration
-<details>
-  <summary>Click to expand</summary>
-<code><pre>{
-	"Version": 4, // Don't touch
-	"DatabaseHost": "", // MySQL host
-	"DatabasePort": 3306, // MySQL port
-	"DatabaseUser": "", // MySQL username
-	"DatabasePassword": "", // MySQL user password
-	"DatabaseName": "", // MySQL database name
-	"CmdRefreshCooldownSeconds": 60, // Cooldown time in refreshing skins (!wp command)
-	"Prefix": "[WeaponPaints]", // Prefix every chat message
-	"Website": "example.com/skins", // Website used in WebsiteMessageCommand (!ws command)
-"Messages": {
-	"WebsiteMessageCommand": "Visit {WEBSITE} where you can change skins.", // Information about website where player can change skins (!ws command) Set to empty to disable
-	"SynchronizeMessageCommand": "Type !wp to synchronize chosen skins.", // Information about skins refreshing (!ws command) Set to empty to disable
-	"KnifeMessageCommand": "Type !knife to open knife menu.", // Information about knife menu (!ws command) Set to empty to disable
-	"CooldownRefreshCommand": "You can\u0027t refresh weapon paints right now.", // Cooldown information (!wp command) Set to empty to disable
-	"SuccessRefreshCommand": "Refreshing weapon paints.", // Information about refreshing skins (!wp command) Set to empty to disable
-	"ChosenKnifeMenu": "You have chosen {KNIFE} as your knife.", // Information about choosen knife (!knife command) Set to empty to disable
-	"ChosenSkinMenu": "You have chosen {SKIN} as your skin.", // Information about choosen skin (!skins command) Set to empty to disable
-	"ChosenKnifeMenuKill": "To correctly apply skin for knife, you need to type !kill.", // Information about suicide after knife selection (!knife command) Set to empty to disable
-	"KnifeMenuTitle": "Knife Menu.",  // Menu title (!knife menu)
-	"WeaponMenuTitle": "Weapon Menu.", // Menu title (!skins menu)
-	"SkinMenuTitle": "Select skin for {WEAPON}" // Menu title (!skins menu, after weapon select)
-},
-"Additional": {
-	"KnifeEnabled": true, // Enable or disable knife feature
-	"SkinEnabled": true, // Enable or disable skin feature
-	"CommandWpEnabled": true, // Enable or disable refreshing command
-	"CommandKillEnabled": true, // Enable or disable kill command
-	"CommandKnife": "knife", // Name of knife menu command, u can change to for e.g, knives
-	"CommandSkin": "ws", // Name of skin information command, u can change to for e.g, skins
-	"CommandSkinSelection": "skins", // Name of skins menu command, u can change to for e.g, weapons
-	"CommandRefresh": "wp", // Name of skin refreshing command, u can change to for e.g, refreshskins
-	"CommandKill": "kill", // Name of kill command, u can change to for e.g, suicide
-	"GiveRandomKnife": false,  // Give random knife to players if they didn't choose
-	"GiveRandomSkins": false  // Give random skins to players if they didn't choose
-},
-</pre></code>
-</details>
-    
-## Web install
-- Requires PHP >= 7.4 with curl and pdo_mysql ***(Tested on php ver **`8.2.3`** and nginx webserver)***
-- **Before using website, make sure the plugin is correctly loaded in cs2 server!** Mysql tables are created by plugin not by website.
-- Copy website to web server ***(Folder `img` not needed)***
-- Get [Steam API Key](https://steamcommunity.com/dev/apikey)
-- Fill in database credentials and api key in `class/config.php`
-- Visit website and login via steam
+The CS2 host needs CounterStrikeSharp API version 338 or newer. This project targets **.NET 8** and is built against `CounterStrikeSharp.API` 1.0.367. Copy `gamedata/weaponpaints.json` to `addons/counterstrikesharp/gamedata/weaponpaints.json`; the plugin stops safely if the gamedata file is missing.
 
-## Web Features
-- Basic website
-- Steam login/logout
-- Change knife, paint, seed and wear
+The upstream license remains in `LICENSE`. Do not remove its notices when redistributing this LEGACY-X fork.
 
-## Troubleshooting
-<details>
-**Skins are not changing:**
-Set FollowCSGOGuidelines to false in cssharp’s core.jcon config
+## Secret-safe configuration
 
-**Database error table does not exists:**
-Plugin is not loaded or configured with mysql credentials. Tables are auto-created by plugin.
+`.env.example` is an operator template only. CounterStrikeSharp does **not** load `.env` for this plugin automatically. On the actual CS2 server, use the values to fill the generated plugin JSON file:
 
-</details>
+```text
+addons/counterstrikesharp/configs/plugins/WeaponPaints/WeaponPaints.json
+```
 
-### Use this plugin at your own risk! Using this may lead to GSLT ban or something else Valve come with. [Valve Server guidelines](https://blog.counter-strike.net/index.php/server_guidelines/)
+Start from [`config.example.json`](./config.example.json). The real `PluginSecret` must be a server-scoped Root API token with **both** `skinchanger:read` and `skinchanger:write` scopes. Never commit this token or paste it into frontend files.
 
-## Preview
-![preview](https://github.com/Nereziel/cs2-WeaponPaints/blob/main/website/preview.png?raw=true)
+```json
+{
+  "ConfigVersion": 10,
+  "ApiBaseUrl": "https://api.legacyx.cc",
+  "PluginId": "legacyx-skinbridge",
+  "PluginSecret": "REPLACE_WITH_SERVER_SCOPED_PLUGIN_TOKEN",
+  "ServerId": "REPLACE_WITH_LEGACYX_SERVER_ID",
+  "ApiPollSeconds": 3,
+  "EnableInGameMenus": false,
+  "Website": "https://legacyx.cc/skinchanger"
+}
+```
+
+`ServerId` must exactly match the server ID used by the LEGACY-X Root API. The plugin rejects an empty API URL, secret shorter than 24 characters, or empty server ID before it starts.
+
+## Root API contract
+
+SkinBridge sends a session event when a player connects or disconnects. It then claims jobs and acknowledges the result with the lease token supplied by the API.
+
+| Operation | Endpoint | Result |
+|---|---|---|
+| Player session | `POST /api/v1/plugin/skinchanger/sessions` | Tracks which SteamID is currently on this server. |
+| Claim | `GET /api/v1/plugin/skinchanger/jobs?server_id=…` | Returns time-limited loadout jobs for this exact server. |
+| Acknowledge | `POST /api/v1/plugin/skinchanger/jobs/:jobId/ack` | Reports `applied` or `failed` with the lease token. |
+
+If a player has disconnected before a claimed job is applied, the bridge reports `player_not_connected`. Runtime exceptions are acknowledged as `apply_error`. A lease token is single-use; an expired or invalid lease must not be treated as a successful apply.
+
+## Build
+
+```bash
+cd weaponpaints-legacyx
+dotnet restore WeaponPaints.csproj
+dotnet build WeaponPaints.csproj -c Release
+```
+
+Copy the release output, `lang/`, and the gamedata file to the matching CounterStrikeSharp directories. Do not install or configure a game server from this repository automatically; validate the build and deploy it only on your intended CS2 host.
+
+## Runtime checklist
+
+1. Create a server-scoped SkinBridge API token in the Root API data store with `skinchanger:read` and `skinchanger:write`.
+2. Put the real token only in the CS2 host's `WeaponPaints.json`.
+3. Confirm `ServerId` is identical to the Root API server ID.
+4. Load the plugin and confirm the server log does not report missing required API configuration or gamedata.
+5. Connect a test Steam account, save a website loadout, and confirm the server log/API audit receives the session, claim, and `applied` acknowledgement.
+
+## Security notes
+
+Never expose `PluginSecret`, `SUPABASE_SERVICE_ROLE_KEY`, or database credentials to the plugin repository, browser, or screenshots. The plugin's only remote dependency is the Root API. Retry/backoff and restart-safe outbox hardening remain a future plugin runtime improvement; this repository provides the current API-compatible bridge and secret-safe deployment template.
