@@ -3,6 +3,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
+using LegacyX.Shared.Configuration;
 
 namespace AdminPlus;
 
@@ -15,6 +16,11 @@ public class AdminPlus : BasePlugin
 
     public override void Load(bool hotReload)
     {
+        if (!LegacyXEnvironmentLoader.Load().GetModuleBoolean("ADMINPLUS", "ENABLED", true))
+        {
+            Console.WriteLine("[LEGACY-X AdminPlus] Disabled by central environment.");
+            return;
+        }
         Console.WriteLine("[LEGACY-X AdminPlus] Loaded — production command bridge ready.");
     }
 

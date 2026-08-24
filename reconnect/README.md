@@ -14,13 +14,15 @@ The command never accepts an address from chat or a player-supplied profile fiel
 
 MatchZy owns 5v5 readiness, live match state and soft map transitions. Reconnect only observes player connect/disconnect events; it does not move teams, change maps, restart matches or alter MatchZy ready state. A map transition normally keeps clients connected and does not require a reconnect event.
 
-## Installation
+## Future host preparation
 
-1. Build with `dotnet build -c Release`.
-2. Copy `bin/Release/net8.0/LegacyXReconnect.dll` to `csgo/addons/counterstrikesharp/plugins/LegacyXReconnect/`.
-3. Copy `config/LegacyXReconnect.json.example` to the CounterStrikeSharp plugin config location as `LegacyXReconnect.json` and insert the production API URL, plugin secret, server ID and public connect address.
-4. Add the same `server_id=address` pair to backend `RECONNECT_SERVER_REGISTRY`.
-5. Apply `legacy_x_reconnect.sql`, restart the API and then restart the CS2 server.
+1. Build source with `dotnet build -c Release` when a compatible build environment is available.
+2. Future CS2 host дээр repository root `.env.example`-ийг `CounterStrikeSharp/.env` болгон secret-free placeholder-оос нь server-local scoped token-тойгоор бэлдэнэ.
+3. `LEGACYX_API_BASE_URL`, `LEGACYX_RECONNECT_PLUGIN_ID`, `LEGACYX_RECONNECT_PLUGIN_TOKEN`, `LEGACYX_SERVER_ID`, `LEGACYX_SERVER_ADDRESS` нь Reconnect-ийн ганц runtime identity source байна.
+4. `config/LegacyXReconnect.json.example` нь зөвхөн mode, heartbeat, chat default агуулна; API URL, server ID/address, token оруулахгүй.
+5. Server ID/address pair-ийг Root API-ийн `RECONNECT_SERVER_REGISTRY`-д reviewed backend deployment-оор бүртгэнэ.
+
+Одоогоор CS2 server/VPS байхгүй учраас DLL copy, runtime config, API restart, server restart хийхгүй.
 
 ## Privacy
 

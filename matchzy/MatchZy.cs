@@ -4,6 +4,7 @@ using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API.Core.Attributes;
 using CounterStrikeSharp.API.Modules.Events;
+using LegacyX.Shared.Configuration;
 
 
 namespace MatchZy
@@ -85,7 +86,13 @@ namespace MatchZy
         private Database database = new();
     
         public override void Load(bool hotReload) {
-            
+            ApplyLegacyXCentralEnvironment();
+            if (!legacyXCentralEnabled)
+            {
+                Console.WriteLine($"[{ModuleName}] Disabled by central environment.");
+                return;
+            }
+
             LoadAdmins();
 
             database.InitializeDatabase(ModuleDirectory);

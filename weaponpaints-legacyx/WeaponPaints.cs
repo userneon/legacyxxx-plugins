@@ -6,6 +6,7 @@ using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
 using CounterStrikeSharp.API.Modules.Timers;
+using LegacyX.Shared.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace WeaponPaints;
@@ -14,6 +15,7 @@ namespace WeaponPaints;
 	public partial class WeaponPaints : BasePlugin, IPluginConfig<WeaponPaintsConfig>
 	{
 		private CounterStrikeSharp.API.Modules.Timers.Timer? _apiPollTimer;
+		private bool _centralEnabled = true;
 	internal static WeaponPaints Instance { get; private set; } = new();
 
 	public WeaponPaintsConfig Config { get; set; } = new();
@@ -23,9 +25,14 @@ namespace WeaponPaints;
 		public override string ModuleName => "LEGACY-X SkinBridge";
 		public override string ModuleVersion => "3.3a-legacyx.1";
 
-	public override void Load(bool hotReload)
-	{
-		// Hardcoded hotfix needs to be changed later (Not needed 17.09.2025)
+		public override void Load(bool hotReload)
+		{
+			if (!_centralEnabled)
+			{
+				Logger.LogInformation("SkinBridge is disabled by central environment.");
+				return;
+			}
+			// Hardcoded hotfix needs to be changed later (Not needed 17.09.2025)
 		//if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 		//	Patch.PerformPatch("0F 85 ? ? ? ? 31 C0 B9 ? ? ? ? BA ? ? ? ? 66 0F EF C0 31 F6 31 FF 48 C7 45 ? ? ? ? ? 48 C7 45 ? ? ? ? ? 48 C7 45 ? ? ? ? ? 48 C7 45 ? ? ? ? ? 0F 29 45 ? 48 C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? 66 89 45 ? E8 ? ? ? ? 41 89 C5 85 C0 0F 8E", "90 90 90 90 90 90");
 		//else
@@ -83,9 +90,16 @@ namespace WeaponPaints;
 			_apiPollTimer = null;
 		}
 
-	public void OnConfigParsed(WeaponPaintsConfig config)
-	{
-		Config = config;
+		public void OnConfigParsed(WeaponPaintsConfig config)
+		{
+			var environment = LegacyXEnvironmentLoader.Load();
+			_centralEnabled = environment.GetModuleBoolean("SKINBRIDGE", "ENABLED", true);
+			config.ApiBaseUrl = environment.Get("LEGACYX_API_BASE_URL", config.ApiBaseUrl);
+			config.PluginId = environment.GetModule("SKINBRIDGE", "PLUGIN_ID", config.PluginId);
+			config.PluginSecret = environment.GetModule("SKINBRIDGE", "PLUGIN_TOKEN", config.PluginSecret);
+			config.ServerId = environment.Get("LEGACYX_SERVER_ID", config.ServerId);
+			config.ApiPollSeconds = environment.GetModuleInt("SKINBRIDGE", "POLL_SECONDS", config.ApiPollSeconds, 1, 30);
+			Config = config;
 		_config = config;
 
 			config.ApiBaseUrl = config.ApiBaseUrl.TrimEnd('/');
@@ -114,9 +128,10 @@ namespace WeaponPaints;
 		Task.Run(async () => await Utility.CheckVersion(ModuleVersion, Logger));
 	}
 
-	public override void OnAllPluginsLoaded(bool hotReload)
-	{
-		try
+		public override void OnAllPluginsLoaded(bool hotReload)
+		{
+			if (!_centralEnabled) return;
+			try
 		{
 				if (!Config.EnableInGameMenus) return;
 				MenuApi = MenuCapability.Get();

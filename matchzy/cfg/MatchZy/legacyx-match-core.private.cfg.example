@@ -1,6 +1,3 @@
-// Copy this file to legacyx-match-core.private.cfg, set the real secret, and execute it after MatchZy/config.cfg.
-// Do not commit the populated private cfg.
-legacyx_match_core_enabled true
-legacyx_match_core_api_url "https://api.legacyx.cc/api/v1/plugin/match-core/events"
-legacyx_match_core_plugin_secret "REPLACE_WITH_LEGACYX_MATCH_CORE_API_TOKEN"
-legacyx_match_core_server_id "legacyx-match-1"
+// Phase A: Match Core identity, endpoint and token are loaded only from
+// CounterStrikeSharp/.env. Do not create a private cfg with a secret.
+// Non-secret gameplay defaults remain in MatchZy/config.cfg.

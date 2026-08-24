@@ -3,6 +3,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
+using LegacyX.Shared.Configuration;
 
 namespace LegacyXSpectatorComms;
 
@@ -24,7 +25,11 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
     public override string ModuleName => "LEGACY-X Spectator Comms";
     public override string ModuleVersion => "0.1.0-legacyx.1";
 
-    public void OnConfigParsed(LegacyXSpectatorCommsConfig config) => Config = config;
+    public void OnConfigParsed(LegacyXSpectatorCommsConfig config)
+    {
+        config.Enabled = LegacyXEnvironmentLoader.Load().GetModuleBoolean("SPECTATOR_COMMS", "ENABLED", config.Enabled);
+        Config = config;
+    }
 
     public override void Load(bool hotReload)
     {

@@ -4,6 +4,7 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
+using LegacyX.Shared.Configuration;
 
 namespace LegacyXCommunity;
 
@@ -27,6 +28,11 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
 
     public void OnConfigParsed(LegacyXCommunityConfig config)
     {
+        var environment = LegacyXEnvironmentLoader.Load();
+        config.Enabled = environment.GetModuleBoolean("COMMUNITY", "ENABLED", config.Enabled);
+        config.ApiBaseUrl = environment.Get("LEGACYX_API_BASE_URL", config.ApiBaseUrl);
+        config.PluginId = environment.GetModule("COMMUNITY", "PLUGIN_ID", config.PluginId);
+        config.PluginSecret = environment.GetModule("COMMUNITY", "PLUGIN_TOKEN", config.PluginSecret);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
     }

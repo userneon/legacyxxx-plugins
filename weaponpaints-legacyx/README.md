@@ -23,28 +23,23 @@ The upstream license remains in `LICENSE`. Do not remove its notices when redist
 
 ## Secret-safe configuration
 
-`.env.example` is an operator template only. CounterStrikeSharp does **not** load `.env` for this plugin automatically. On the actual CS2 server, use the values to fill the generated plugin JSON file:
+SkinBridge now uses the repository-wide central environment loader. On the future CS2 host, copy the **repository root** `.env.example` to:
 
 ```text
-addons/counterstrikesharp/configs/plugins/WeaponPaints/WeaponPaints.json
+CounterStrikeSharp/.env
 ```
 
-Start from [`config.example.json`](./config.example.json). The real `PluginSecret` must be a server-scoped Root API token with **both** `skinchanger:read` and `skinchanger:write` scopes. Never commit this token or paste it into frontend files.
+The real `LEGACYX_SKINBRIDGE_PLUGIN_TOKEN` must be a server-scoped Root API token with **both** `skinchanger:read` and `skinchanger:write` scopes. Never commit this token or paste it into frontend files. `config.example.json` is now secret-free and contains only SkinBridge gameplay/menu defaults.
 
 ```json
 {
   "ConfigVersion": 10,
-  "ApiBaseUrl": "https://api.legacyx.cc",
-  "PluginId": "legacyx-skinbridge",
-  "PluginSecret": "REPLACE_WITH_SERVER_SCOPED_PLUGIN_TOKEN",
-  "ServerId": "REPLACE_WITH_LEGACYX_SERVER_ID",
-  "ApiPollSeconds": 3,
   "EnableInGameMenus": false,
   "Website": "https://legacyx.cc/skinchanger"
 }
 ```
 
-`ServerId` must exactly match the server ID used by the LEGACY-X Root API. The plugin rejects an empty API URL, secret shorter than 24 characters, or empty server ID before it starts.
+`LEGACYX_SERVER_ID` must exactly match the server ID used by the LEGACY-X Root API. The plugin rejects an empty API URL, token shorter than 24 characters, or empty server ID before it starts.
 
 ## Root API contract
 
@@ -71,8 +66,8 @@ Copy the release output, `lang/`, and the gamedata file to the matching CounterS
 ## Runtime checklist
 
 1. Create a server-scoped SkinBridge API token in the Root API data store with `skinchanger:read` and `skinchanger:write`.
-2. Put the real token only in the CS2 host's `WeaponPaints.json`.
-3. Confirm `ServerId` is identical to the Root API server ID.
+2. Put the real token only in the CS2 host's central `CounterStrikeSharp/.env` as `LEGACYX_SKINBRIDGE_PLUGIN_TOKEN`.
+3. Confirm `LEGACYX_SERVER_ID` is identical to the Root API server ID.
 4. Load the plugin and confirm the server log does not report missing required API configuration or gamedata.
 5. Connect a test Steam account, save a website loadout, and confirm the server log/API audit receives the session, claim, and `applied` acknowledgement.
 

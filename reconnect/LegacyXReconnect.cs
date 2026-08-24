@@ -7,6 +7,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Timers;
+using LegacyX.Shared.Configuration;
 
 namespace LegacyXReconnect;
 
@@ -36,6 +37,13 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
 
     public void OnConfigParsed(LegacyXReconnectConfig config)
     {
+        var environment = LegacyXEnvironmentLoader.Load();
+        config.Enabled = environment.GetModuleBoolean("RECONNECT", "ENABLED", config.Enabled);
+        config.ApiBaseUrl = environment.Get("LEGACYX_API_BASE_URL", config.ApiBaseUrl);
+        config.PluginId = environment.GetModule("RECONNECT", "PLUGIN_ID", config.PluginId);
+        config.PluginSecret = environment.GetModule("RECONNECT", "PLUGIN_TOKEN", config.PluginSecret);
+        config.ServerId = environment.Get("LEGACYX_SERVER_ID", config.ServerId);
+        config.ServerAddress = environment.Get("LEGACYX_SERVER_ADDRESS", config.ServerAddress);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
         Config.ServerId = Config.ServerId.Trim();

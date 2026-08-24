@@ -11,4 +11,7 @@
       <IncludeAssets>compile;build;native;contentfiles;analyzers;buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../shared/LegacyX.Shared.Configuration/LegacyX.Shared.Configuration.csproj" />
+  </ItemGroup>
 </Project>

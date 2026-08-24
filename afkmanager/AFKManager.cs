@@ -6,6 +6,7 @@ using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
+using LegacyX.Shared.Configuration;
 
 namespace AFKManager;
 
@@ -50,10 +51,17 @@ public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
 
     public required AFKManagerConfig Config { get; set; }
     private CCSGameRules? _gGameRulesProxy;
+    private bool _centralEnabled = true;
     
     public void OnConfigParsed(AFKManagerConfig config)
     {
+        _centralEnabled = LegacyXEnvironmentLoader.Load().GetModuleBoolean("AFKMANAGER", "ENABLED", true);
         Config = config;
+        if (!_centralEnabled)
+        {
+            Console.WriteLine($"{ModuleName}: Disabled by central environment.");
+            return;
+        }
 
         if (Config.AfkPunishment is < 0 or > 2)
         {
@@ -106,6 +114,7 @@ public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
 
     public override void Load(bool hotReload)
     {
+        if (!_centralEnabled) return;
         RegisterListener<Listeners.OnMapStart>(_ =>
         {
             Server.NextFrame(() =>

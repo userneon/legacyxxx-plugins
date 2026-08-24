@@ -1,11 +1,6 @@
 {
   "ConfigVersion": 10,
   "SkinsLanguage": "en",
-  "ApiBaseUrl": "https://api.legacyx.cc",
-  "PluginId": "legacyx-skinbridge",
-  "PluginSecret": "REPLACE_WITH_SERVER_SCOPED_PLUGIN_TOKEN",
-  "ServerId": "REPLACE_WITH_LEGACYX_SERVER_ID",
-  "ApiPollSeconds": 3,
   "EnableInGameMenus": false,
   "Website": "https://legacyx.cc/skinchanger",
   "CmdRefreshCooldownSeconds": 3,

@@ -6,6 +6,12 @@
 
 ```text
 legacyxxx-plugins/
+├── .env.example                     # one central secret-free template
+├── LegacyX.Plugins.sln
+├── shared/LegacyX.Shared.Configuration/
+├── CounterStrikeSharp/               # future runtime placeholders only
+├── configs/                          # future secret-free defaults registry
+├── scripts/                          # source-only build/package/deploy placeholders
 ├── adminplus/
 │   └── plugin/AdminPlus/
 │       ├── AdminPlus.cs             # API-triggered admin command bridge
@@ -40,6 +46,7 @@ legacyxxx-plugins/
 │   ├── LegacyXSpectatorComms.csproj
 │   ├── config/LegacyXSpectatorComms.json.example
 │   └── README.md
+├── weaponpaints-legacyx/             # API-only SkinBridge loadout runtime
 ├── .gitignore
 ├── MATCHZY_LEGACYX_CHANGELOG.md
 ├── AFKMANAGER_LEGACYX_CHANGELOG.md
@@ -56,6 +63,7 @@ legacyxxx-plugins/
 | `community/` | Player-facing XP, level, rank and clan lookup | Read-only; backend owns all progression and clan writes |
 | `reconnect/` | Private Last Played session events and `css_reconnect` | Observes connect/disconnect only; never owns MatchZy lifecycle |
 | `spectator-comms/` | Spectator/dead-only text routing and competitive voice baseline | Never changes player/team/map state; MatchZy commands pass through |
+| `weaponpaints-legacyx/` | API-only SkinBridge loadout claim/apply/ack runtime | Receives scoped Root API identity from central environment; never connects directly to database |
 
 Database audit, RCON bridge, Discord webhook, rank scoring and API are in the separate [`legacyxxx-backend`](https://github.com/userneon/legacyxxx-backend) repository. AdminPlus is frontendless; UI source is intentionally not in this repository.
 
@@ -69,32 +77,10 @@ The same final map result includes the two five-player rosters, SteamID64 identi
 
 ## Build
 
-Requirements: .NET 8 SDK, Metamod:Source and CounterStrikeSharp on the server.
+Requirements for source build: .NET 8 SDK. CounterStrikeSharp runtime validation is a future server task.
 
 ```bash
-# MatchZy
-cd matchzy
-dotnet build --configuration Release
-
-# AFK Manager
-cd ../afkmanager
-dotnet build --configuration Release
-
-# AdminPlus
-cd ../adminplus/plugin/AdminPlus
-dotnet build --configuration Release
-
-# Community
-cd ../../../community
-dotnet build --configuration Release
-
-# Reconnect
-cd ../reconnect
-dotnet build --configuration Release
-
-# Spectator Comms
-cd ../spectator-comms
-dotnet build --configuration Release
+./scripts/build-all.sh
 ```
 
 Artifacts:
@@ -108,25 +94,11 @@ reconnect/bin/Release/net8.0/LegacyXReconnect.dll
 spectator-comms/bin/Release/net8.0/LegacyXSpectatorComms.dll
 ```
 
-## Deployment
+## Future deployment preparation
 
-Install each plugin in its own CounterStrikeSharp directory and copy the corresponding configuration assets.
+There is currently no approved CS2 server or VPS. Phase A does **not** deploy DLLs, create production secrets, or install CounterStrikeSharp. The future host layout and source-only preparation are documented in [`docs/PHASE_A_DEPLOYMENT_PREPARATION.md`](docs/PHASE_A_DEPLOYMENT_PREPARATION.md).
 
-```text
-csgo/addons/counterstrikesharp/plugins/MatchZy/MatchZy.dll
-csgo/addons/counterstrikesharp/plugins/AFKManager/AFKManager.dll
-csgo/addons/counterstrikesharp/plugins/AdminPlus/AdminPlus.dll
-csgo/addons/counterstrikesharp/plugins/LegacyXCommunity/LegacyXCommunity.dll
-csgo/addons/counterstrikesharp/plugins/LegacyXReconnect/LegacyXReconnect.dll
-csgo/addons/counterstrikesharp/plugins/LegacyXSpectatorComms/LegacyXSpectatorComms.dll
-csgo/addons/counterstrikesharp/configs/plugins/AFKManager/AFKManager.json
-csgo/cfg/MatchZy/config.cfg
-csgo/cfg/MatchZy/*.cfg
-csgo/cfg/MatchZy/*.json
-csgo/addons/counterstrikesharp/configs/plugins/LegacyXCommunity/LegacyXCommunity.json
-csgo/addons/counterstrikesharp/configs/plugins/LegacyXReconnect/LegacyXReconnect.json
-csgo/addons/counterstrikesharp/configs/plugins/LegacyXSpectatorComms/LegacyXSpectatorComms.json
-```
+All modules use one central `CounterStrikeSharp/.env` file, derived from the repository root `.env.example`. The runtime loader reads API base URL, server identity, module enable switches and scoped plugin tokens from this one source. Plugin-local JSON/cfg remains only for secret-free gameplay defaults.
 
 Only install one owner for match-end lifecycle. If MatchZy is enabled on a Match server, do not install a separate AdminPlus `MatchFlow` event handler. AFK Manager skips MatchZy warmup and must not register a second map changer. AdminPlus remains the frontendless action bridge, while MatchZy owns 5v5 readiness, rank payloads and map transitions.
 
@@ -147,7 +119,7 @@ AdminPlus commands include player info, team movement, respawn, money, weapons, 
 
 ## Security and secrets
 
-No `.env`, RCON secret, webhook URL, database password or API token belongs in this repository. Build output, local configs, `bin/`, `obj/`, `node_modules/` and secret files are ignored. In particular, `cfg/MatchZy/*.private.cfg` is ignored: use the rank private cfg example and keep `x-plugin-secret` only on the CS2 server. Production secrets belong in `legacyxxx-backend` deployment configuration or the server secret store.
+No real `.env`, RCON secret, webhook URL, database password or API token belongs in this repository. The committed root `.env.example` is the **only** environment template. On a future host, its real counterpart is `CounterStrikeSharp/.env` and all LEGACY-X plugins read it through `LegacyX.Shared.Configuration`. Build output, local runtime configs, `bin/`, `obj/`, `node_modules/` and secret files are ignored. Do not put `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, Steam key, browser credential or plugin token in plugin-local JSON/cfg files.
 
 ## References
 
@@ -160,6 +132,8 @@ No `.env`, RCON secret, webhook URL, database password or API token belongs in t
 - [LEGACY-X Community plugin](community/README.md)
 - [LEGACY-X Reconnect plugin](reconnect/README.md)
 - [LEGACY-X Spectator Comms plugin](spectator-comms/README.md)
+- [LEGACY-X SkinBridge](weaponpaints-legacyx/README.md)
+- [Plugin registry and central environment ownership](docs/PLUGIN_REGISTRY.md)
 - [LEGACY-X AdminPlus](adminplus/plugin/AdminPlus/)
 - [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp)
 - [Upstream MatchZy](https://github.com/shobhit-pathak/MatchZy)

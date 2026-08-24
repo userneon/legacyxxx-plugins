@@ -1,10 +1,4 @@
 {
-  "Enabled": true,
-  "ApiBaseUrl": "https://api.legacyx.cc",
-  "PluginId": "legacyx-reconnect",
-  "PluginSecret": "REPLACE_WITH_LEGACYX_RECONNECT_API_TOKEN",
-  "ServerId": "legacyx-match-1",
-  "ServerAddress": "203.0.113.10:27015",
   "ServerMode": "competitive_5v5",
   "HeartbeatSeconds": 30,
   "ChatPrefix": "{Lime}[LEGACY-X]{Default}"
