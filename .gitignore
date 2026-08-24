@@ -6,9 +6,9 @@ obj/
 *.user
 *.suo
 *.log
-community/config/LegacyXCommunity.json
-reconnect/config/LegacyXReconnect.json
-spectator-comms/config/LegacyXSpectatorComms.json
-matchzy/cfg/MatchZy/legacyx-match-core.private.cfg
-weaponpaints-legacyx/config/*.json
-!weaponpaints-legacyx/config.example.json
+LegacyX-Community/config/LegacyX-Community.json
+LegacyX-Reconnect/config/LegacyX-Reconnect.json
+LegacyX-Spectator/config/LegacyX-Spectator.json
+LegacyX-MatchZy/cfg/MatchZy/legacyx-match-core.private.cfg
+LegacyX-WeaponPaints/*.json
+!LegacyX-WeaponPaints/config.example.json

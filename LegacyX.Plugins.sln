@@ -5,6 +5,20 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX.Shared.Configuration", "shared\LegacyX.Shared.Configuration\LegacyX.Shared.Configuration.csproj", "{BFA5891E-13EA-4D92-A95C-9A1F9D45A1F2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-Admin", "LegacyX-Admin\LegacyX-Admin.csproj", "{D112986D-7EC3-4875-83E9-098271CC0801}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-AFKManager", "LegacyX-AFKManager\LegacyX-AFKManager.csproj", "{2A7AD3EA-6078-4E61-A60C-2A18A85B39C8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-Community", "LegacyX-Community\LegacyX-Community.csproj", "{F59F1ABE-652A-4882-8F1D-9631A0A195FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-MatchZy", "LegacyX-MatchZy\LegacyX-MatchZy.csproj", "{79E670A0-8DBB-4B88-9987-DB99ACDF4790}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-Reconnect", "LegacyX-Reconnect\LegacyX-Reconnect.csproj", "{568275A2-E220-474A-8EBF-C014FB67CABE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-Spectator", "LegacyX-Spectator\LegacyX-Spectator.csproj", "{C929ED66-D14C-4B5D-BDCF-1D1C3625D73E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-WeaponPaints", "LegacyX-WeaponPaints\LegacyX-WeaponPaints.csproj", "{5C8C597F-4408-431C-A94D-635B7C47B26F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,5 +29,33 @@ Global
 		{BFA5891E-13EA-4D92-A95C-9A1F9D45A1F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BFA5891E-13EA-4D92-A95C-9A1F9D45A1F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BFA5891E-13EA-4D92-A95C-9A1F9D45A1F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D112986D-7EC3-4875-83E9-098271CC0801}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D112986D-7EC3-4875-83E9-098271CC0801}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D112986D-7EC3-4875-83E9-098271CC0801}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D112986D-7EC3-4875-83E9-098271CC0801}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2A7AD3EA-6078-4E61-A60C-2A18A85B39C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2A7AD3EA-6078-4E61-A60C-2A18A85B39C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2A7AD3EA-6078-4E61-A60C-2A18A85B39C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2A7AD3EA-6078-4E61-A60C-2A18A85B39C8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F59F1ABE-652A-4882-8F1D-9631A0A195FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F59F1ABE-652A-4882-8F1D-9631A0A195FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F59F1ABE-652A-4882-8F1D-9631A0A195FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F59F1ABE-652A-4882-8F1D-9631A0A195FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79E670A0-8DBB-4B88-9987-DB99ACDF4790}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79E670A0-8DBB-4B88-9987-DB99ACDF4790}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79E670A0-8DBB-4B88-9987-DB99ACDF4790}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79E670A0-8DBB-4B88-9987-DB99ACDF4790}.Release|Any CPU.Build.0 = Release|Any CPU
+		{568275A2-E220-474A-8EBF-C014FB67CABE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{568275A2-E220-474A-8EBF-C014FB67CABE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{568275A2-E220-474A-8EBF-C014FB67CABE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{568275A2-E220-474A-8EBF-C014FB67CABE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C929ED66-D14C-4B5D-BDCF-1D1C3625D73E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C929ED66-D14C-4B5D-BDCF-1D1C3625D73E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C929ED66-D14C-4B5D-BDCF-1D1C3625D73E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C929ED66-D14C-4B5D-BDCF-1D1C3625D73E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C8C597F-4408-431C-A94D-635B7C47B26F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C8C597F-4408-431C-A94D-635B7C47B26F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C8C597F-4408-431C-A94D-635B7C47B26F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C8C597F-4408-431C-A94D-635B7C47B26F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

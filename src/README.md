@@ -1,15 +1,15 @@
 # Source Map
 
-Phase A preserves existing module paths to avoid gameplay behavior changes and fragile mass moves. This directory records the target source ownership for the next compatibility-preserving migration.
+The canonical source folders are now the LEGACY-X runtime module names. The `src/` directory remains an architecture index; CounterStrikeSharp projects live at repository root to preserve their upstream-relative asset and documentation layout.
 
-| Target source area | Existing Phase A module path |
+| Target source area | Canonical module path |
 |---|---|
-| `src/MatchZy/` | `matchzy/` |
-| `src/AFKManager/` | `afkmanager/` |
-| `src/AdminPlus/` | `adminplus/plugin/AdminPlus/` |
-| `src/Community/` | `community/` |
-| `src/Reconnect/` | `reconnect/` |
-| `src/SpectatorComms/` | `spectator-comms/` |
-| `src/SkinBridge/` | `weaponpaints-legacyx/` |
+| `src/LegacyX-Admin/` | `LegacyX-Admin/` |
+| `src/LegacyX-MatchZy/` | `LegacyX-MatchZy/` |
+| `src/LegacyX-AFKManager/` | `LegacyX-AFKManager/` |
+| `src/LegacyX-Community/` | `LegacyX-Community/` |
+| `src/LegacyX-Reconnect/` | `LegacyX-Reconnect/` |
+| `src/LegacyX-Spectator/` | `LegacyX-Spectator/` |
+| `src/LegacyX-WeaponPaints/` | `LegacyX-WeaponPaints/` |
 
-No source is moved in Phase A. The map makes the intended source-versus-runtime boundary explicit without changing CounterStrikeSharp load paths.
+The former minimal AdminPlus bridge is removed. `LegacyX-Admin` is the complete upstream-derived in-game admin owner.
