@@ -94,6 +94,7 @@ public static class Discord
     private static string ChatLogsWebhook = "";
     private static string ReportAndCalladminWebhook = "";
     private static string ReportAndCalladminWebhookMentionUserId = "";
+    private static string ServerConnectUrl = "";
     public static string ConfiguredServerAddress = "";
     private static Timer? _statusTimer;
 
@@ -108,6 +109,7 @@ public static class Discord
                 ConnectionLogsWebhook = ChatLogsWebhook = ReportAndCalladminWebhook = "";
                 ReportAndCalladminWebhookMentionUserId = "@everyone";
                 ConfiguredServerAddress = environment.Get("LEGACYX_SERVER_ADDRESS");
+                ServerConnectUrl = "";
                 return;
             }
 
@@ -120,11 +122,31 @@ public static class Discord
             ReportAndCalladminWebhook = environment.GetModule("ADMIN", "DISCORD_REPORT_WEBHOOK");
             ReportAndCalladminWebhookMentionUserId = environment.GetModule("ADMIN", "DISCORD_REPORT_MENTION", "@everyone");
             ConfiguredServerAddress = environment.Get("LEGACYX_SERVER_ADDRESS");
+            ServerConnectUrl = BuildServerConnectUrl(
+                environment.GetModule("ADMIN", "DISCORD_CONNECT_URL"),
+                environment.Get("LEGACYX_SERVER_ID"));
         }
         catch (Exception ex)
         {
             AdminPlus.LogError($"Config load error: {ex.Message}");
         }
+    }
+
+    private static string BuildServerConnectUrl(string configuredUrl, string serverId)
+    {
+        if (string.IsNullOrWhiteSpace(configuredUrl) || string.IsNullOrWhiteSpace(serverId))
+        {
+            return "";
+        }
+
+        if (!Uri.TryCreate(configuredUrl, UriKind.Absolute, out var baseUri) || baseUri.Scheme != Uri.UriSchemeHttps)
+        {
+            AdminPlus.LogError("Discord connect URL must be an absolute HTTPS URL.");
+            return "";
+        }
+
+        var separator = string.IsNullOrWhiteSpace(baseUri.Query) ? "?" : "&";
+        return $"{baseUri}{separator}server={Uri.EscapeDataString(serverId)}";
     }
 
     public static async Task SendCommunicationLog(string playerName, ulong playerSteamId, string adminName, ulong adminSteamId, string reason, int duration, string actionType, bool isApplied, AdminPlus plugin)
@@ -469,6 +491,27 @@ public static class Discord
         {
         }
         
+        object? components = string.IsNullOrWhiteSpace(ServerConnectUrl)
+            ? null
+            : new[]
+            {
+                new
+                {
+                    type = 1,
+                    components = new[]
+                    {
+                        new
+                        {
+                            type = 2,
+                            style = 5,
+                            label = "Connect to Server",
+                            emoji = new { name = "🎮" },
+                            url = ServerConnectUrl
+                        }
+                    }
+                }
+            };
+
         var embedObject = new
         {
             embeds = new[]
@@ -492,6 +535,7 @@ public static class Discord
                     timestamp = DateTime.UtcNow
                 }
             },
+            components
         };
 
         try
@@ -799,7 +843,10 @@ public static class Discord
             string jsonString = JsonSerializer.Serialize(embedData, JsonOptions);
             using StringContent stringContent = new(jsonString, Encoding.UTF8, "application/json");
 
-            using HttpResponseMessage response = await _httpClient.PostAsync(webhookUrl, stringContent).ConfigureAwait(false);
+            var executionUrl = webhookUrl.Contains("?", StringComparison.Ordinal)
+                ? $"{webhookUrl}&with_components=true"
+                : $"{webhookUrl}?with_components=true";
+            using HttpResponseMessage response = await _httpClient.PostAsync(executionUrl, stringContent).ConfigureAwait(false);
             string responseContent = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
