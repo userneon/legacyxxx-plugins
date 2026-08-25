@@ -95,6 +95,7 @@ public static class Discord
     private static string ReportAndCalladminWebhook = "";
     private static string ReportAndCalladminWebhookMentionUserId = "";
     private static string ServerConnectUrl = "";
+    private static bool DiscordMatchModeAllowed;
     public static string ConfiguredServerAddress = "";
     private static Timer? _statusTimer;
 
@@ -110,6 +111,7 @@ public static class Discord
                 ReportAndCalladminWebhookMentionUserId = "@everyone";
                 ConfiguredServerAddress = environment.Get("LEGACYX_SERVER_ADDRESS");
                 ServerConnectUrl = "";
+                DiscordMatchModeAllowed = false;
                 return;
             }
 
@@ -125,6 +127,9 @@ public static class Discord
             ServerConnectUrl = BuildServerConnectUrl(
                 environment.GetModule("ADMIN", "DISCORD_CONNECT_URL"),
                 environment.Get("LEGACYX_SERVER_ID"));
+            DiscordMatchModeAllowed = IsDiscordMatchModeAllowed(
+                environment.Get("LEGACYX_SERVER_MODE"),
+                environment.GetModule("ADMIN", "DISCORD_MATCH_MODES", "competitive_5v5"));
         }
         catch (Exception ex)
         {
@@ -147,6 +152,17 @@ public static class Discord
 
         var separator = string.IsNullOrWhiteSpace(baseUri.Query) ? "?" : "&";
         return $"{baseUri}{separator}server={Uri.EscapeDataString(serverId)}";
+    }
+
+    private static bool IsDiscordMatchModeAllowed(string configuredMode, string configuredAllowlist)
+    {
+        var mode = configuredMode.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(mode)) return false;
+
+        return configuredAllowlist
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(value => value.ToLowerInvariant())
+            .Contains(mode, StringComparer.Ordinal);
     }
 
     public static async Task SendCommunicationLog(string playerName, ulong playerSteamId, string adminName, ulong adminSteamId, string reason, int duration, string actionType, bool isApplied, AdminPlus plugin)
@@ -429,6 +445,8 @@ public static class Discord
 
     public static async Task SendServerStatus(AdminPlus plugin, string status, int playerCount, int maxPlayers, string currentMap, string uptime, string serverIp = "", string timeLeft = "")
     {
+        if (!DiscordMatchModeAllowed) return;
+
         if (string.IsNullOrWhiteSpace(ServerStatusWebhook))
         {
             return;

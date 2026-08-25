@@ -44,10 +44,12 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
         config.PluginSecret = environment.GetModule("RECONNECT", "PLUGIN_TOKEN", config.PluginSecret);
         config.ServerId = environment.Get("LEGACYX_SERVER_ID", config.ServerId);
         config.ServerAddress = environment.Get("LEGACYX_SERVER_ADDRESS", config.ServerAddress);
+        config.ServerMode = environment.Get("LEGACYX_SERVER_MODE", config.ServerMode);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
         Config.ServerId = Config.ServerId.Trim();
         Config.ServerAddress = Config.ServerAddress.Trim();
+        Config.ServerMode = Config.ServerMode.Trim().ToLowerInvariant();
         Config.HeartbeatSeconds = Math.Clamp(Config.HeartbeatSeconds, 10, 120);
     }
 
