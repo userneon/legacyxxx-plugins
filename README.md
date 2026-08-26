@@ -6,7 +6,7 @@ This repository contains **source only** for LEGACY-X CS2 server plugins. It has
 
 | Module | Source project | Runtime assembly | Responsibility |
 |---|---|---|---|
-| LegacyX-Admin | `LegacyX-Admin/LegacyX-Admin.csproj` | `LegacyX-Admin.dll` | Full admin menus, bans, mute/gag, reports, votes, reservations, optional Discord audit log |
+| LegacyX-Admin | `LegacyX-Admin/LegacyX-Admin.csproj` | `LegacyX-Admin.dll` | Full admin menus, bans, mute/gag, reports, votes, reservations; optional player `!admin` Call channel alert only |
 | LegacyX-AFKManager | `LegacyX-AFKManager/LegacyX-AFKManager.csproj` | `LegacyX-AFKManager.dll` | MatchZy-aware AFK, C4 and spectator policy |
 | LegacyX-Community | `LegacyX-Community/LegacyX-Community.csproj` | `LegacyX-Community.dll` | Player progress, rank and clan lookup through Root API |
 | LegacyX-MatchZy | `LegacyX-MatchZy/LegacyX-MatchZy.csproj` | `LegacyX-MatchZy.dll` | Competitive match lifecycle and Match Core bridge |

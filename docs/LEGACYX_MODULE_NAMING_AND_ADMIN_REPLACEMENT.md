@@ -22,8 +22,8 @@ The upstream source baseline is `debr1sj/CS2-AdminPlus` commit `1225a03ee4f393ea
 
 Every module continues to read the one future host file `CounterStrikeSharp/.env` through `LegacyX.Shared.Configuration`. The root `.env.example` is the canonical template. Plugin-local JSON/cfg remains only for secret-free behavior defaults and state that an upstream plugin owns locally.
 
-The full admin plugin remains file-based for bans, admin groups, communication records, menu bindings, and optional Discord settings. It does **not** receive Supabase, database, browser, or backend service-role credentials. Its central environment integration controls at minimum module enablement; a future reviewed adapter may map optional Discord webhooks from the central secret store without writing them into tracked source.
+The full admin plugin remains file-based for bans, admin groups, communication records and menu bindings. It does **not** receive Supabase, database, browser or backend service-role credentials. Its only optional Discord setting is the player `!admin` / report Call channel path; no other webhook adapter is present in source.
 
 ## Runtime and deployment boundary
 
-This migration changes source names, assemblies, central configuration wiring, and localization preparation only. It does not install a CS2 server, deploy a DLL, create real tokens, configure Discord, copy runtime files, or delete/convert any live ban or moderation data.
+This migration changes source names, assemblies, central configuration wiring, and localization preparation only. It does not install a CS2 server, deploy a DLL, create real tokens, configure the optional Call channel, copy runtime files, or delete/convert any live ban or moderation data.

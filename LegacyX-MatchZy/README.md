@@ -97,7 +97,7 @@ Map pool-д server дээр суусан map-уудыг л оруулна. Plugi
 
 ## Repository boundary
 
-`LegacyX-MatchZy/` нь match lifecycle, competitive settings, demo/stats, map transition болон MatchZy configs-ийг эзэмшинэ. `LegacyX-Admin/` нь in-game admin menu, moderation, report, vote болон reservation ownership-г эзэмшинэ. Database audit, Root API, Discord webhook secret ownership болон frontend API нь `legacyxxx-backend` repository-д үлдэнэ.
+`LegacyX-MatchZy/` нь match lifecycle, competitive settings, demo/stats, map transition болон MatchZy configs-ийг эзэмшинэ. `LegacyX-Admin/` нь in-game admin menu, moderation, report, vote болон reservation ownership-г эзэмшинэ. Database audit, Root API болон frontend API нь `legacyxxx-backend` repository-д үлдэнэ; MatchZy Discord event delivery байхгүй.
 
 ## Upstream
 
