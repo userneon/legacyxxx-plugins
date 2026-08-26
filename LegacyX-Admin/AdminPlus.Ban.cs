@@ -40,7 +40,7 @@ public partial class AdminPlus
 
     public void RegisterBanCommands()
     {
-        AddCommand("ban", Localizer["Ban.Usage"], CmdBan);
+        AddCommand("ban", "Use !admin → Ban to select player, duration, reason and confirmation", CmdBanMenuOnly);
         AddCommand("ipban", Localizer["IpBan.Usage"], CmdIpBan);
         AddCommand("unban", Localizer["Unban.Usage"], CmdUnban);
         AddCommand("lastban", Localizer["LastBan.Header"], CmdLastBan);
@@ -55,6 +55,24 @@ public partial class AdminPlus
         AddCommand("css_cleanbans", "Clean all bans from console", CmdCleanBans);
         AddCommand("css_cleanipbans", "Clean all IP bans from console", CmdCleanIpBans);
         AddCommand("css_cleansteambans", "Clean all SteamID bans from console", CmdCleanSteamBans);
+    }
+
+    private void CmdBanMenuOnly(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null)
+        {
+            CmdBan(null, info);
+            return;
+        }
+
+        if (!caller.IsValid || !HasEffectivePermission(caller, "@css/ban"))
+        {
+            if (caller.IsValid) caller.Print(Localizer["NoPermission"]);
+            return;
+        }
+
+        caller.Print("Use !admin → Ban. Select player, duration, reason, then confirm.");
+        ShowPlayerList(caller);
     }
 
     private void CmdBan(CCSPlayerController? caller, CommandInfo info)

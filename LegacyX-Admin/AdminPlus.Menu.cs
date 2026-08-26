@@ -17,6 +17,8 @@ namespace AdminPlus;
 
 public partial class AdminPlus
 {
+    private sealed record BanMenuTarget(ulong SteamId, string PlayerName, string IpAddress);
+
     private static readonly List<string> PredefinedMaps = new()
     {
         "de_vertigo", "de_mirage", "de_inferno", "de_anubis", "de_nuke",
@@ -1168,7 +1170,11 @@ public partial class AdminPlus
         foreach (var p in Utilities.GetPlayers()!)
         {
             if (p == null || !p.IsValid || p.IsBot) continue;
-            menu.AddMenuOption(SanitizeName(p.PlayerName), (ply, opt) => ShowBanTypeMenu(admin, p));
+            var target = new BanMenuTarget(
+                p.SteamID,
+                SanitizeName(p.PlayerName),
+                string.IsNullOrWhiteSpace(p.IpAddress) ? "-" : p.IpAddress);
+            menu.AddMenuOption(target.PlayerName, (ply, opt) => ShowBanTypeMenu(admin, target));
         }
 
         if (!menu.MenuOptions.Any())
@@ -1178,7 +1184,7 @@ public partial class AdminPlus
         OpenMenu(admin, menu);
     }
 
-    private void ShowBanTypeMenu(CCSPlayerController admin, CCSPlayerController target)
+    private void ShowBanTypeMenu(CCSPlayerController admin, BanMenuTarget target)
     {
         if (!HasEffectivePermission(admin, "@css/ban"))
         {
@@ -1190,12 +1196,13 @@ public partial class AdminPlus
         if (menu == null) return;
         
         menu.AddMenuOption(Localizer["Menu.Option.SteamIdBan"], (ply, opt) => ShowDurationMenu(admin, target));
-        menu.AddMenuOption(Localizer["Menu.Option.IpBan"], (ply, opt) => ShowReasonMenu(admin, target, 0, true));
+        if (target.IpAddress != "-")
+            menu.AddMenuOption(Localizer["Menu.Option.IpBan"], (ply, opt) => ShowReasonMenu(admin, target, 0, true));
         menu.ExitButton = true;
         OpenMenu(admin, menu);
     }
 
-    private void ShowDurationMenu(CCSPlayerController admin, CCSPlayerController target)
+    private void ShowDurationMenu(CCSPlayerController admin, BanMenuTarget target)
     {
         if (!HasEffectivePermission(admin, "@css/ban"))
         {
@@ -1221,7 +1228,7 @@ public partial class AdminPlus
         OpenMenu(admin, menu);
     }
 
-    private void ShowReasonMenu(CCSPlayerController admin, CCSPlayerController target, int minutes, bool isIpBan)
+    private void ShowReasonMenu(CCSPlayerController admin, BanMenuTarget target, int minutes, bool isIpBan)
     {
         if (!HasEffectivePermission(admin, "@css/ban"))
         {
@@ -1248,49 +1255,81 @@ public partial class AdminPlus
                     return;
                 }
 
-                var safeName = SanitizeName(target.PlayerName);
-
-                if (isIpBan)
-                {
-                    string ip = target.IpAddress ?? "-";
-                    var line = $"addip \"{ip}\" expiry:0 // {reason}";
-
-                    lock (_lock)
-                    {
-                        IpBans[ip] = (0, line, safeName);
-                        File.WriteAllLines(BannedIpPath, IpBans.Values.Select(x => x.line));
-                    }
-
-                    target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
-                    PlayerExtensions.PrintToAll(Localizer["IpBan.AddedNick", admin.PlayerName, safeName, reason]);
-                    LogAction($"{admin.PlayerName} ip-banned {safeName} ({ip}). Reason: {reason}");
-                }
-                else
-                {
-                    var steamId = target.SteamID.ToString();
-                    var ip = target.IpAddress ?? "-";
-                    var expiry = minutes == 0 ? 0 : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + minutes * 60;
-                    var line = $"banid \"{steamId}\" \"{safeName}\" ip:{ip} expiry:{expiry} // {reason}";
-
-                    lock (_lock)
-                    {
-                        SteamBans[steamId] = (expiry, line, safeName, ip);
-                        File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(x => x.line));
-                    }
-
-                    target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
-                    if (minutes == 0)
-                        PlayerExtensions.PrintToAll(Localizer["PermabannedReason", admin.PlayerName, safeName, reason]);
-                    else
-                        PlayerExtensions.PrintToAll(Localizer["BannedReason", admin.PlayerName, safeName, minutes, reason]);
-
-                    LogAction($"{admin.PlayerName} banned {safeName} ({steamId}) [IP:{ip}] for {minutes} minutes. Reason: {reason}");
-                }
+                ShowBanConfirmationMenu(admin, target, minutes, isIpBan, reason);
             });
         }
 
         menu.ExitButton = true;
         OpenMenu(admin, menu);
+    }
+
+    private void ShowBanConfirmationMenu(CCSPlayerController admin, BanMenuTarget target, int minutes, bool isIpBan, string reason)
+    {
+        if (!HasEffectivePermission(admin, "@css/ban"))
+        {
+            admin.Print(Localizer["NoPermission"]);
+            return;
+        }
+
+        var menu = CreateMenu($"Confirm ban: {target.PlayerName}");
+        if (menu == null) return;
+
+        var duration = minutes == 0 ? Localizer["Duration.Forever"] : $"{minutes} {Localizer["Duration.Minute"]}";
+        menu.AddMenuOption($"Target: {target.PlayerName}", (ply, opt) => { });
+        menu.AddMenuOption($"Duration: {duration}", (ply, opt) => { });
+        menu.AddMenuOption($"Reason: {reason}", (ply, opt) => { });
+        menu.AddMenuOption(Localizer["Menu.ConfirmYes"], (ply, opt) => ApplyMenuBan(admin, target, minutes, isIpBan, reason));
+        menu.AddMenuOption(Localizer["Menu.ConfirmNo"], (ply, opt) => ShowReasonMenu(admin, target, minutes, isIpBan));
+        menu.ExitButton = true;
+        OpenMenu(admin, menu);
+    }
+
+    private void ApplyMenuBan(CCSPlayerController admin, BanMenuTarget target, int minutes, bool isIpBan, string reason)
+    {
+        if (!HasEffectivePermission(admin, "@css/ban"))
+        {
+            admin.Print(Localizer["NoPermission"]);
+            return;
+        }
+
+        var safeName = target.PlayerName;
+        var steamId = target.SteamId.ToString();
+        var expiry = minutes == 0 ? 0 : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + minutes * 60;
+
+        if (isIpBan)
+        {
+            if (target.IpAddress == "-")
+            {
+                admin.Print("IP snapshot is unavailable for this player.");
+                return;
+            }
+
+            var line = $"addip \"{target.IpAddress}\" expiry:0 // {reason}";
+            lock (_lock)
+            {
+                IpBans[target.IpAddress] = (0, line, safeName);
+                File.WriteAllLines(BannedIpPath, IpBans.Values.Select(x => x.line));
+            }
+            PlayerExtensions.PrintToAll(Localizer["IpBan.AddedNick", admin.PlayerName, safeName, reason]);
+            LogAction($"{admin.PlayerName} ip-banned {safeName} ({target.IpAddress}). Reason: {reason}");
+        }
+        else
+        {
+            var line = $"banid \"{steamId}\" \"{safeName}\" ip:{target.IpAddress} expiry:{expiry} // {reason}";
+            lock (_lock)
+            {
+                SteamBans[steamId] = (expiry, line, safeName, target.IpAddress);
+                File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(x => x.line));
+            }
+            if (minutes == 0)
+                PlayerExtensions.PrintToAll(Localizer["PermabannedReason", admin.PlayerName, safeName, reason]);
+            else
+                PlayerExtensions.PrintToAll(Localizer["BannedReason", admin.PlayerName, safeName, minutes, reason]);
+            LogAction($"{admin.PlayerName} banned {safeName} ({steamId}) [IP:{target.IpAddress}] for {minutes} minutes. Reason: {reason}");
+        }
+
+        var connectedTarget = Utilities.GetPlayers().FirstOrDefault(p => p != null && p.IsValid && p.SteamID == target.SteamId);
+        connectedTarget?.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
     }
 
     private void BanListMenu(CCSPlayerController? caller, CommandInfo info)
