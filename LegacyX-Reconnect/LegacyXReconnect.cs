@@ -21,7 +21,7 @@ public sealed class LegacyXReconnectConfig : BasePluginConfig
     public string ServerAddress { get; set; } = "";
     public string ServerMode { get; set; } = "competitive_5v5";
     public int HeartbeatSeconds { get; set; } = 30;
-    public string ChatPrefix { get; set; } = "{Lime}[LEGACY-X]{Default}";
+    public string ChatPrefix { get; set; } = LegacyXChat.Prefix;
 }
 
 public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnectConfig>
@@ -170,7 +170,7 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
                 Print(player, "Reconnect target validation failed.");
                 return;
             }
-            Print(player, "Reconnecting to your last online LEGACY-X server…");
+            Print(player, $"IP: CONNECT {address}");
             Server.NextFrame(() => { if (player.IsValid) player.ExecuteClientCommand($"connect {address}"); });
         }
         catch (Exception exception)
@@ -197,5 +197,8 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
 
     private bool Ready() => Config.Enabled && !string.IsNullOrWhiteSpace(Config.ApiBaseUrl) && !string.IsNullOrWhiteSpace(Config.PluginSecret) && !string.IsNullOrWhiteSpace(Config.ServerId) && !string.IsNullOrWhiteSpace(Config.ServerAddress);
     private static bool IsTrackable(CCSPlayerController? player) => player != null && player.IsValid && !player.IsBot && !player.IsHLTV && player.SteamID > 0;
-    private void Print(CCSPlayerController player, string message) => Server.NextFrame(() => { if (player.IsValid) player.PrintToChat($"{Config.ChatPrefix} {message}"); });
+    private void Print(CCSPlayerController player, string message) => Server.NextFrame(() =>
+    {
+        if (player.IsValid) player.PrintToChat(LegacyXChat.System(message));
+    });
 }

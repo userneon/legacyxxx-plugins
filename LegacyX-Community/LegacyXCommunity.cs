@@ -14,7 +14,7 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public string ApiBaseUrl { get; set; } = "";
     public string PluginId { get; set; } = "legacyx-community";
     public string PluginSecret { get; set; } = "";
-    public string ChatPrefix { get; set; } = "{Lime}[LEGACY-X]{Default}";
+    public string ChatPrefix { get; set; } = LegacyXChat.Prefix;
 }
 
 public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
@@ -122,7 +122,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     {
         Server.NextFrame(() =>
         {
-            if (player.IsValid) player.PrintToChat($"{Config.ChatPrefix} {message}");
+            if (player.IsValid) player.PrintToChat(LegacyXChat.System(message));
         });
     }
 }

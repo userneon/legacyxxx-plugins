@@ -21,8 +21,8 @@ namespace MatchZy
 
         public override string ModuleDescription => "LEGACY-X 5v5 competitive matches, ready gate, stats and random map lifecycle";
 
-        public string chatPrefix = $"[{ChatColors.Green}LEGACY-X{ChatColors.Default}]";
-        public string adminChatPrefix = $"[{ChatColors.Red}ADMIN{ChatColors.Default}]";
+        public string chatPrefix = LegacyXChat.Prefix;
+        public string adminChatPrefix = LegacyXChat.Prefix;
 
         // Plugin start phase data
         public bool isPractice = false;

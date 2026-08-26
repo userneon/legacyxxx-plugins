@@ -311,7 +311,7 @@ public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
                                 {
                                     RemoveC4(weaponService, weapon);
                                     nearestPlayer.GiveNamedItem("weapon_c4");
-                                    Server.PrintToChatAll(ReplaceVars(player,
+                                    PrintSystemAll(ReplaceVars(player,
                                         Localizer["ChatBombTransfer"].Value
                                             .Replace("{targetPlayerName}", nearestPlayer.PlayerName)));
                                 }
@@ -324,19 +324,19 @@ public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
                         switch (Config.AfkPunishment)
                         {
                             case 0:
-                                Server.PrintToChatAll(ReplaceVars(player, Localizer["ChatKillMessage"].Value));
+                                PrintSystemAll(ReplaceVars(player, Localizer["ChatKillMessage"].Value));
                                 playerPawn?.CommitSuicide(false, true);
                                 
                                 break;
                             case 1:
-                                Server.PrintToChatAll(ReplaceVars(player, Localizer["ChatMoveMessage"].Value));
+                                PrintSystemAll(ReplaceVars(player, Localizer["ChatMoveMessage"].Value));
                                 playerPawn?.CommitSuicide(false, true);
                                 player.ChangeTeam(CsTeam.Spectator);
                                 data.MovedByPlugin = true;
                                 
                                 break;
                             case 2:
-                                Server.PrintToChatAll(ReplaceVars(player, Localizer["ChatKickMessage"].Value));
+                                PrintSystemAll(ReplaceVars(player, Localizer["ChatKickMessage"].Value));
                                 Server.ExecuteCommand($"kickid {player.UserId}");
                                 
                                 break;
@@ -351,15 +351,15 @@ public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
                     switch (Config.AfkPunishment)
                     {
                         case 0:
-                            player.PrintToChat(ReplaceVars(player, Localizer["ChatWarningKillMessage"].Value, Config.AfkPunishAfterWarnings * Config.AfkWarnInterval - data.AfkWarningCount * Config.AfkWarnInterval));
+                            PrintSystem(player, ReplaceVars(player, Localizer["ChatWarningKillMessage"].Value, Config.AfkPunishAfterWarnings * Config.AfkWarnInterval - data.AfkWarningCount * Config.AfkWarnInterval));
                         break;
 
                         case 1:
-                            player.PrintToChat(ReplaceVars(player, Localizer["ChatWarningMoveMessage"].Value, Config.AfkPunishAfterWarnings * Config.AfkWarnInterval - data.AfkWarningCount * Config.AfkWarnInterval));
+                            PrintSystem(player, ReplaceVars(player, Localizer["ChatWarningMoveMessage"].Value, Config.AfkPunishAfterWarnings * Config.AfkWarnInterval - data.AfkWarningCount * Config.AfkWarnInterval));
                             break;
 
                         case 2:
-                            player.PrintToChat(ReplaceVars(player, Localizer["ChatWarningKickMessage"].Value, Config.AfkPunishAfterWarnings * Config.AfkWarnInterval - data.AfkWarningCount * Config.AfkWarnInterval));
+                            PrintSystem(player, ReplaceVars(player, Localizer["ChatWarningKickMessage"].Value, Config.AfkPunishAfterWarnings * Config.AfkWarnInterval - data.AfkWarningCount * Config.AfkWarnInterval));
                             break;
                     }
 
@@ -392,12 +392,12 @@ public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
                             switch (Config.AntiCampPunishment)
                             {
                                 case 0:
-                                    Server.PrintToChatAll(ReplaceVars(player, Localizer["AntiCampSlayMessage"].Value));
+                                    PrintSystemAll(ReplaceVars(player, Localizer["AntiCampSlayMessage"].Value));
 
                                     playerPawn?.CommitSuicide(false, true);
                                     break;
                                 case 1:
-                                    Server.PrintToChatAll(ReplaceVars(player, Localizer["AntiCampSlapMessage"].Value));
+                                    PrintSystemAll(ReplaceVars(player, Localizer["AntiCampSlapMessage"].Value));
                                 
                                     Slap(playerPawn, Config.AntiCampSlapDamage);
                                     break;
@@ -412,10 +412,10 @@ public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
                         switch (Config.AntiCampPunishment)
                         {
                             case 0:
-                                player.PrintToChat(ReplaceVars(player, Localizer["AntiCampSlayWarningMessage"].Value, Config.AntiCampPunishAfterWarnings * Config.AntiCampWarnInterval - data.AntiCampWarningCount * Config.AntiCampWarnInterval));
+                                PrintSystem(player, ReplaceVars(player, Localizer["AntiCampSlayWarningMessage"].Value, Config.AntiCampPunishAfterWarnings * Config.AntiCampWarnInterval - data.AntiCampWarningCount * Config.AntiCampWarnInterval));
                                 break;
                             case 1:
-                                player.PrintToChat(ReplaceVars(player, Localizer["AntiCampSlapWarningMessage"].Value, Config.AntiCampPunishAfterWarnings * Config.AntiCampWarnInterval - data.AntiCampWarningCount * Config.AntiCampWarnInterval));
+                                PrintSystem(player, ReplaceVars(player, Localizer["AntiCampSlapWarningMessage"].Value, Config.AntiCampPunishAfterWarnings * Config.AntiCampWarnInterval - data.AntiCampWarningCount * Config.AntiCampWarnInterval));
                                 break;
                         }
                             
@@ -455,7 +455,7 @@ public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
                 
                 if (data.SpecWarningCount == Config.SpecKickAfterWarnings)
                 {
-                    Server.PrintToChatAll(ReplaceVars(player, Localizer["ChatKickMessage"].Value));
+                    PrintSystemAll(ReplaceVars(player, Localizer["ChatKickMessage"].Value));
                     Server.ExecuteCommand($"kickid {player.UserId}");
 
                     data.SpecWarningCount = 0;
@@ -464,7 +464,7 @@ public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
                     continue;
                 }
 
-                player.PrintToChat( ReplaceVars(player, Localizer["ChatWarningKickMessage"].Value, Config.SpecKickAfterWarnings * Config.SpecWarnInterval - data.SpecWarningCount * Config.SpecWarnInterval));
+                PrintSystem(player, ReplaceVars(player, Localizer["ChatWarningKickMessage"].Value, Config.SpecKickAfterWarnings * Config.SpecWarnInterval - data.SpecWarningCount * Config.SpecWarnInterval));
                 data.SpecWarningCount++;
                 data.SpecAfkTime = 0;
             }
@@ -472,6 +472,16 @@ public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
         }
     }
     
+    private static void PrintSystemAll(string message)
+    {
+        Server.PrintToChatAll(LegacyXChat.System(message));
+    }
+
+    private static void PrintSystem(CCSPlayerController player, string message)
+    {
+        player.PrintToChat(LegacyXChat.System(message));
+    }
+
     private static float CalculateDistance(Vector point1, Vector point2)
     {
         var dx = point2.X - point1.X;

@@ -666,7 +666,7 @@ public partial class AdminPlus : BasePlugin
         catch (Exception ex)
         {
             if (caller != null && caller.IsValid)
-                caller.PrintToChat($"{{green}}[LEGACY-X Admin]{{default}} Failed to get admin list: {ex.Message}");
+                caller.PrintToChat(LegacyXChat.System($"Failed to get admin list: {ex.Message}"));
             else
                 LogError($"Admins command error: {ex.Message}");
         }
@@ -875,7 +875,7 @@ public partial class AdminPlus : BasePlugin
     private static string GetPrefixedMessage(string key, params object[] args)
     {
         var message = _instance?.Localizer[key, args] ?? key;
-        var prefix = _instance?.Localizer["Prefix"] ?? "{green}[LEGACY-X Admin]{default}";
+        var prefix = LegacyXChat.Prefix;
         return message.Replace("{Prefix}", prefix);
     }
     
@@ -1124,19 +1124,14 @@ public static class PlayerExtensions
 {
     public static void Print(this CCSPlayerController controller, string message = "")
     {
-        var prefix = AdminPlus._instance?.Localizer?["Prefix"] ?? "";
-        if (!string.IsNullOrEmpty(prefix))
-            controller.PrintToChat($"{prefix} {message}");
-        else
-            controller.PrintToChat(message);
+        controller.PrintToChat(LegacyXChat.System(message));
     }
     
         public static void PrintToAll(string message)
         {
             try
             {
-                var prefix = AdminPlus._instance?.Localizer?["Prefix"] ?? "";
-                string fullMessage = !string.IsNullOrEmpty(prefix) ? $"{prefix} {message}" : message;
+                string fullMessage = LegacyXChat.System(message);
                 
                 if (Server.MaxPlayers <= 0)
                 {
