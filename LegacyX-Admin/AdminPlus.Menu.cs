@@ -72,15 +72,16 @@ public partial class AdminPlus
             return;
         }
 
-        var menu = CreateMenu(Localizer["Menu.Title"]);
+        var menu = CreateMenu("LEGACY-X ADMIN | MAIN MENU");
         List<ChatMenuOptionData> options = [];
 
         if (HasEffectivePermission(caller, "@css/root"))
-            options.Add(new ChatMenuOptionData(Localizer["Menu.Option.AdminManage"], () => ShowAdminManageMenu(caller)));
+            options.Add(new ChatMenuOptionData("ADMINISTRATION & PERMISSIONS", () => ShowAdminManageMenu(caller)));
 
-        options.Add(new ChatMenuOptionData(Localizer["Menu.ServerCommands"], () => ShowServerCommands(caller)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.PlayerCommands"], () => ShowPlayerCommands(caller)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Title"], () => ShowFunRootMenu(caller)));
+        options.Add(new ChatMenuOptionData("PLAYER MODERATION & TOOLS", () => ShowPlayerCommands(caller)));
+        options.Add(new ChatMenuOptionData("SERVER & MATCH CONTROL", () => ShowServerCommands(caller)));
+        options.Add(new ChatMenuOptionData("GAMEPLAY & FUN TOOLS", () => ShowFunRootMenu(caller)));
+        options.Add(new ChatMenuOptionData("PUNISHMENT HISTORY", () => BanListMenu(caller, info)));
 
         foreach (var menuOptionData in options)
         {
@@ -103,7 +104,7 @@ public partial class AdminPlus
             return;
         }
 
-        var m = CreateMenu(Localizer["Menu.Fun.Title"]);
+        var m = CreateMenu("GAMEPLAY & FUN TOOLS");
         if (m == null) return;
         
         m.AddMenuOption(Localizer["Menu.Fun.Cat.Teleport"], (p, o) => ShowFunTeleportMenu(admin));
@@ -805,7 +806,7 @@ public partial class AdminPlus
             return;
         }
 
-        var menu = CreateMenu(Localizer["Menu.PlayerCommands"]);
+        var menu = CreateMenu("PLAYER MODERATION & TOOLS");
         List<ChatMenuOptionData> options = [];
 
         options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Ban"], () => ShowPlayerList(admin)));
@@ -1066,7 +1067,7 @@ public partial class AdminPlus
             return;
         }
 
-        var menu = CreateMenu(Localizer["Menu.ServerCommands"]);
+        var menu = CreateMenu("SERVER & MATCH CONTROL");
         List<ChatMenuOptionData> options = [];
 
         options.Add(new ChatMenuOptionData(Localizer["Menu.Option.ChangeMap"], () => ShowMapSelectionMenu(admin)));
