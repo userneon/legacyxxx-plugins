@@ -214,12 +214,12 @@ public sealed class LegacyXPlayerTelemetry : BasePlugin, IPluginConfig<LegacyXPl
         {
             var player = Utilities.GetPlayers().FirstOrDefault(candidate => candidate != null && candidate.IsValid && candidate.SteamID == steamId);
             if (player == null) return;
-            player.PrintToChat("{green}LEGACY-X • {default}ROUND ENDED");
-            player.PrintToChat("────────────────────────");
-            player.PrintToChat($"ROUND: {roundNumber}");
-            player.PrintToChat($"SERVER: {Config.ServerId}");
-            player.PrintToChat($"EXP: {expColor}{sign}{delta}");
-            player.PrintToChat($"RANK: {{green}}{rankName}");
+            player.PrintToChat(LegacyXChat.System("ROUND ENDED"));
+            player.PrintToChat(LegacyXChat.System("────────────────────────"));
+            player.PrintToChat(LegacyXChat.System($"ROUND: {roundNumber}"));
+            player.PrintToChat(LegacyXChat.System($"SERVER: {{blue}}{Config.ServerId}"));
+            player.PrintToChat(LegacyXChat.System($"EXP: {expColor}{sign}{delta}"));
+            player.PrintToChat(LegacyXChat.System($"RANK: {{green}}{rankName}"));
         });
     }
 }
