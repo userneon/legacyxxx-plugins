@@ -259,6 +259,11 @@ public partial class AdminPlus
 
     private void CmdAddAdmin(CCSPlayerController? caller, CommandInfo info)
     {
+        if (_websiteAdminPolicyClient != null)
+        {
+            SendWebsitePolicyManagedMessage(caller);
+            return;
+        }
         bool isConsoleCommand = caller == null;
         
         if (isConsoleCommand)
@@ -348,6 +353,11 @@ public partial class AdminPlus
 
     private void CmdRemoveAdmin(CCSPlayerController? caller, CommandInfo info)
     {
+        if (_websiteAdminPolicyClient != null)
+        {
+            SendWebsitePolicyManagedMessage(caller);
+            return;
+        }
         bool isConsoleCommand = caller == null;
         
         if (isConsoleCommand)
@@ -491,6 +501,14 @@ public partial class AdminPlus
         if (!isConsoleCommand && (caller == null || !caller.IsValid || !HasEffectivePermission(caller, "@css/root")))
         {
             caller?.Print(Localizer["NoPermission"]);
+            return;
+        }
+
+        if (_websiteAdminPolicyClient != null)
+        {
+            _ = RefreshWebsiteAdminPolicyAsync();
+            if (caller != null && caller.IsValid) caller.Print("{green}LEGACY-X • {default}ADMIN POLICY REFRESH REQUESTED FROM WEBSITE");
+            else Console.WriteLine("[LEGACY-X Admin] Website admin policy refresh requested.");
             return;
         }
 

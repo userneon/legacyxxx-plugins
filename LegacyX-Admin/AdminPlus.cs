@@ -113,6 +113,7 @@ public partial class AdminPlus : BasePlugin
         EnsureAdminConfigFiles();
         EnsurePluginDataFiles();
         LoadMenuConfigFile();
+        InitializeWebsiteAdminPolicySync();
 
             BannedUserPath = Path.Combine(Server.GameDirectory, "csgo/cfg/banned_user.cfg");
             BannedIpPath = Path.Combine(Server.GameDirectory, "csgo/cfg/banned_ip.cfg");
