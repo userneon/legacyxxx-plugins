@@ -23,6 +23,22 @@ The plugin records only repeated high-alignment weapon-fire events. Each evidenc
 
 The signal is evidence for staff review only. It does not punish a player, change their state, or call any ban action. A single aligned shot is deliberately weak; repeated events increase the score slowly and remain contextual.
 
+## Suspension and manager review
+
+When all configured conditions are met — a multi-signal count, aggregate score, and average confidence — Phantom creates a `SUSPENDED` case. It immediately applies `MOVETYPE_NONE`, zero velocity modifier, and no incoming damage. The restriction is reapplied on every tick, player spawn, round start, weapon-fire observation, reconnect, and server-side restored-case lookup. The player's position, aim, team, score, health value, and Phantom mapping are never moved or otherwise changed.
+
+The state machine is `ACTIVE → SUSPICIOUS → HIGH_CONFIDENCE → SUSPENDED → MANAGER REVIEW`. A Manager or Owner can view evidence and cases through the Staff Panel Anti-Cheat workspace. **Clear**, **Keep**, and **Confirm ban** each require a review note and explicit browser confirmation. Confirming does not make a direct browser-to-server ban call: it writes the reviewed case audit record and queues the existing, 10-second-notice permanent-ban workflow for a scoped executor. A suspended disconnect is separately persisted as `suspended_disconnect`; it never auto-bans.
+
+| Restriction claim | Source-ready implementation | Limitation |
+|---|---|---|
+| Persistent movement freeze | Reapplied on tick/spawn/round/reconnect with `MOVETYPE_NONE` | Supported server-side state |
+| Prevent incoming damage | `TakesDamage=false` while suspended | Supported pawn state |
+| Prevent outgoing fire/use/damage with a hard guarantee | Not claimed | CounterStrikeSharp does not document a stable `OnPlayerRunCmd`-style input pre-hook; weapon-fire is an observation event, not a cancellation point.[5] |
+| Prevent leave/rejoin bypass | Active server case is read on reconnect and re-applied | Requires API/database availability |
+| Permanent ban | Only after Manager/Owner's explicit reviewed confirmation | Uses the existing audited queue, never automatic |
+
+For this reason, production suspension must remain disabled until the controlled lifecycle test confirms that the installed CounterStrikeSharp build and its server-side restriction behavior meet the community's standard. If strict input and outgoing-damage blocking is a hard requirement, it requires a separately vetted engine-level capability; it must not be simulated or assumed from a game event.
+
 ## Required server-local configuration
 
 ```dotenv
@@ -35,6 +51,10 @@ LEGACYX_PHANTOM_MAX_COUNT=64
 LEGACYX_PHANTOM_TELEMETRY_BATCH_SECONDS=5
 LEGACYX_PHANTOM_PLUGIN_ID=legacyx-phantom
 LEGACYX_PHANTOM_PLUGIN_TOKEN=SERVER_LOCAL_PHANTOM_WRITE_TOKEN
+LEGACYX_PHANTOM_SUSPENSION_ENABLED=true
+LEGACYX_PHANTOM_SUSPENSION_SCORE_THRESHOLD=80
+LEGACYX_PHANTOM_SUSPENSION_MINIMUM_SIGNALS=4
+LEGACYX_PHANTOM_SUSPENSION_MINIMUM_CONFIDENCE=0.80
 ```
 
 The real secret belongs only in the CS2 host `.env`, never in a plugin config committed to Git, the browser, or the frontend.
@@ -51,3 +71,4 @@ CounterStrikeSharp documents a server-side framework with commands, game events,
 [2]: https://github.com/roflmuffin/CounterStrikeSharp/blob/main/managed/CounterStrikeSharp.API/Utilities.cs
 [3]: https://github.com/roflmuffin/CounterStrikeSharp/issues/765
 [4]: https://github.com/roflmuffin/CounterStrikeSharp/blob/main/managed/CounterStrikeSharp.API/Modules/Entities/Constants/CollisionGroup.cs
+[5]: https://github.com/roflmuffin/CounterStrikeSharp/issues/730
