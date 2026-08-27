@@ -18,6 +18,10 @@ public sealed class LegacyXPhantomConfig : BasePluginConfig
     public int MovementDelayMs { get; set; } = 250;
     public int MaxCount { get; set; } = 64;
     public int TelemetryBatchSeconds { get; set; } = 5;
+    public bool HistoryEnabled { get; set; } = true;
+    public int HistorySampleIntervalMs { get; set; } = 250;
+    public int HistoryMaxSamplesPerRound { get; set; } = 480;
+    public int HistoryMinimumSamplesForReplay { get; set; } = 12;
     public bool SuspensionEnabled { get; set; } = true;
     public int SuspensionScoreThreshold { get; set; } = 80;
     public int SuspensionMinimumSignals { get; set; } = 4;
@@ -39,6 +43,18 @@ internal sealed class VirtualPhantom
     internal Vector Position { get; set; } = new();
     internal int Samples { get; set; }
     internal DateTimeOffset LastEvidenceAt { get; set; }
+    internal IReadOnlyList<PhantomHistorySample> ReplaySamples { get; set; } = [];
+    internal DateTimeOffset ReplayAssignedAt { get; set; } = DateTimeOffset.UtcNow;
+    internal Vector ReplayOffset { get; init; } = new();
+}
+
+internal sealed record PhantomHistorySample(int sequence, int offset_ms, PhantomHistoryVector position, PhantomHistoryView view, PhantomHistoryVector velocity, bool crouched);
+internal sealed record PhantomHistoryVector(float x, float y, float z);
+internal sealed record PhantomHistoryView(float pitch, float yaw);
+internal sealed class PhantomHistoryCapture
+{
+    internal Guid SourceRef { get; } = Guid.NewGuid();
+    internal List<PhantomHistorySample> Samples { get; } = [];
 }
 
 internal sealed record PhantomEvidence(
@@ -67,11 +83,13 @@ public sealed class LegacyXPhantom : BasePlugin, IPluginConfig<LegacyXPhantomCon
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(4) };
     private readonly Dictionary<ulong, VirtualPhantom> _phantoms = new();
+    private readonly Dictionary<ulong, PhantomHistoryCapture> _historyCaptures = new();
     private readonly Dictionary<ulong, PhantomSuspicion> _suspicion = new();
     private readonly Dictionary<ulong, PhantomSuspension> _suspended = new();
     private readonly Queue<PhantomEvidence> _pendingEvidence = new();
     private readonly object _evidenceLock = new();
     private DateTimeOffset _nextMovementAt = DateTimeOffset.MinValue;
+    private DateTimeOffset _roundStartedAt = DateTimeOffset.UtcNow;
     private int _roundNumber;
     private string _matchReference = string.Empty;
     public required LegacyXPhantomConfig Config { get; set; }
@@ -90,6 +108,10 @@ public sealed class LegacyXPhantom : BasePlugin, IPluginConfig<LegacyXPhantomCon
         config.MovementDelayMs = environment.GetModuleInt("PHANTOM", "MOVEMENT_DELAY_MS", config.MovementDelayMs, 100, 5000);
         config.MaxCount = environment.GetModuleInt("PHANTOM", "MAX_COUNT", config.MaxCount, 1, 64);
         config.TelemetryBatchSeconds = environment.GetModuleInt("PHANTOM", "TELEMETRY_BATCH_SECONDS", config.TelemetryBatchSeconds, 1, 60);
+        config.HistoryEnabled = environment.GetModuleBoolean("PHANTOM", "HISTORY_ENABLED", config.HistoryEnabled);
+        config.HistorySampleIntervalMs = environment.GetModuleInt("PHANTOM", "HISTORY_SAMPLE_INTERVAL_MS", config.HistorySampleIntervalMs, 100, 2000);
+        config.HistoryMaxSamplesPerRound = environment.GetModuleInt("PHANTOM", "HISTORY_MAX_SAMPLES_PER_ROUND", config.HistoryMaxSamplesPerRound, 12, 600);
+        config.HistoryMinimumSamplesForReplay = environment.GetModuleInt("PHANTOM", "HISTORY_MINIMUM_SAMPLES_FOR_REPLAY", config.HistoryMinimumSamplesForReplay, 3, config.HistoryMaxSamplesPerRound);
         config.SuspensionEnabled = environment.GetModuleBoolean("PHANTOM", "SUSPENSION_ENABLED", config.SuspensionEnabled);
         config.SuspensionScoreThreshold = environment.GetModuleInt("PHANTOM", "SUSPENSION_SCORE_THRESHOLD", config.SuspensionScoreThreshold, 50, 100);
         config.SuspensionMinimumSignals = environment.GetModuleInt("PHANTOM", "SUSPENSION_MINIMUM_SIGNALS", config.SuspensionMinimumSignals, 2, 100);
@@ -109,6 +131,7 @@ public sealed class LegacyXPhantom : BasePlugin, IPluginConfig<LegacyXPhantomCon
         RegisterEventHandler<EventPlayerConnectFull>(OnPlayerConnectFull);
         RegisterEventHandler<EventPlayerDisconnect>(OnPlayerDisconnect);
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
+        RegisterEventHandler<EventRoundEnd>(OnRoundEnd);
         RegisterEventHandler<EventPlayerSpawn>(OnPlayerSpawn);
         RegisterEventHandler<EventWeaponFire>(OnWeaponFire);
         RegisterListener<Listeners.OnTick>(OnTick);
@@ -119,6 +142,7 @@ public sealed class LegacyXPhantom : BasePlugin, IPluginConfig<LegacyXPhantomCon
     public override void Unload(bool hotReload)
     {
         _phantoms.Clear();
+        _historyCaptures.Clear();
         _suspicion.Clear();
         _suspended.Clear();
         lock (_evidenceLock) _pendingEvidence.Clear();
@@ -140,6 +164,7 @@ public sealed class LegacyXPhantom : BasePlugin, IPluginConfig<LegacyXPhantomCon
         {
             var steamId = @event.Userid.SteamID;
             _phantoms.Remove(steamId);
+            _historyCaptures.Remove(steamId);
             if (_suspended.TryGetValue(steamId, out var suspension)) _ = PublishSuspensionSignalAsync(steamId, suspension.Suspicion, "suspended_disconnect");
         }
         return HookResult.Continue;
@@ -149,8 +174,16 @@ public sealed class LegacyXPhantom : BasePlugin, IPluginConfig<LegacyXPhantomCon
     {
         _roundNumber++;
         if (_roundNumber == 1) ResetMatchReference();
+        _roundStartedAt = DateTimeOffset.UtcNow;
+        _historyCaptures.Clear();
         foreach (var player in Utilities.GetPlayers().Where(IsTrackable)) EnsurePhantom(player.SteamID);
         ReapplySuspensions();
+        return HookResult.Continue;
+    }
+
+    private HookResult OnRoundEnd(EventRoundEnd @event, GameEventInfo info)
+    {
+        if (Config.HistoryEnabled) _ = FlushCompletedHistoryRoundAsync();
         return HookResult.Continue;
     }
 
@@ -164,13 +197,46 @@ public sealed class LegacyXPhantom : BasePlugin, IPluginConfig<LegacyXPhantomCon
     {
         if (!Config.Enabled || DateTimeOffset.UtcNow < _nextMovementAt) return;
         _nextMovementAt = DateTimeOffset.UtcNow.AddMilliseconds(Config.MovementDelayMs);
+        CaptureHistorySamples();
         var time = (float)Server.CurrentTime;
         foreach (var phantom in _phantoms.Values)
         {
-            // Server-only fallback: independent procedural path. No real player position/input is read or copied.
-            phantom.Position = new Vector(phantom.Anchor.X + MathF.Cos(time * 0.43f + phantom.Phase) * phantom.Radius, phantom.Anchor.Y + MathF.Sin(time * 0.37f + phantom.Phase) * phantom.Radius, phantom.Anchor.Z + MathF.Sin(time * 0.19f + phantom.Phase) * 8f);
+            ApplyReplayOrFallback(phantom, time);
         }
         ReapplySuspensions();
+    }
+
+    private void CaptureHistorySamples()
+    {
+        if (!Config.HistoryEnabled || _roundNumber < 1) return;
+        var offsetMs = (int)Math.Min(180_000, Math.Max(0, (DateTimeOffset.UtcNow - _roundStartedAt).TotalMilliseconds));
+        foreach (var player in Utilities.GetPlayers().Where(IsTrackable))
+        {
+            var pawn = player.PlayerPawn?.Value;
+            var origin = pawn?.AbsOrigin;
+            var angles = pawn?.EyeAngles;
+            if (pawn == null || origin == null || angles == null) continue;
+            if (!_historyCaptures.TryGetValue(player.SteamID, out var capture)) _historyCaptures[player.SteamID] = capture = new PhantomHistoryCapture();
+            if (capture.Samples.Count >= Config.HistoryMaxSamplesPerRound) continue;
+            var velocity = pawn.AbsVelocity;
+            var crouched = false;
+            try { crouched = pawn.MovementServices != null && new CCSPlayer_MovementServices(pawn.MovementServices.Handle).DuckAmount >= 0.5; } catch { }
+            capture.Samples.Add(new PhantomHistorySample(capture.Samples.Count, offsetMs, new PhantomHistoryVector(origin.X, origin.Y, origin.Z), new PhantomHistoryView(angles.X, angles.Y), new PhantomHistoryVector(velocity.X, velocity.Y, velocity.Z), crouched));
+        }
+    }
+
+    private void ApplyReplayOrFallback(VirtualPhantom phantom, float time)
+    {
+        if (phantom.ReplaySamples.Count >= Config.HistoryMinimumSamplesForReplay)
+        {
+            var duration = Math.Max(Config.HistorySampleIntervalMs, phantom.ReplaySamples[^1].offset_ms + Config.HistorySampleIntervalMs);
+            var elapsed = (int)Math.Max(0, (DateTimeOffset.UtcNow - phantom.ReplayAssignedAt).TotalMilliseconds) % duration;
+            var sample = phantom.ReplaySamples.LastOrDefault(item => item.offset_ms <= elapsed) ?? phantom.ReplaySamples[0];
+            phantom.Position = new Vector(sample.position.x + phantom.ReplayOffset.X, sample.position.y + phantom.ReplayOffset.Y, sample.position.z + phantom.ReplayOffset.Z);
+            return;
+        }
+        // Safe fallback when no completed historical round is available. It reads no active player state.
+        phantom.Position = new Vector(phantom.Anchor.X + MathF.Cos(time * 0.43f + phantom.Phase) * phantom.Radius, phantom.Anchor.Y + MathF.Sin(time * 0.37f + phantom.Phase) * phantom.Radius, phantom.Anchor.Z + MathF.Sin(time * 0.19f + phantom.Phase) * 8f);
     }
 
     private HookResult OnWeaponFire(EventWeaponFire @event, GameEventInfo info)
@@ -187,7 +253,9 @@ public sealed class LegacyXPhantom : BasePlugin, IPluginConfig<LegacyXPhantomCon
         if (!Config.Enabled || _phantoms.ContainsKey(mappedSteamId) || _phantoms.Count >= Config.MaxCount || !Config.CountMode.Equals("per_player", StringComparison.OrdinalIgnoreCase)) return;
         var seed = HashCode.Combine(mappedSteamId, Server.MapName ?? "unknown", DateTimeOffset.UtcNow.DayOfYear);
         var random = new Random(seed);
-        _phantoms[mappedSteamId] = new VirtualPhantom { Id = Guid.NewGuid(), MappedSteamId = mappedSteamId, Anchor = new Vector(random.Next(-2500, 2501), random.Next(-2500, 2501), random.Next(128, 513)), Radius = random.Next(96, 321), Phase = (float)(random.NextDouble() * Math.PI * 2) };
+        var phantom = new VirtualPhantom { Id = Guid.NewGuid(), MappedSteamId = mappedSteamId, Anchor = new Vector(random.Next(-2500, 2501), random.Next(-2500, 2501), random.Next(128, 513)), Radius = random.Next(96, 321), Phase = (float)(random.NextDouble() * Math.PI * 2), ReplayOffset = new Vector(random.Next(-96, 97), random.Next(-96, 97), random.Next(-12, 13)) };
+        _phantoms[mappedSteamId] = phantom;
+        if (Config.HistoryEnabled) _ = LoadHistoricalReplayAsync(phantom);
     }
 
     private void EvaluateShotCorrelation(CCSPlayerController player)
@@ -303,6 +371,54 @@ public sealed class LegacyXPhantom : BasePlugin, IPluginConfig<LegacyXPhantomCon
                 lock (_evidenceLock) _pendingEvidence.Enqueue(evidence);
             }
         }
+    }
+
+    private async Task FlushCompletedHistoryRoundAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Config.ApiBaseUrl) || string.IsNullOrWhiteSpace(Config.PluginSecret)) return;
+        var completedAt = DateTimeOffset.UtcNow.ToString("O");
+        var captures = _historyCaptures.Values.Where(capture => capture.Samples.Count >= 3).Select(capture => new { source_ref = capture.SourceRef, samples = capture.Samples.ToArray() }).ToArray();
+        foreach (var capture in captures)
+        {
+            try
+            {
+                var payload = new { source_ref = capture.source_ref, match_reference = _matchReference, server_id = Config.ServerId, server_mode = Config.ServerMode, map_name = Server.MapName ?? "unknown", round_number = _roundNumber, completed_at = completedAt, samples = capture.samples };
+                using var request = new HttpRequestMessage(HttpMethod.Post, $"{Config.ApiBaseUrl}/api/v1/plugin/phantom/history/rounds");
+                request.Headers.Add("x-plugin-id", Config.PluginId);
+                request.Headers.Add("x-plugin-secret", Config.PluginSecret);
+                request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                using var response = await Http.SendAsync(request);
+                if (!response.IsSuccessStatusCode) Console.WriteLine($"[{ModuleName}] Phantom history upload rejected: {(int)response.StatusCode}");
+            }
+            catch (Exception exception) { Console.WriteLine($"[{ModuleName}] Phantom history upload failed: {exception.Message}"); }
+        }
+    }
+
+    private async Task LoadHistoricalReplayAsync(VirtualPhantom phantom)
+    {
+        if (string.IsNullOrWhiteSpace(Config.ApiBaseUrl) || string.IsNullOrWhiteSpace(Config.PluginSecret)) return;
+        try
+        {
+            var mapName = Server.MapName ?? "unknown";
+            var url = $"{Config.ApiBaseUrl}/api/v1/plugin/phantom/history/rounds?serverId={Uri.EscapeDataString(Config.ServerId)}&mapName={Uri.EscapeDataString(mapName)}&excludeMatchReference={Uri.EscapeDataString(_matchReference)}&minimumSamples={Config.HistoryMinimumSamplesForReplay}";
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("x-plugin-id", Config.PluginId);
+            request.Headers.Add("x-plugin-secret", Config.PluginSecret);
+            using var response = await Http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return;
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            if (!document.RootElement.TryGetProperty("rounds", out var rounds) || rounds.ValueKind != JsonValueKind.Array || rounds.GetArrayLength() == 0) return;
+            var index = Random.Shared.Next(rounds.GetArrayLength());
+            var selected = rounds[index];
+            if (!selected.TryGetProperty("samples", out var rawSamples)) return;
+            var samples = JsonSerializer.Deserialize<List<PhantomHistorySample>>(rawSamples.GetRawText());
+            if (samples is { Count: >= 3 })
+            {
+                phantom.ReplaySamples = samples.OrderBy(sample => sample.sequence).Take(Config.HistoryMaxSamplesPerRound).ToArray();
+                phantom.ReplayAssignedAt = DateTimeOffset.UtcNow;
+            }
+        }
+        catch (Exception exception) { Console.WriteLine($"[{ModuleName}] Phantom history replay lookup failed: {exception.Message}"); }
     }
 
     private async Task RestoreSuspensionAsync(CCSPlayerController player)

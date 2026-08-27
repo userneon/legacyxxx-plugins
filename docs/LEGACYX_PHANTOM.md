@@ -11,11 +11,27 @@ This is intentional. CounterStrikeSharp supports server-side events, timers, sch
 | One Phantom per real player | Yes, virtual in-memory mapping up to the configured cap |
 | Invisible/non-interactive | Yes, because no game or client entity exists |
 | Collision, damage, score, K/D, round safety | Yes, impossible for a virtual record to affect gameplay |
-| Historical replay | Not yet available: existing telemetry has no position/rotation samples |
+| Historical replay | Completed, standalone Phantom History rounds; never reads an active player's input for replay |
 | Fallback movement | Independent procedural trajectory; never reads another active player's position/input |
 | Aim/shot evidence | Supported as low-confidence server-side correlation evidence |
 | Wall-ray, ESP visibility proof, fake-player interaction | Not supported with CounterStrikeSharp alone; no claim is made |
 | Automatic ban | Never implemented |
+
+## Standalone Phantom History
+
+Phantom History is **not** `LegacyX-PlayerTelemetry`. It uses a separate `phantom_history_rounds` table and a separate Root API route. At the configured interval, Phantom records only a per-round ephemeral source reference, ordered position, view pitch/yaw, velocity and crouch state. It does not send player name, SteamID64, chat, inventory, audio, IP, or any PlayerTelemetry statistic to this table.
+
+At round end, each bounded sample sequence is uploaded once. At a later match on the same server and map, each Phantom randomly chooses a completed historical sequence excluding the active match, adds a small independent position variation, and repeats it. The current source implementation still uses the history for server-only trajectory/evidence calculation; it does not yet spawn or network a fake CS2 player entity. This separation is intentional so history capture can be retained and tested without silently changing gameplay or client networking.
+
+| Limit | Default | Purpose |
+|---|---:|---|
+| Capture cadence | 250 ms | Prevent per-tick database volume |
+| Maximum samples per player/round | 480 | Caps a source trajectory at two minutes at the default cadence |
+| Replay eligibility | 12 samples | Rejects trivial/incomplete rounds |
+| Replay source | Same server + same map + prior match | Never copies active-player movement |
+| Identity stored in history | None | Uses a generated source reference only |
+
+The database migration includes an indexed bounded JSON array only. A retention job is deliberately deferred until controlled MCP deployment: it must delete old rows based on an approved retention period, not rely on unbounded growth.
 
 ## Evidence model
 
@@ -49,6 +65,10 @@ LEGACYX_PHANTOM_INTERACTION_TELEMETRY=true
 LEGACYX_PHANTOM_MOVEMENT_DELAY_MS=250
 LEGACYX_PHANTOM_MAX_COUNT=64
 LEGACYX_PHANTOM_TELEMETRY_BATCH_SECONDS=5
+LEGACYX_PHANTOM_HISTORY_ENABLED=true
+LEGACYX_PHANTOM_HISTORY_SAMPLE_INTERVAL_MS=250
+LEGACYX_PHANTOM_HISTORY_MAX_SAMPLES_PER_ROUND=480
+LEGACYX_PHANTOM_HISTORY_MINIMUM_SAMPLES_FOR_REPLAY=12
 LEGACYX_PHANTOM_PLUGIN_ID=legacyx-phantom
 LEGACYX_PHANTOM_PLUGIN_TOKEN=SERVER_LOCAL_PHANTOM_WRITE_TOKEN
 LEGACYX_PHANTOM_SUSPENSION_ENABLED=true
@@ -61,7 +81,7 @@ The real secret belongs only in the CS2 host `.env`, never in a plugin config co
 
 ## Controlled test plan
 
-After Supabase MCP is restored and authorization is given: apply `legacy_x_phantom_evidence.sql`; provision `legacyx-phantom` with `phantom:write`; deploy the DLL; start a controlled test server; connect 5 then 10 test players; verify matching virtual mapping count in the server log; disconnect/reconnect players and verify mapping cleanup/recreation; fire only in controlled target-direction scenarios; verify idempotent evidence ingest and Owner review; confirm no entity appears on scoreboards and no round, hit-registration, collision, damage, K/D, audio, or movement change occurs. Test Community and competitive modes separately. Keep `LEGACYX_PHANTOM_ENABLED=false` as the explicit rollback.
+After Supabase MCP is restored and authorization is given: apply `legacy_x_phantom_evidence.sql`, `legacy_x_phantom_suspensions.sql`, and `legacy_x_phantom_history.sql`; provision `legacyx-phantom` with `phantom:read` and `phantom:write`; deploy the DLL; start a controlled test server; connect 5 then 10 test players; complete multiple test rounds; verify capped history upload contains no SteamID64/name/IP; start a later match on the same map; verify each Phantom selects a prior-match trajectory rather than active input; disconnect/reconnect players and verify mapping cleanup/recreation; fire only in controlled target-direction scenarios; verify idempotent evidence ingest and Manager/Owner review; confirm no entity appears on scoreboards and no round, hit-registration, collision, damage, K/D, audio, or movement change occurs. Test Community and competitive modes separately. Keep `LEGACYX_PHANTOM_ENABLED=false` as the explicit rollback.
 
 ## Sources and limitations
 
