@@ -140,6 +140,7 @@ public partial class AdminPlus : BasePlugin
         RegisterHelpCommands();
         
         RegisterReportCommands();
+        RegisterStaminaCommandGuards();
         RegisterListener<Listeners.OnTick>(OnInternalMenuTick);
         AddCommandListener("say", OnInternalMenuSay, HookMode.Pre);
         AddCommandListener("say_team", OnInternalMenuSay, HookMode.Pre);

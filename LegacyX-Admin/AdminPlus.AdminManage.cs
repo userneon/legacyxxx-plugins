@@ -56,7 +56,8 @@ public partial class AdminPlus
                             "@css/cheats",
                             "@css/root"
                         ),
-                        ["immunity"] = 100
+                        ["stamina"] = 1000,
+                        ["immunity"] = 1000
                     }
                 };
 
@@ -292,6 +293,7 @@ public partial class AdminPlus
         var normalizedFlag = NormalizeAdminFlag(groupArg);
         var resolvedGroup = isFlagInput ? ResolveGroupForFlag(normalizedFlag) : null;
         if (!int.TryParse(info.GetArg(3), out var immunity)) immunity = 0;
+        immunity = Math.Clamp(immunity, 0, 1000);
 
         if (!TryParseSteam64(idRaw, out var s64) || s64 == 0)
         {
@@ -324,6 +326,7 @@ public partial class AdminPlus
         {
             ["identity"] = key,
             ["name"] = playerName,
+            ["stamina"] = immunity,
             ["immunity"] = immunity
         };
         if (isFlagInput && !string.IsNullOrWhiteSpace(resolvedGroup))

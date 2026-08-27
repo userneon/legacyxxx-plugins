@@ -18,6 +18,7 @@ namespace AdminPlus;
 public partial class AdminPlus
 {
     private Dictionary<ulong, int> adminImmunity = new();
+    private Dictionary<ulong, int> adminStamina = new();
     private Dictionary<ulong, (DateTime seenAt, string ip)> recentSeen = new();
 
     private string FormatDiscordBanDurationMinutes(int minutes) =>
@@ -30,6 +31,7 @@ public partial class AdminPlus
         try
         {
             adminImmunity.Clear();
+            adminStamina.Clear();
             recentSeen.Clear();
         }
         catch (Exception ex)
@@ -687,6 +689,8 @@ public partial class AdminPlus
                 LogError($"Admin file not found for ban sync: {path}");
                 return;
             }
+            adminImmunity.Clear();
+            adminStamina.Clear();
             var json = JsonDocument.Parse(File.ReadAllText(path));
             foreach (var admin in json.RootElement.EnumerateObject())
             {
@@ -696,6 +700,8 @@ public partial class AdminPlus
                     if (TryParseSteamId(admin.Name, out var steamId))
                         adminImmunity[steamId] = imm;
                 }
+                if (obj.TryGetProperty("stamina", out var staminaVal) && staminaVal.TryGetInt32(out var stamina) && TryParseSteamId(admin.Name, out var staminaSteamId))
+                    adminStamina[staminaSteamId] = Math.Clamp(stamina, 0, 1000);
             }
         }
         catch (Exception ex)

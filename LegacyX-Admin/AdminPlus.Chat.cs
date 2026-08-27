@@ -47,8 +47,8 @@ public partial class AdminPlus
         AddCommand("css_say", "Say to all (console)", CmdSayAll);
     }
 
-    private static bool HasChatPermission(CCSPlayerController? p)
-        => p != null && p.IsValid && AdminManager.PlayerHasPermissions(p, ChatPerm);
+    private bool HasChatPermission(CCSPlayerController? player, string command)
+        => player != null && player.IsValid && RequireCommandStamina(player, command) && AdminManager.PlayerHasPermissions(player, ChatPerm);
 
     private HookResult OnChatSayListener(CCSPlayerController? caller, CommandInfo info)
     {
@@ -72,7 +72,7 @@ public partial class AdminPlus
                 return HookResult.Handled;
             }
 
-            if (cmd.Equals("say", StringComparison.OrdinalIgnoreCase) && text.StartsWith("@") && HasChatPermission(caller))
+            if (cmd.Equals("say", StringComparison.OrdinalIgnoreCase) && text.StartsWith("@") && HasChatPermission(caller, "asay"))
             {
                 var msg = text.Length >= 2 && text[1] == ' ' ? text[2..] : text[1..];
                 if (!string.IsNullOrWhiteSpace(msg))
@@ -84,17 +84,17 @@ public partial class AdminPlus
             }
 
             if (text.StartsWith("!asay ", StringComparison.OrdinalIgnoreCase))
-            { if (HasChatPermission(caller)) SendASay(caller, text[6..]); return HookResult.Handled; }
+            { if (HasChatPermission(caller, "asay")) SendASay(caller, text[6..]); return HookResult.Handled; }
 
             if (text.StartsWith("!csay ", StringComparison.OrdinalIgnoreCase))
-            { if (HasChatPermission(caller)) SendCSay(caller, text[6..]); return HookResult.Handled; }
+            { if (HasChatPermission(caller, "csay")) SendCSay(caller, text[6..]); return HookResult.Handled; }
 
             if (text.StartsWith("!hsay ", StringComparison.OrdinalIgnoreCase))
-            { if (HasChatPermission(caller)) SendHSay(caller, text[6..]); return HookResult.Handled; }
+            { if (HasChatPermission(caller, "hsay")) SendHSay(caller, text[6..]); return HookResult.Handled; }
 
             if (text.StartsWith("!psay ", StringComparison.OrdinalIgnoreCase))
             {
-                if (!HasChatPermission(caller)) return HookResult.Handled;
+                if (!HasChatPermission(caller, "psay")) return HookResult.Handled;
                 var raw = text[6..];
                 var parts = raw.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length < 2)
@@ -115,7 +115,7 @@ public partial class AdminPlus
             }
 
             if (text.StartsWith("!say ", StringComparison.OrdinalIgnoreCase))
-            { if (HasChatPermission(caller)) SendSayAll(caller, text[5..]); return HookResult.Handled; }
+            { if (HasChatPermission(caller, "asay")) SendSayAll(caller, text[5..]); return HookResult.Handled; }
 
             return HookResult.Continue;
         }
@@ -177,7 +177,7 @@ public partial class AdminPlus
 
     private void CmdASay(CCSPlayerController? caller, CommandInfo info)
     {
-        if (caller != null && (!caller.IsValid || !HasChatPermission(caller))) return;
+        if (caller != null && (!caller.IsValid || !HasChatPermission(caller, "asay"))) return;
         if (info.ArgCount < 2) { if (caller != null) caller.Print(Localizer["Asay.Usage"]); else Console.WriteLine(Localizer["Asay.UsageConsole"]); return; }
         var msg = info.ArgString?.Trim() ?? "";
         if (caller == null)
@@ -192,7 +192,7 @@ public partial class AdminPlus
 
     private void CmdCSay(CCSPlayerController? caller, CommandInfo info)
     {
-        if (caller != null && (!caller.IsValid || !HasChatPermission(caller))) return;
+        if (caller != null && (!caller.IsValid || !HasChatPermission(caller, "csay"))) return;
         if (info.ArgCount < 2) { if (caller != null) caller.Print(Localizer["Csay.Usage"]); else Console.WriteLine(Localizer["Csay.UsageConsole"]); return; }
         var msg = info.ArgString?.Trim() ?? "";
         if (caller == null) { Console.WriteLine("[AdminPlus] csay: " + msg); return; }
@@ -201,7 +201,7 @@ public partial class AdminPlus
 
     private void CmdHSay(CCSPlayerController? caller, CommandInfo info)
     {
-        if (caller != null && (!caller.IsValid || !HasChatPermission(caller))) return;
+        if (caller != null && (!caller.IsValid || !HasChatPermission(caller, "hsay"))) return;
         if (info.ArgCount < 2) { if (caller != null) caller.Print(Localizer["Hsay.Usage"]); else Console.WriteLine(Localizer["Hsay.UsageConsole"]); return; }
         var msg = info.ArgString?.Trim() ?? "";
         if (caller == null) { Console.WriteLine("[AdminPlus] hsay: " + msg); return; }
@@ -210,7 +210,7 @@ public partial class AdminPlus
 
     private void CmdPSay(CCSPlayerController? caller, CommandInfo info)
     {
-        if (caller != null && (!caller.IsValid || !HasChatPermission(caller))) return;
+        if (caller != null && (!caller.IsValid || !HasChatPermission(caller, "psay"))) return;
         if (info.ArgCount < 3)
         {
             if (caller != null) caller.Print(Localizer["Psay.Usage"]);
@@ -228,7 +228,7 @@ public partial class AdminPlus
 
     private void CmdSayAll(CCSPlayerController? caller, CommandInfo info)
     {
-        if (caller != null && (!caller.IsValid || !HasChatPermission(caller))) return;
+        if (caller != null && (!caller.IsValid || !HasChatPermission(caller, "asay"))) return;
         if (info.ArgCount < 2) { if (caller != null) caller.Print(Localizer["Say.Usage"]); else Console.WriteLine(Localizer["Say.UsageConsole"]); return; }
         var msg = info.ArgString?.Trim() ?? "";
         if (caller == null)

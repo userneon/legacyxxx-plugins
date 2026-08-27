@@ -47,7 +47,8 @@ internal sealed class WebsiteAdminPolicyEntry
 {
     [JsonPropertyName("steamId")] public string SteamId { get; set; } = string.Empty;
     [JsonPropertyName("username")] public string Username { get; set; } = "LEGACY-X Staff";
+    [JsonPropertyName("stamina")] public int Stamina { get; set; }
     [JsonPropertyName("immunity")] public int Immunity { get; set; }
     [JsonPropertyName("permissions")] public List<string> Permissions { get; set; } = [];
-    internal bool IsUsable => System.Text.RegularExpressions.Regex.IsMatch(SteamId, "^7656\\d{13,14}$") && Permissions.Count > 0 && Immunity is >= 0 and <= 100;
+    internal bool IsUsable => System.Text.RegularExpressions.Regex.IsMatch(SteamId, "^7656\\d{13,14}$") && Permissions.Count > 0 && Stamina is >= 0 and <= 1000 && Immunity is >= 0 and <= 1000;
 }

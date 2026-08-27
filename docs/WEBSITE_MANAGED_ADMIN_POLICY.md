@@ -25,14 +25,27 @@ The plugin secret remains only in the CounterStrikeSharp host `.env`. Do not pla
 1. Apply `supabase/legacy_x_staff_panel.sql`.
 2. Apply `supabase/legacy_x_staff_game_permissions.sql`.
 3. Provision the `legacyx-admin` plugin identity with only `admin:read` scope and its server-local secret.
-4. In the Owner Staff Panel, create/select an active staff record and set Steam identity, explicit `@css/*` game permissions, and immunity from `0` through `100`.
+4. In the Owner Staff Panel, create/select an active staff record and set Steam identity, explicit `@css/*` game permissions, stamina from `0` through `1000`, and immunity from `0` through `1000`.
 5. Enable policy sync and reload LegacyX-Admin.
 
 The API returns only active staff records that have a valid SteamID64 and at least one explicit game permission. It never returns website sessions, passwords, raw database data, or staff audit records.
 
-## Immunity
+## Stamina and immunity
 
-Immunity is an integer `0`–`100`. A larger number can outrank a smaller number in plugin moderation checks. `100` is the recommended Owner value, but it **does not grant commands by itself**. Every privileged command still requires an explicit `@css/*` permission.
+Stamina controls the command-threshold layer. The configured baseline is Owner `1000`, Manager `750`, Admin `500`, and non-admin roles `0`. The plugin applies the threshold table to player-issued chat commands, client-console commands, and menu actions. The dedicated server console remains a host-only emergency control and is not impersonated as a player.
+
+Immunity is also an integer `0`–`1000`, but it is used only for target precedence: a larger value can outrank a smaller value in moderation checks. Stamina and immunity are independent fields even when their role baseline is the same.
+
+Neither role, stamina, nor immunity grants a CounterStrikeSharp command on its own. Every privileged command still requires its separate selected `@css/*` permission. For example, an Admin with stamina `500` may meet the `!ban` threshold, but cannot ban until `@css/ban` is explicitly selected.
+
+| Role | Suggested stamina | Suggested immunity |
+|---|---:|---:|
+| Owner | 1000 | 1000 |
+| Manager | 750 | 750 |
+| Admin | 500 | 500 |
+| Developer / Designer / Player | 0 | 0 |
+
+The full command threshold registry is compiled in `LegacyX-Admin/AdminPlus.Stamina.cs`. The key tiers are `250` for low-impact communication and information actions, `500` for standard moderation, `750` for high-impact server or ban administration, and `1000` for root-level and gameplay-altering operations.
 
 ## Safe rollback
 

@@ -101,7 +101,7 @@ public partial class AdminPlus
             _pluginChatCommands.Add(alias);
             AddCommand(alias, $"Change map alias: {alias}", (caller, info) =>
             {
-                if (caller != null && (!caller.IsValid || !AdminManager.PlayerHasPermissions(caller, "@css/generic")))
+                if (caller != null && (!caller.IsValid || !RequireCommandStamina(caller, "map") || !AdminManager.PlayerHasPermissions(caller, "@css/generic")))
                 {
                     caller.Print(Localizer["NoPermission"]);
                     return;
@@ -1068,15 +1068,14 @@ public partial class AdminPlus
 
     private void CmdPlayers(CCSPlayerController? caller, CommandInfo info)
     {
-        if (caller != null && !AdminManager.PlayerHasPermissions(caller, "@css/root"))
-            return;
-
-        Console.WriteLine("--------- PLAYER LIST ---------");
+        var output = new List<string> { "--------- PLAYER LIST ---------" };
         foreach (var p in Utilities.GetPlayers().Where(p => p != null && p.IsValid && !p.IsBot))
         {
-            Console.WriteLine($"• [#{p.UserId}] \"{p.PlayerName}\" (IP: \"{p.IpAddress ?? "-"}\" SteamID64: \"{p.SteamID}\")");
+            output.Add($"• [#{p.UserId}] \"{p.PlayerName}\" (SteamID64: \"{p.SteamID}\")");
         }
-        Console.WriteLine("--------- END LIST ---------");
+        output.Add("--------- END LIST ---------");
+        if (caller != null && caller.IsValid) foreach (var line in output) caller.PrintToConsole(line);
+        else foreach (var line in output) Console.WriteLine(line);
     }
 
     private void ForceChangeMap(CCSPlayerController? caller, string mapName)

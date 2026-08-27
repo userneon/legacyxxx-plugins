@@ -60,7 +60,7 @@ public partial class AdminPlus
             return;
         }
         
-        if (caller == null || !caller.IsValid || !HasEffectivePermission(caller, "@css/generic"))
+        if (caller == null || !caller.IsValid || !RequireCommandStamina(caller, "admin") || !HasEffectivePermission(caller, "@css/generic"))
         {
             caller?.Print(Localizer["NoPermission"]);
             return;
@@ -179,9 +179,7 @@ public partial class AdminPlus
 
     private void RunServerCmd(CCSPlayerController admin, string cmd)
     {
-        AdminPlus._menuInvokerName = admin.PlayerName;
-        Server.ExecuteCommand(cmd);
-        AddTimer(0.1f, () => { AdminPlus._menuInvokerName = null; });
+        RunStaminaCheckedServerCommand(admin, cmd);
     }
 
     private void ShowFunTeleportMenu(CCSPlayerController admin)

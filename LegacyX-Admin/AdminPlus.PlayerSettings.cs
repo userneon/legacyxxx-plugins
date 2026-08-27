@@ -121,6 +121,9 @@ public partial class AdminPlus
 
     private void DispatchPluginChatCommand(CCSPlayerController player, string commandToken, string argumentLine)
     {
+        if (!RequireCommandStamina(player, commandToken))
+            return;
+
         switch (commandToken.ToLowerInvariant())
         {
             case "admin":
