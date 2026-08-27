@@ -19,6 +19,7 @@ public partial class AdminPlus
 {
     private Dictionary<ulong, int> adminImmunity = new();
     private Dictionary<ulong, int> adminStamina = new();
+    private Dictionary<ulong, string> adminStaffRoles = new();
     private Dictionary<ulong, (DateTime seenAt, string ip)> recentSeen = new();
 
     private string FormatDiscordBanDurationMinutes(int minutes) =>
@@ -32,6 +33,7 @@ public partial class AdminPlus
         {
             adminImmunity.Clear();
             adminStamina.Clear();
+            adminStaffRoles.Clear();
             recentSeen.Clear();
         }
         catch (Exception ex)
@@ -691,6 +693,7 @@ public partial class AdminPlus
             }
             adminImmunity.Clear();
             adminStamina.Clear();
+            adminStaffRoles.Clear();
             var json = JsonDocument.Parse(File.ReadAllText(path));
             foreach (var admin in json.RootElement.EnumerateObject())
             {
@@ -702,6 +705,8 @@ public partial class AdminPlus
                 }
                 if (obj.TryGetProperty("stamina", out var staminaVal) && staminaVal.TryGetInt32(out var stamina) && TryParseSteamId(admin.Name, out var staminaSteamId))
                     adminStamina[staminaSteamId] = Math.Clamp(stamina, 0, 1000);
+                if (obj.TryGetProperty("staffRole", out var roleVal) && TryParseSteamId(admin.Name, out var roleSteamId))
+                    adminStaffRoles[roleSteamId] = (roleVal.GetString() ?? string.Empty).Trim().ToUpperInvariant();
             }
         }
         catch (Exception ex)

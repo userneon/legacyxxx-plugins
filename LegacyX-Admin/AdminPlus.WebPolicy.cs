@@ -53,6 +53,7 @@ public partial class AdminPlus
                 {
                     ["identity"] = admin.SteamId,
                     ["name"] = SanitizeName(admin.Username),
+                    ["staffRole"] = admin.Role,
                     ["stamina"] = admin.Stamina,
                     ["immunity"] = admin.Immunity,
                     ["flags"] = new JsonArray(admin.Permissions.Select(permission => (JsonNode?)permission).ToArray())

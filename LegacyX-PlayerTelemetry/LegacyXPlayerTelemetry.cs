@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Utils;
 using LegacyX.Shared.Configuration;
 
 namespace LegacyX.PlayerTelemetry;
@@ -15,6 +16,7 @@ public sealed class LegacyXPlayerTelemetryConfig : BasePluginConfig
     public string PluginSecret { get; set; } = "";
     public string ServerId { get; set; } = "legacyx-match-1";
     public string ServerMode { get; set; } = "competitive_5v5";
+    public bool RoundSummaryEnabled { get; set; } = false;
 }
 
 internal sealed class PlayerSession
@@ -32,6 +34,7 @@ public sealed class LegacyXPlayerTelemetry : BasePlugin, IPluginConfig<LegacyXPl
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(4) };
     private readonly Dictionary<ulong, PlayerSession> _sessions = new();
+    private readonly Dictionary<ulong, int> _lastRoundSummaryExperience = new();
     private int _roundNumber;
     private string _matchReference = "";
     public required LegacyXPlayerTelemetryConfig Config { get; set; }
@@ -49,6 +52,7 @@ public sealed class LegacyXPlayerTelemetry : BasePlugin, IPluginConfig<LegacyXPl
         config.PluginSecret = environment.GetModule("PLAYER_TELEMETRY", "PLUGIN_TOKEN", config.PluginSecret);
         config.ServerId = environment.Get("LEGACYX_SERVER_ID", config.ServerId);
         config.ServerMode = environment.Get("LEGACYX_SERVER_MODE", config.ServerMode);
+        config.RoundSummaryEnabled = environment.GetModuleBoolean("PLAYER_TELEMETRY", "ROUND_SUMMARY_ENABLED", config.RoundSummaryEnabled);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
         Config.ServerId = Config.ServerId.Trim();
@@ -86,6 +90,7 @@ public sealed class LegacyXPlayerTelemetry : BasePlugin, IPluginConfig<LegacyXPl
         if (!IsTrackable(player)) return HookResult.Continue;
         if (_sessions.Remove(player!.SteamID, out var session))
         {
+            _lastRoundSummaryExperience.Remove(player.SteamID);
             _ = SendSnapshotAsync(session, "player_disconnected", "client_disconnect", "engine_disconnect_reason_unavailable");
         }
         return HookResult.Continue;
@@ -100,9 +105,10 @@ public sealed class LegacyXPlayerTelemetry : BasePlugin, IPluginConfig<LegacyXPl
 
     private HookResult OnRoundEnd(EventRoundEnd @event, GameEventInfo info)
     {
+        var roundNumber = _roundNumber;
         foreach (var session in _sessions.Values)
         {
-            _ = SendSnapshotAsync(session, "round_snapshot", null, null);
+            _ = SendSnapshotAsync(session, "round_snapshot", null, null, roundNumber);
         }
         return HookResult.Continue;
     }
@@ -127,7 +133,7 @@ public sealed class LegacyXPlayerTelemetry : BasePlugin, IPluginConfig<LegacyXPl
         return HookResult.Continue;
     }
 
-    private async Task SendSnapshotAsync(PlayerSession session, string eventType, string? disconnectMethod, string? disconnectReason)
+    private async Task SendSnapshotAsync(PlayerSession session, string eventType, string? disconnectMethod, string? disconnectReason, int? roundNumberOverride = null)
     {
         if (!Ready()) return;
         var activeSeconds = Math.Max(0, (int)(DateTimeOffset.UtcNow - session.ConnectedAt).TotalSeconds);
@@ -141,7 +147,7 @@ public sealed class LegacyXPlayerTelemetry : BasePlugin, IPluginConfig<LegacyXPl
             ["map_name"] = Server.MapName ?? "",
             ["steam_id"] = session.SteamId.ToString(),
             ["player_name"] = session.PlayerName,
-            ["round_number"] = _roundNumber,
+            ["round_number"] = roundNumberOverride ?? _roundNumber,
             ["match_state"] = "live",
             ["active_seconds"] = activeSeconds,
             ["disconnect_method"] = disconnectMethod,
@@ -164,6 +170,12 @@ public sealed class LegacyXPlayerTelemetry : BasePlugin, IPluginConfig<LegacyXPl
             request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
             using var response = await Http.SendAsync(request);
             if (!response.IsSuccessStatusCode) Console.WriteLine($"[{ModuleName}] Telemetry event rejected: {(int)response.StatusCode}");
+            if (eventType == "round_snapshot" && Config.RoundSummaryEnabled && response.IsSuccessStatusCode)
+            {
+                using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                if (TryReadRoundProgression(document.RootElement, out var experience, out var rankName))
+                    PrintRoundSummary(session.SteamId, roundNumberOverride ?? _roundNumber, experience, rankName);
+            }
         }
         catch (Exception exception)
         {
@@ -174,9 +186,40 @@ public sealed class LegacyXPlayerTelemetry : BasePlugin, IPluginConfig<LegacyXPl
     private void ResetMatchReference()
     {
         _roundNumber = 0;
+        _lastRoundSummaryExperience.Clear();
         _matchReference = $"{Config.ServerId}:{Server.MapName ?? "unknown"}:{DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
     }
 
     private bool Ready() => Config.Enabled && !string.IsNullOrWhiteSpace(Config.ApiBaseUrl) && !string.IsNullOrWhiteSpace(Config.PluginSecret) && !string.IsNullOrWhiteSpace(Config.ServerId);
     private static bool IsTrackable(CCSPlayerController? player) => player != null && player.IsValid && !player.IsBot && !player.IsHLTV && player.SteamID > 0;
+
+    private static bool TryReadRoundProgression(JsonElement root, out int experience, out string rankName)
+    {
+        experience = 0;
+        rankName = "Unranked";
+        if (!root.TryGetProperty("progression", out var progression) || progression.ValueKind != JsonValueKind.Object) return false;
+        if (!progression.TryGetProperty("experience", out var experienceElement) || !experienceElement.TryGetInt32(out experience)) return false;
+        if (progression.TryGetProperty("rankName", out var rankElement) && rankElement.ValueKind == JsonValueKind.String) rankName = rankElement.GetString() ?? rankName;
+        return true;
+    }
+
+    private void PrintRoundSummary(ulong steamId, int roundNumber, int currentExperience, string rankName)
+    {
+        var hasPreviousExperience = _lastRoundSummaryExperience.TryGetValue(steamId, out var previousExperience);
+        _lastRoundSummaryExperience[steamId] = currentExperience;
+        var delta = hasPreviousExperience ? currentExperience - previousExperience : 0;
+        var expColor = delta < 0 ? "{red}" : "{green}";
+        var sign = delta >= 0 ? "+" : string.Empty;
+        Server.NextFrame(() =>
+        {
+            var player = Utilities.GetPlayers().FirstOrDefault(candidate => candidate != null && candidate.IsValid && candidate.SteamID == steamId);
+            if (player == null) return;
+            player.PrintToChat("{green}LEGACY-X • {default}ROUND ENDED");
+            player.PrintToChat("────────────────────────");
+            player.PrintToChat($"ROUND: {roundNumber}");
+            player.PrintToChat($"SERVER: {Config.ServerId}");
+            player.PrintToChat($"EXP: {expColor}{sign}{delta}");
+            player.PrintToChat($"RANK: {{green}}{rankName}");
+        });
+    }
 }

@@ -47,6 +47,7 @@ internal sealed class WebsiteAdminPolicyEntry
 {
     [JsonPropertyName("steamId")] public string SteamId { get; set; } = string.Empty;
     [JsonPropertyName("username")] public string Username { get; set; } = "LEGACY-X Staff";
+    [JsonPropertyName("role")] public string Role { get; set; } = string.Empty;
     [JsonPropertyName("stamina")] public int Stamina { get; set; }
     [JsonPropertyName("immunity")] public int Immunity { get; set; }
     [JsonPropertyName("permissions")] public List<string> Permissions { get; set; } = [];

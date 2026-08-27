@@ -47,6 +47,16 @@ Neither role, stamina, nor immunity grants a CounterStrikeSharp command on its o
 
 The full command threshold registry is compiled in `LegacyX-Admin/AdminPlus.Stamina.cs`. The key tiers are `250` for low-impact communication and information actions, `500` for standard moderation, `750` for high-impact server or ban administration, and `1000` for root-level and gameplay-altering operations.
 
+## Menu and assistance behavior
+
+`!admin` never exposes a command that the caller cannot use. The menu filters every visible category and root action using both the caller's stamina and its explicit CounterStrikeSharp permission. A player with stamina `0` cannot open the admin menu at all.
+
+`!calladmin` alerts online website-policy staff whose role is `ADMIN`, `MANAGER`, or `OWNER`; `!callmanager` alerts only online `MANAGER` or `OWNER` staff. Both use the standard in-game LEGACY-X chat prefix and cooldown. They do not add any generic Discord event channel.
+
+## Round-end progression summary
+
+Set `LEGACYX_PLAYER_TELEMETRY_ROUND_SUMMARY_ENABLED=true` only after the telemetry and competitive-profile database migrations are applied. At round end, Player Telemetry asks the Root API for the authoritative current EXP/rank snapshot and shows the accumulated EXP delta and current rank to the affected player. The first synchronized round establishes a baseline and deliberately shows `+0`, preventing historic total EXP from being displayed as a new reward. The plugin does not emit headshot, kill, or other micro-EXP messages during a round.
+
 ## Safe rollback
 
 Set `LEGACYX_ADMIN_POLICY_SYNC_ENABLED=false` and reload the plugin. The last generated `admins.json` cache remains intact. Do not manually edit the cache while sync is enabled; the next successful policy response deliberately replaces it.

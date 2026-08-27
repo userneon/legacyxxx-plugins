@@ -60,28 +60,30 @@ public partial class AdminPlus
             return;
         }
         
-        if (caller == null || !caller.IsValid || !RequireCommandStamina(caller, "admin") || !HasEffectivePermission(caller, "@css/generic"))
+        if (caller == null || !caller.IsValid || !RequireCommandStamina(caller, "admin"))
         {
             caller?.Print(Localizer["NoPermission"]);
-            return;
-        }
-
-        if (!HasEffectivePermission(caller, "@css/ban"))
-        {
-            caller.Print(Localizer["NoPermission"]);
             return;
         }
 
         var menu = CreateMenu("LEGACY-X ADMIN | MAIN MENU");
         List<ChatMenuOptionData> options = [];
 
-        if (HasEffectivePermission(caller, "@css/root"))
+        if (HasCommandAccess(caller, "addadmin"))
             options.Add(new ChatMenuOptionData("ADMINISTRATION & PERMISSIONS", () => ShowAdminManageMenu(caller)));
+        if (new[] { "ban", "kick", "mute", "gag", "slay", "slap", "respawn", "money", "armor", "team" }.Any(command => HasCommandAccess(caller, command)))
+            options.Add(new ChatMenuOptionData("PLAYER MODERATION & TOOLS", () => ShowPlayerCommands(caller)));
+        if (new[] { "map", "rr", "clean" }.Any(command => HasCommandAccess(caller, command)))
+            options.Add(new ChatMenuOptionData("SERVER & MATCH CONTROL", () => ShowServerCommands(caller)));
+        if (new[] { "freeze", "weapon" }.Any(command => HasCommandAccess(caller, command)))
+            options.Add(new ChatMenuOptionData("GAMEPLAY & FUN TOOLS", () => ShowFunRootMenu(caller)));
+        if (HasCommandAccess(caller, "banlist")) options.Add(new ChatMenuOptionData("PUNISHMENT HISTORY", () => BanListMenu(caller, info)));
 
-        options.Add(new ChatMenuOptionData("PLAYER MODERATION & TOOLS", () => ShowPlayerCommands(caller)));
-        options.Add(new ChatMenuOptionData("SERVER & MATCH CONTROL", () => ShowServerCommands(caller)));
-        options.Add(new ChatMenuOptionData("GAMEPLAY & FUN TOOLS", () => ShowFunRootMenu(caller)));
-        options.Add(new ChatMenuOptionData("PUNISHMENT HISTORY", () => BanListMenu(caller, info)));
+        if (options.Count == 0)
+        {
+            caller.Print(Localizer["NoPermission"]);
+            return;
+        }
 
         foreach (var menuOptionData in options)
         {
@@ -98,7 +100,7 @@ public partial class AdminPlus
 
     private void ShowFunRootMenu(CCSPlayerController admin)
     {
-        if (!HasEffectivePermission(admin, "@css/slay"))
+        if (!new[] { "freeze", "weapon" }.Any(command => HasCommandAccess(admin, command)))
         {
             admin.Print(Localizer["NoPermission"]);
             return;
@@ -107,11 +109,11 @@ public partial class AdminPlus
         var m = CreateMenu("GAMEPLAY & FUN TOOLS");
         if (m == null) return;
         
-        m.AddMenuOption(Localizer["Menu.Fun.Cat.Teleport"], (p, o) => ShowFunTeleportMenu(admin));
-        m.AddMenuOption(Localizer["Menu.Fun.Cat.PlayerFx"], (p, o) => ShowFunPlayerFxMenu(admin));
-        m.AddMenuOption(Localizer["Menu.Fun.Cat.Weapons"], (p, o) => ShowFunWeaponsMenu(admin));
-        m.AddMenuOption(Localizer["Menu.Fun.Cat.Physics"], (p, o) => ShowFunPhysicsMenu(admin));
-        m.AddMenuOption(Localizer["Menu.Fun.Cat.Visual"], (p, o) => ShowFunVisualMenu(admin));
+        if (HasCommandAccess(admin, "goto")) m.AddMenuOption(Localizer["Menu.Fun.Cat.Teleport"], (p, o) => ShowFunTeleportMenu(admin));
+        if (HasCommandAccess(admin, "freeze")) m.AddMenuOption(Localizer["Menu.Fun.Cat.PlayerFx"], (p, o) => ShowFunPlayerFxMenu(admin));
+        if (HasCommandAccess(admin, "weapon")) m.AddMenuOption(Localizer["Menu.Fun.Cat.Weapons"], (p, o) => ShowFunWeaponsMenu(admin));
+        if (HasCommandAccess(admin, "gravity")) m.AddMenuOption(Localizer["Menu.Fun.Cat.Physics"], (p, o) => ShowFunPhysicsMenu(admin));
+        if (HasCommandAccess(admin, "glow")) m.AddMenuOption(Localizer["Menu.Fun.Cat.Visual"], (p, o) => ShowFunVisualMenu(admin));
         {
             m.ExitButton = true;
             OpenMenu(admin, m);
@@ -532,7 +534,7 @@ public partial class AdminPlus
 
     private void ShowAdminManageMenu(CCSPlayerController admin)
     {
-        if (!HasEffectivePermission(admin, "@css/root"))
+        if (!HasCommandAccess(admin, "addadmin"))
         {
             admin.Print(Localizer["NoPermission"]);
             return;
@@ -798,26 +800,20 @@ public partial class AdminPlus
 
     private void ShowPlayerCommands(CCSPlayerController admin)
     {
-        if (!HasEffectivePermission(admin, "@css/ban"))
-        {
-            admin.Print(Localizer["NoPermission"]);
-            return;
-        }
-
         var menu = CreateMenu("PLAYER MODERATION & TOOLS");
         List<ChatMenuOptionData> options = [];
 
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Ban"], () => ShowPlayerList(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Kick"], () => ShowKickPlayerMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Slay"], () => ShowSlayMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Slap"], () => ShowSlapMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Mute"], () => ShowMutePlayerMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Gag"], () => ShowGagPlayerMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Silence"], () => ShowSilencePlayerMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Teleport.Respawn"], () => ShowRespawnMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Money"], () => ShowMoneyMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Armor"], () => ShowArmorMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Cat.TeamOps"], () => ShowFunTeamOpsMenu(admin)));
+        if (HasCommandAccess(admin, "ban")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Ban"], () => ShowPlayerList(admin)));
+        if (HasCommandAccess(admin, "kick")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Kick"], () => ShowKickPlayerMenu(admin)));
+        if (HasCommandAccess(admin, "slay")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Slay"], () => ShowSlayMenu(admin)));
+        if (HasCommandAccess(admin, "slap")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Slap"], () => ShowSlapMenu(admin)));
+        if (HasCommandAccess(admin, "mute")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Mute"], () => ShowMutePlayerMenu(admin)));
+        if (HasCommandAccess(admin, "gag")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Gag"], () => ShowGagPlayerMenu(admin)));
+        if (HasCommandAccess(admin, "silence")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Silence"], () => ShowSilencePlayerMenu(admin)));
+        if (HasCommandAccess(admin, "respawn")) options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Teleport.Respawn"], () => ShowRespawnMenu(admin)));
+        if (HasCommandAccess(admin, "money")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Money"], () => ShowMoneyMenu(admin)));
+        if (HasCommandAccess(admin, "armor")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Armor"], () => ShowArmorMenu(admin)));
+        if (HasCommandAccess(admin, "team")) options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Cat.TeamOps"], () => ShowFunTeamOpsMenu(admin)));
 
         foreach (var menuOptionData in options)
         {
@@ -1059,7 +1055,7 @@ public partial class AdminPlus
 
     private void ShowServerCommands(CCSPlayerController admin)
     {
-        if (!HasEffectivePermission(admin, "@css/generic"))
+        if (!new[] { "map", "rr", "clean" }.Any(command => HasCommandAccess(admin, command)))
         {
             admin.Print(Localizer["NoPermission"]);
             return;
@@ -1068,14 +1064,13 @@ public partial class AdminPlus
         var menu = CreateMenu("SERVER & MATCH CONTROL");
         List<ChatMenuOptionData> options = [];
 
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.ChangeMap"], () => ShowMapSelectionMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Cat.Cleanup"], () => ShowFunCleanupMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.RoundRestart"], () =>
+        if (HasCommandAccess(admin, "map")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.ChangeMap"], () => ShowMapSelectionMenu(admin)));
+        if (HasCommandAccess(admin, "clean")) options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Cat.Cleanup"], () => ShowFunCleanupMenu(admin)));
+        if (HasCommandAccess(admin, "rr")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.RoundRestart"], () =>
         {
-            if (HasEffectivePermission(admin, "@css/generic"))
+            if (HasCommandAccess(admin, "rr"))
             {
-                Server.ExecuteCommand("mp_restartgame 1");
-                PlayerExtensions.PrintToAll(Localizer["Round.Restarted", admin.PlayerName]);
+                RunServerCmd(admin, "css_rr");
             }
             else admin.Print(Localizer["NoPermission"]);
         }));

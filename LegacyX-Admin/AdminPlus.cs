@@ -141,6 +141,7 @@ public partial class AdminPlus : BasePlugin
         
         RegisterReportCommands();
         RegisterStaminaCommandGuards();
+        RegisterEventHandler<EventRoundEnd>(OnAdminRoundEnd);
         RegisterListener<Listeners.OnTick>(OnInternalMenuTick);
         AddCommandListener("say", OnInternalMenuSay, HookMode.Pre);
         AddCommandListener("say_team", OnInternalMenuSay, HookMode.Pre);
@@ -924,7 +925,37 @@ public partial class AdminPlus : BasePlugin
     private void RegisterReportCommands()
     {
         AddCommand("css_report", "Report a player", OnReportCommand);
-        AddCommand("css_calladmin", "Call an admin", OnReportCommand);
+        AddCommand("css_calladmin", "Call an online Admin", OnCallAdminCommand);
+        AddCommand("css_callmanager", "Call an online Manager", OnCallManagerCommand);
+    }
+
+    private void OnCallAdminCommand(CCSPlayerController? caller, CommandInfo? commandInfo) => SendStaffAssistanceCall(caller, 500, "ADMIN", new[] { "ADMIN", "MANAGER", "OWNER" });
+    private void OnCallManagerCommand(CCSPlayerController? caller, CommandInfo? commandInfo) => SendStaffAssistanceCall(caller, 750, "MANAGER", new[] { "MANAGER", "OWNER" });
+
+    private void SendStaffAssistanceCall(CCSPlayerController? caller, int requiredStamina, string roleName, string[] eligibleRoles)
+    {
+        if (caller == null || !caller.IsValid || caller.IsBot) return;
+        if (!CheckReportCooldown(caller.SteamID.ToString()))
+        {
+            caller.Print(Localizer["Report.GlobalCooldown"]);
+            return;
+        }
+        var recipients = Utilities.GetPlayers().Where(player => player != null && player.IsValid && !player.IsBot && player.SteamID != caller.SteamID && adminStamina.TryGetValue(player.SteamID, out var stamina) && stamina >= requiredStamina && adminStaffRoles.TryGetValue(player.SteamID, out var staffRole) && eligibleRoles.Contains(staffRole, StringComparer.OrdinalIgnoreCase)).ToList();
+        if (recipients.Count == 0)
+        {
+            caller.Print($"NO ONLINE {roleName} IS AVAILABLE");
+            return;
+        }
+        var callerName = SanitizeName(caller.PlayerName);
+        foreach (var recipient in recipients) recipient.Print($"{roleName} ASSISTANCE REQUEST: {callerName} NEEDS HELP");
+        _lastReportTime[caller.SteamID] = DateTime.Now;
+        caller.Print($"{roleName} ASSISTANCE REQUEST SENT");
+    }
+
+    private HookResult OnAdminRoundEnd(EventRoundEnd @event, GameEventInfo info)
+    {
+        PlayerExtensions.PrintToAll("NEED STAFF ASSISTANCE? !CALLADMIN — CALL AN ADMIN | !CALLMANAGER — CALL A MANAGER");
+        return HookResult.Continue;
     }
 
 
