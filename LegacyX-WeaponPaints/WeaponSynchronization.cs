@@ -22,8 +22,7 @@ internal sealed class WeaponSynchronization
     /// </summary>
     internal async Task GetPlayerData(PlayerInfo? player)
     {
-        if (string.IsNullOrEmpty(player?.SteamId)) return;
-        var steamId = player.SteamId;
+        if (player?.SteamId is not { Length: > 0 } steamId) return;
         try
         {
             var payload = await _api.GetLoadoutAsync(steamId) ?? new SkinchangerPayload();
