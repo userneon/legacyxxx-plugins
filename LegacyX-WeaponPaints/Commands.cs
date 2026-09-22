@@ -11,6 +11,28 @@ namespace WeaponPaints;
 
 public partial class WeaponPaints
 {
+	/// <summary>
+	/// Reads the player's website loadout first, then re-gives the items on the game thread so the
+	/// refresh shows what was just saved instead of the previous loadout.
+	/// </summary>
+	private void RefreshFromWebsite(CCSPlayerController player, PlayerInfo playerInfo)
+	{
+		if (WeaponSync == null) return;
+		_ = Task.Run(async () =>
+		{
+			await WeaponSync.GetPlayerData(playerInfo);
+			Server.NextFrame(() =>
+			{
+				if (!player.IsValid) return;
+				GivePlayerGloves(player);
+				RefreshWeapons(player);
+				GivePlayerAgent(player);
+				GivePlayerMusicKit(player);
+				AddTimer(0.15f, () => GivePlayerPin(player));
+			});
+		});
+	}
+
 	private void OnCommandRefresh(CCSPlayerController? player, CommandInfo command)
 	{
 		if (!Config.Additional.CommandWpEnabled || !Config.Additional.SkinEnabled || !_gBCommandsAllowed) return;
@@ -35,16 +57,7 @@ public partial class WeaponPaints
 			{
 				CommandsCooldown[player.Slot] = DateTime.UtcNow.AddSeconds(Config.CmdRefreshCooldownSeconds);
 
-				if (WeaponSync != null)
-				{
-					_ = Task.Run(async () => await WeaponSync.GetPlayerData(playerInfo));
-
-					GivePlayerGloves(player);
-					RefreshWeapons(player);
-					GivePlayerAgent(player);
-					GivePlayerMusicKit(player);
-					AddTimer(0.15f, () => GivePlayerPin(player));
-				}
+				RefreshFromWebsite(player, playerInfo);
 
 				if (!string.IsNullOrEmpty(Localizer["wp_command_refresh_done"]))
 				{
@@ -218,16 +231,7 @@ public partial class WeaponPaints
 					IpAddress = targetPlayer.IpAddress?.Split(":")[0]
 				};
 
-				if (WeaponSync != null)
-				{
-					_ = Task.Run(async () => await WeaponSync.GetPlayerData(playerInfo));
-				}
-
-				GivePlayerGloves(targetPlayer);
-				RefreshWeapons(targetPlayer);
-				GivePlayerAgent(targetPlayer);
-				GivePlayerMusicKit(targetPlayer);
-				AddTimer(0.15f, () => GivePlayerPin(targetPlayer));
+				RefreshFromWebsite(targetPlayer, playerInfo);
 
 				if (!string.IsNullOrEmpty(Localizer["wp_command_refresh_done"]))
 				{

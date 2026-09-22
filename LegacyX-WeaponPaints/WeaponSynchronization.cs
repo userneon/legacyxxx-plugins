@@ -9,7 +9,6 @@ internal sealed class WeaponSynchronization
 {
     private readonly LegacyXSkinApiClient _api;
     private readonly WeaponPaintsConfig _config;
-    private int _pollInFlight;
 
     internal WeaponSynchronization(LegacyXSkinApiClient api, WeaponPaintsConfig config)
     {
@@ -17,49 +16,39 @@ internal sealed class WeaponSynchronization
         _config = config;
     }
 
-    internal async Task OpenSessionAndApplyAsync(PlayerInfo player)
+    /// <summary>
+    /// Reads the player's saved loadout and applies it on the next game frame. A player without a
+    /// LEGACY-X account gets an empty loadout (default items).
+    /// </summary>
+    internal async Task GetPlayerData(PlayerInfo? player)
     {
-        await _api.SendSessionAsync("session_connected", player);
-        await PollAndApplyAsync();
-    }
-
-    internal Task GetPlayerData(PlayerInfo? player) => player is null ? Task.CompletedTask : OpenSessionAndApplyAsync(player);
-    internal Task CloseSessionAsync(PlayerInfo player) => _api.SendSessionAsync("session_disconnected", player);
-
-    internal async Task PollAndApplyAsync()
-    {
-        if (Interlocked.Exchange(ref _pollInFlight, 1) == 1) return;
+        if (string.IsNullOrEmpty(player?.SteamId)) return;
+        var steamId = player.SteamId;
         try
         {
-            foreach (var job in await _api.ClaimJobsAsync())
+            var payload = await _api.GetLoadoutAsync(steamId) ?? new SkinchangerPayload();
+            var applied = new TaskCompletionSource();
+            Server.NextFrame(() =>
             {
-                var player = Utilities.GetPlayers().FirstOrDefault(candidate => candidate.IsValid && !candidate.IsBot && candidate.SteamID.ToString() == job.SteamId);
-                if (player is null)
+                try
                 {
-                    await _api.AcknowledgeAsync(job, "failed", "player_not_connected", "Player is no longer connected to this server.");
-                    continue;
+                    var controller = Utilities.GetPlayers().FirstOrDefault(candidate => candidate.IsValid && !candidate.IsBot && candidate.SteamID.ToString() == steamId);
+                    if (controller is not null) ApplyLoadout(controller, payload);
                 }
-                Server.NextFrame(() =>
+                catch (Exception exception)
                 {
-                    try
-                    {
-                        ApplyLoadout(player, job.Payload);
-                        _ = _api.AcknowledgeAsync(job, "applied", null, null);
-                    }
-                    catch (Exception exception)
-                    {
-                        _ = _api.AcknowledgeAsync(job, "failed", "apply_error", exception.Message);
-                    }
-                });
-            }
+                    Utility.Log($"LEGACY-X SkinBridge apply failed: {exception.Message}");
+                }
+                finally
+                {
+                    applied.TrySetResult();
+                }
+            });
+            await applied.Task;
         }
         catch (Exception exception)
         {
-            Utility.Log($"LEGACY-X SkinBridge polling failed: {exception.Message}");
-        }
-        finally
-        {
-            Interlocked.Exchange(ref _pollInFlight, 0);
+            Utility.Log($"LEGACY-X SkinBridge loadout read failed: {exception.Message}");
         }
     }
 

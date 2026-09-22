@@ -14,7 +14,6 @@ namespace WeaponPaints;
 [MinimumApiVersion(338)]
 	public partial class WeaponPaints : BasePlugin, IPluginConfig<WeaponPaintsConfig>
 	{
-		private CounterStrikeSharp.API.Modules.Timers.Timer? _apiPollTimer;
 		private bool _centralEnabled = true;
 	internal static WeaponPaints Instance { get; private set; } = new();
 
@@ -81,13 +80,6 @@ namespace WeaponPaints;
 		Utility.LoadPinsFromFile(ModuleDirectory + $"/data/collectibles_{_config.SkinsLanguage}.json", Logger);
 
 			RegisterListeners();
-			_apiPollTimer = AddTimer(Config.ApiPollSeconds, () => _ = WeaponSync?.PollAndApplyAsync(), TimerFlags.REPEAT);
-		}
-
-		public override void Unload(bool hotReload)
-		{
-			_apiPollTimer?.Kill();
-			_apiPollTimer = null;
 		}
 
 		public void OnConfigParsed(WeaponPaintsConfig config)
@@ -106,9 +98,9 @@ namespace WeaponPaints;
 			config.PluginId = config.PluginId.Trim();
 			config.ServerId = config.ServerId.Trim();
 			config.ApiPollSeconds = Math.Clamp(config.ApiPollSeconds, 1, 30);
-			if (config.ApiBaseUrl.Length < 1 || config.PluginSecret.Length < 24 || config.ServerId.Length < 1)
+			if (config.ApiBaseUrl.Length < 1 || config.PluginSecret.Length < 24)
 			{
-				Logger.LogError("ApiBaseUrl, PluginSecret, and ServerId are required. Database credentials are intentionally unsupported in LEGACY-X SkinBridge.");
+				Logger.LogError("ApiBaseUrl and PluginSecret are required. Database credentials are intentionally unsupported in LEGACY-X SkinBridge.");
 				Unload(false);
 				return;
 		}

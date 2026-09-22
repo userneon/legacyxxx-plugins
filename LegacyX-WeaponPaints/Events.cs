@@ -31,7 +31,7 @@ namespace WeaponPaints
 
 			try
 			{
-				_ = Task.Run(async () => await WeaponSync.OpenSessionAndApplyAsync(playerInfo));
+				_ = Task.Run(async () => await WeaponSync.GetPlayerData(playerInfo));
 				/*
 				if (Config.Additional.SkinEnabled)
 				{
@@ -81,7 +81,6 @@ namespace WeaponPaints
 				IpAddress = player.IpAddress?.Split(":")[0]
 			};
 
-			_ = Task.Run(async () => { if (WeaponSync != null) await WeaponSync.CloseSessionAsync(playerInfo); });
 			if (Config.Additional.SkinEnabled) GPlayerWeaponsInfo.TryRemove(player.Slot, out _);
 
 			if (Config.Additional.KnifeEnabled)

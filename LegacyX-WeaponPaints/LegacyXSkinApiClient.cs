@@ -12,33 +12,16 @@ internal sealed class LegacyXSkinApiClient
 
     internal LegacyXSkinApiClient(WeaponPaintsConfig config) => _config = config;
 
-    internal async Task SendSessionAsync(string eventName, PlayerInfo player)
+    /// <summary>
+    /// The player's saved website loadout, or null when the SteamID has no LEGACY-X account.
+    /// </summary>
+    internal async Task<SkinchangerPayload?> GetLoadoutAsync(string steamId)
     {
-        using var request = CreateRequest(HttpMethod.Post, "/api/v1/plugin/skinchanger/sessions");
-        request.Content = JsonContent.Create(new
-        {
-            eventId = $"skinbridge-{_config.ServerId}-{eventName}-{Guid.NewGuid():N}",
-            @event = eventName,
-            serverId = _config.ServerId,
-            steamId = player.SteamId,
-            playerName = player.Name ?? string.Empty,
-        });
-        await SendAsync(request);
-    }
-
-    internal async Task<IReadOnlyList<SkinchangerJob>> ClaimJobsAsync()
-    {
-        using var request = CreateRequest(HttpMethod.Get, $"/api/v1/plugin/skinchanger/jobs?server_id={Uri.EscapeDataString(_config.ServerId)}&limit=20");
-        using var response = await SendAsync(request);
-        var body = await response.Content.ReadFromJsonAsync<SkinchangerJobsResponse>(_json);
-        return body?.Jobs ?? [];
-    }
-
-    internal async Task AcknowledgeAsync(SkinchangerJob job, string status, string? failureCode, string? failureDetail)
-    {
-        using var request = CreateRequest(HttpMethod.Post, $"/api/v1/plugin/skinchanger/jobs/{job.Id}/ack");
-        request.Content = JsonContent.Create(new { leaseToken = job.LeaseToken, status, failureCode, failureDetail });
-        using var response = await SendAsync(request);
+        using var request = CreateRequest(HttpMethod.Get, $"/api/v1/plugin/skinchanger/loadout?steam_id={Uri.EscapeDataString(steamId)}");
+        using var response = await Http.SendAsync(request);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<SkinchangerPayload>(_json) ?? new SkinchangerPayload();
     }
 
     private HttpRequestMessage CreateRequest(HttpMethod method, string path)
@@ -49,28 +32,13 @@ internal sealed class LegacyXSkinApiClient
         return request;
     }
 
-    private static async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request)
+    private static async Task EnsureSuccessAsync(HttpResponseMessage response)
     {
-        var response = await Http.SendAsync(request);
-        if (response.IsSuccessStatusCode) return response;
+        if (response.IsSuccessStatusCode) return;
         var statusCode = (int)response.StatusCode;
         var detail = await response.Content.ReadAsStringAsync();
-        response.Dispose();
         throw new InvalidOperationException($"LEGACY-X API returned {statusCode}: {detail[..Math.Min(detail.Length, 240)]}");
     }
-}
-
-internal sealed class SkinchangerJobsResponse
-{
-    [JsonPropertyName("jobs")] public List<SkinchangerJob> Jobs { get; set; } = [];
-}
-
-internal sealed class SkinchangerJob
-{
-    [JsonPropertyName("id")] public Guid Id { get; set; }
-    [JsonPropertyName("steam_id")] public string SteamId { get; set; } = string.Empty;
-    [JsonPropertyName("payload")] public SkinchangerPayload Payload { get; set; } = new();
-    [JsonPropertyName("lease_token")] public Guid LeaseToken { get; set; }
 }
 
 internal sealed class SkinchangerPayload
