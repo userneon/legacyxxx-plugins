@@ -12,3 +12,9 @@ LegacyX-Spectator/config/LegacyX-Spectator.json
 LegacyX-MatchZy/cfg/MatchZy/legacyx-match-core.private.cfg
 LegacyX-WeaponPaints/*.json
 !LegacyX-WeaponPaints/config.example.json
+
+# Compiled plugin output belongs in a release, not in git.
+BuildOutput/
+
+# Upstream WeaponPaints PHP site: LEGACY-X edits loadouts on legacyx.cc instead.
+LegacyX-WeaponPaints/website/
