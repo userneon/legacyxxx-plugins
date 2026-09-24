@@ -82,6 +82,7 @@ public partial class MatchZy
         matchCoreRemoteSlotsReady = true;
         matchCoreSlotsByOriginal.Clear();
         matchCoreSnapshots.Clear();
+        ResetLegacyXRankTelemetry();
 
         var participants = new List<object>();
         foreach (var group in roster)
@@ -135,6 +136,7 @@ public partial class MatchZy
     private void OnLegacyXMatchCoreDisconnect(CCSPlayerController player)
     {
         if (!IsMatchCoreEnabled || !matchCoreId.HasValue || !isMatchLive) return;
+        OnLegacyXRankDisconnect(player);
         var steamId = CoreSteamId(player);
         var slot = matchCoreSlotsByOriginal.Values.FirstOrDefault(candidate => candidate.ActiveSteamId == steamId);
         if (slot == null) return;
@@ -203,6 +205,7 @@ public partial class MatchZy
     private void OnLegacyXMatchCoreConnect(CCSPlayerController player)
     {
         if (!IsMatchCoreEnabled || !matchCoreId.HasValue) return;
+        OnLegacyXRankReconnect(player);
         var steamId = CoreSteamId(player);
         if (!matchCoreSlotsByOriginal.TryGetValue(steamId, out var slot)) return;
         if (slot.ActiveSteamId == steamId) return;
@@ -244,14 +247,19 @@ public partial class MatchZy
         });
     }
 
-    private void OnLegacyXMatchCoreFinal(string winnerTeam, int team1Score, int team2Score)
+    /// <param name="winnerTeam">MatchZy winner key ("team1" = matchzyTeam1, or "none").</param>
+    /// <param name="mapTeam1Rounds">Rounds won on this map by matchzyTeam1.</param>
+    /// <param name="mapTeam2Rounds">Rounds won on this map by matchzyTeam2.</param>
+    private void OnLegacyXMatchCoreFinal(string winnerTeam, int team1Score, int team2Score, int mapTeam1Rounds, int mapTeam2Rounds)
     {
         if (!IsMatchCoreEnabled || !matchCoreId.HasValue) return;
-        var (_, rawTeam1, rawTeam2) = GetPlayerStatsDict();
-        var originalSteamIds = matchCoreSlotsByOriginal.Keys.ToHashSet(StringComparer.Ordinal);
-        var eligibleTeam1 = rawTeam1.Where(player => originalSteamIds.Contains(player.SteamId)).ToList();
-        var eligibleTeam2 = rawTeam2.Where(player => originalSteamIds.Contains(player.SteamId)).ToList();
-        var rewardEligible = !matchCoreSlotsByOriginal.Values.Any(slot => slot.IsFill) && eligibleTeam1.Count == 5 && eligibleTeam2.Count == 5 && winnerTeam is "team1" or "team2";
+        // Match Core keys teams by starting side, MatchZy by config order; the result uses Match Core keys.
+        var coreWinner = CoreTeamFromMatchzy(winnerTeam);
+        var coreTeam1Series = rankCoreTeam1IsMatchzyTeam1 ? team1Score : team2Score;
+        var coreTeam2Series = rankCoreTeam1IsMatchzyTeam1 ? team2Score : team1Score;
+        var rewardEligible = !matchCoreSlotsByOriginal.Values.Any(slot => slot.IsFill) && coreWinner is "team1" or "team2";
+        // The API decides whether the match is ranked and what everyone gets; the plugin only reports raw telemetry.
+        var competitiveResult = BuildCompetitiveResult(mapTeam1Rounds, mapTeam2Rounds, finishedNormally: true);
         QueueMatchCoreEvent("result_final", expectedRevision => new
         {
             event_id = NextMatchCoreEventId("final"),
@@ -260,25 +268,13 @@ public partial class MatchZy
             expected_revision = expectedRevision,
             result = new
             {
-                winner_team = winnerTeam,
-                team1_series_score = team1Score,
-                team2_series_score = team2Score,
+                winner_team = coreWinner,
+                team1_series_score = coreTeam1Series,
+                team2_series_score = coreTeam2Series,
                 map_name = Server.MapName,
                 map_number = matchConfig.CurrentMapNumber,
                 reward_eligible = rewardEligible,
-                rank_result = rewardEligible ? new
-                {
-                    @event = "map_result",
-                    event_id = $"legacyx-core:{matchCoreId.Value:N}:rank-final",
-                    matchid = liveMatchId.ToString(),
-                    map_number = matchConfig.CurrentMapNumber,
-                    map_name = Server.MapName,
-                    season = legacyXRankSeason.Value,
-                    match_core_final = true,
-                    winner = new { team = winnerTeam },
-                    team1 = new { id = matchzyTeam1.id, name = matchzyTeam1.teamName, score = team1Score, players = eligibleTeam1 },
-                    team2 = new { id = matchzyTeam2.id, name = matchzyTeam2.teamName, score = team2Score, players = eligibleTeam2 },
-                } : null,
+                competitive_result = competitiveResult,
             },
         });
     }

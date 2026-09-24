@@ -1,11 +1,10 @@
 # LEGACY-X Community Plugin
 
-`LegacyXCommunity` нь тусдаа EXP/rank calculation хийхгүй. MatchZy-ийн completed 5v5 final map result-ийг backend processing хийж XP, level, competitive rank болон clan season score-г хадгална. Энэ plugin нь тоглогчид server дотор өөрийн profile-ийг харах command UX өгнө.
+`LegacyXCommunity` нь тусдаа EXP/rank calculation хийхгүй. MatchZy-ийн `competitive_result`-ийг backend (Rank system v1) боловсруулж EXP болон rank-ийг хадгална. Энэ plugin нь тоглогчид server дотор өөрийн rank-ийг харах command өгнө.
 
 | Command | Behavior |
 |---|---|
-| `css_xp`, `css_level`, `css_progress` | XP, level, competitive rating/tier, clan tag харуулна. |
-| `css_clan` | Clan membership, role болон clan season contribution context харуулна. |
+| `css_rank`, `css_xp`, `css_level`, `css_progress` | Rank, EXP, leaderboard байр, дараагийн rank хүртэлх EXP болон Pro League төлөв харуулна. |
 
 ## Security
 
@@ -14,10 +13,8 @@ Plugin нь `/api/v1/plugin/community/players/:steamId` endpoint рүү л яв�
 ## Build and deploy
 
 ```bash
-cd community
+cd LegacyX-Community
 dotnet build -c Release
 ```
 
 Одоогоор server байхгүй тул энэ repository нь source/build preparation л агуулна. Future host батлагдсаны дараа central `.env`, secret-free config default болон release artifact-ийг reviewed deployment procedure-ээр байрлуулна.
-
-Clan self-service creation/join/leave нь server chat command биш. Энэ нь moderation, offensive tag prevention болон ownership dispute үүсгэх эрсдэлтэй тул LEGACY-X backend/staff workflow-оор удирдана.

@@ -14,5 +14,6 @@ public partial class MatchZy
         legacyXMatchCoreApiUrl.Value = environment.GetModule("MATCHZY", "MATCH_CORE_API_URL", legacyXMatchCoreApiUrl.Value).Trim();
         legacyXMatchCorePluginSecret.Value = environment.GetModule("MATCHZY", "MATCH_CORE_PLUGIN_TOKEN", legacyXMatchCorePluginSecret.Value).Trim();
         legacyXMatchCoreServerId.Value = environment.Get("LEGACYX_SERVER_ID", legacyXMatchCoreServerId.Value).Trim();
+        SetLegacyXMatchMode(environment.Get("LEGACYX_SERVER_MODE", "competitive_5v5"));
     }
 }

@@ -39,26 +39,20 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
 
     public override void Load(bool hotReload)
     {
-        Console.WriteLine($"[{ModuleName}] Loaded — EXP, level and clan profile commands ready.");
+        Console.WriteLine($"[{ModuleName}] Loaded — rank and EXP command ready.");
     }
 
-    [ConsoleCommand("css_xp", "Shows your LEGACY-X XP, level and competitive rank")]
-    [ConsoleCommand("css_level", "Shows your LEGACY-X XP, level and competitive rank")]
-    [ConsoleCommand("css_progress", "Shows your LEGACY-X XP, level and competitive rank")]
+    [ConsoleCommand("css_rank", "Shows your LEGACY-X rank, EXP and leaderboard position")]
+    [ConsoleCommand("css_xp", "Shows your LEGACY-X rank, EXP and leaderboard position")]
+    [ConsoleCommand("css_level", "Shows your LEGACY-X rank, EXP and leaderboard position")]
+    [ConsoleCommand("css_progress", "Shows your LEGACY-X rank, EXP and leaderboard position")]
     public void OnProgress(CCSPlayerController? player, CommandInfo? command)
     {
         if (player == null || !player.IsValid) return;
-        _ = SendProfileAsync(player, false);
+        _ = SendProfileAsync(player);
     }
 
-    [ConsoleCommand("css_clan", "Shows your LEGACY-X clan membership and season contribution")]
-    public void OnClan(CCSPlayerController? player, CommandInfo? command)
-    {
-        if (player == null || !player.IsValid) return;
-        _ = SendProfileAsync(player, true);
-    }
-
-    private async Task SendProfileAsync(CCSPlayerController player, bool clanOnly)
+    private async Task SendProfileAsync(CCSPlayerController player)
     {
         if (!Config.Enabled)
         {
@@ -81,7 +75,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
             using var response = await Http.SendAsync(request);
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                Print(player, "No completed LEGACY-X match history yet. Finish a 5v5 map to earn XP.");
+                Print(player, "No LEGACY-X rank yet. Sign in on the website and finish a ranked 5v5 match.");
                 return;
             }
             if (!response.IsSuccessStatusCode)
@@ -90,32 +84,39 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
                 return;
             }
 
+            // Rank and EXP come from the API (competitive_leaderboard); the plugin never calculates them.
             using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             var profile = document.RootElement.GetProperty("profile");
-            var level = profile.GetProperty("level").GetInt32();
-            var xp = profile.GetProperty("experience").GetInt32();
-            var rating = profile.GetProperty("rating").GetInt32();
-            var tier = profile.GetProperty("rank_tier").GetString() ?? "rookie";
-            var clanTag = profile.TryGetProperty("clan_tag", out var tag) && tag.ValueKind == JsonValueKind.String ? tag.GetString() : null;
-            var clanName = profile.TryGetProperty("clan_name", out var name) && name.ValueKind == JsonValueKind.String ? name.GetString() : null;
-            var clanRole = profile.TryGetProperty("clan_role", out var role) && role.ValueKind == JsonValueKind.String ? role.GetString() : null;
+            var rankName = StringOrNull(profile, "rank_name") ?? "Unranked";
+            var exp = IntOrNull(profile, "current_exp") ?? 0;
+            var position = IntOrNull(profile, "position");
+            var nextName = StringOrNull(profile, "next_rank_name");
+            var nextExp = IntOrNull(profile, "next_rank_min_exp");
+            var proLeague = profile.TryGetProperty("pro_league_unlocked", out var unlocked) && unlocked.ValueKind == JsonValueKind.True;
 
-            if (clanOnly)
-            {
-                Print(player, string.IsNullOrWhiteSpace(clanTag)
-                    ? "You are not in a LEGACY-X clan yet. Clan creation is managed through the community API."
-                    : $"Clan [{clanTag}] {clanName} — role: {clanRole}. Season points are earned from completed 5v5 maps.");
-                return;
-            }
-
-            var clan = string.IsNullOrWhiteSpace(clanTag) ? "No clan" : $"[{clanTag}] {clanName}";
-            Print(player, $"Level {level} · {xp} XP · {tier} {rating} rating · {clan}");
+            var parts = new List<string> { rankName, $"{exp:N0} EXP" };
+            if (position.HasValue) parts.Add($"#{position.Value:N0}");
+            parts.Add(nextName != null && nextExp.HasValue ? $"{Math.Max(0, nextExp.Value - exp):N0} EXP to {nextName}" : "Highest rank");
+            parts.Add(proLeague ? "Pro League unlocked" : "Pro League at Vanguard I");
+            Print(player, string.Join(" · ", parts));
         }
         catch (Exception exception)
         {
             Console.WriteLine($"[{ModuleName}] Profile lookup failed: {exception.Message}");
             Print(player, "Community profile is temporarily unavailable.");
         }
+    }
+
+    private static string? StringOrNull(JsonElement element, string property) =>
+        element.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    /// <summary>Postgres numerics can arrive as numbers or strings.</summary>
+    private static int? IntOrNull(JsonElement element, string property)
+    {
+        if (!element.TryGetProperty(property, out var value)) return null;
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var number)) return (int)Math.Round(number);
+        if (value.ValueKind == JsonValueKind.String && double.TryParse(value.GetString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var parsed)) return (int)Math.Round(parsed);
+        return null;
     }
 
     private void Print(CCSPlayerController player, string message)

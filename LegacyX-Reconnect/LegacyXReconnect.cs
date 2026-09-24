@@ -20,6 +20,8 @@ public sealed class LegacyXReconnectConfig : BasePluginConfig
     public string ServerId { get; set; } = "legacyx-match-1";
     public string ServerAddress { get; set; } = "";
     public string ServerMode { get; set; } = "competitive_5v5";
+    /// <summary>GOTV address (ip:port) for "Spectate" on the website; empty when GOTV is off.</summary>
+    public string GotvAddress { get; set; } = "";
     public int HeartbeatSeconds { get; set; } = 30;
     public string ChatPrefix { get; set; } = "{Lime}[LEGACY-X]{Default}";
 }
@@ -45,11 +47,13 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
         config.ServerId = environment.Get("LEGACYX_SERVER_ID", config.ServerId);
         config.ServerAddress = environment.Get("LEGACYX_SERVER_ADDRESS", config.ServerAddress);
         config.ServerMode = environment.Get("LEGACYX_SERVER_MODE", config.ServerMode);
+        config.GotvAddress = environment.Get("LEGACYX_GOTV_ADDRESS", config.GotvAddress);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
         Config.ServerId = Config.ServerId.Trim();
         Config.ServerAddress = Config.ServerAddress.Trim();
         Config.ServerMode = Config.ServerMode.Trim().ToLowerInvariant();
+        Config.GotvAddress = Config.GotvAddress.Trim();
         Config.HeartbeatSeconds = Math.Clamp(Config.HeartbeatSeconds, 10, 120);
     }
 
@@ -104,7 +108,7 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
     {
         if (!Ready()) return;
         var playerCount = Utilities.GetPlayers().Count(player => IsTrackable(player));
-        _ = SendEventAsync(new Dictionary<string, object?>
+        var payload = new Dictionary<string, object?>
         {
             ["event"] = "server_heartbeat",
             ["event_id"] = $"heartbeat-{Config.ServerId}-{Guid.NewGuid():N}",
@@ -113,7 +117,11 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
             ["map_name"] = Server.MapName ?? "",
             ["mode"] = Config.ServerMode,
             ["player_count"] = playerCount,
-        });
+            // Capacity and GOTV feed the website's Play pages (slots, "Hide full", Spectate).
+            ["max_players"] = Math.Clamp(Server.MaxPlayers, 1, 128),
+        };
+        if (!string.IsNullOrWhiteSpace(Config.GotvAddress)) payload["gotv_address"] = Config.GotvAddress;
+        _ = SendEventAsync(payload);
     }
 
     private async Task SendPlayerEventAsync(string eventName, CCSPlayerController player, Guid sessionId, string disconnectReason)
