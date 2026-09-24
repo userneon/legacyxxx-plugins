@@ -23,6 +23,8 @@ public sealed class LegacyXReconnectConfig : BasePluginConfig
     /// <summary>GOTV address (ip:port) for "Spectate" on the website; empty when GOTV is off.</summary>
     public string GotvAddress { get; set; } = "";
     public int HeartbeatSeconds { get; set; } = 30;
+    /// <summary>Send kills to the website's live kill feed (held in API memory only, never stored).</summary>
+    public bool KillFeedEnabled { get; set; } = true;
     public string ChatPrefix { get; set; } = "{Lime}[LEGACY-X]{Default}";
 }
 
@@ -31,6 +33,8 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(4) };
     private readonly Dictionary<ulong, Guid> _sessions = new();
     private CounterStrikeSharp.API.Modules.Timers.Timer? _heartbeatTimer;
+    private static readonly Regex KillWeaponPattern = new("[^A-Za-z0-9_ -]", RegexOptions.Compiled);
+    private readonly List<Dictionary<string, object?>> _pendingKills = new();
     public required LegacyXReconnectConfig Config { get; set; }
 
     public override string ModuleAuthor => "LEGACY-X Community";
@@ -48,6 +52,7 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
         config.ServerAddress = environment.Get("LEGACYX_SERVER_ADDRESS", config.ServerAddress);
         config.ServerMode = environment.Get("LEGACYX_SERVER_MODE", config.ServerMode);
         config.GotvAddress = environment.Get("LEGACYX_GOTV_ADDRESS", config.GotvAddress);
+        config.KillFeedEnabled = environment.GetModuleBoolean("RECONNECT", "KILLFEED_ENABLED", config.KillFeedEnabled);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
         Config.ServerId = Config.ServerId.Trim();
@@ -62,6 +67,11 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
         RegisterEventHandler<EventPlayerConnectFull>(OnPlayerConnectFull);
         RegisterEventHandler<EventPlayerDisconnect>(OnPlayerDisconnect);
         _heartbeatTimer = AddTimer(Config.HeartbeatSeconds, SendHeartbeat, TimerFlags.REPEAT);
+        if (Config.KillFeedEnabled)
+        {
+            RegisterEventHandler<EventPlayerDeath>(OnPlayerDeath);
+            AddTimer(2.0f, FlushKills, TimerFlags.REPEAT);
+        }
         Console.WriteLine($"[{ModuleName}] Loaded — session tracking and Last Played are ready.");
     }
 
@@ -186,6 +196,59 @@ public sealed class LegacyXReconnect : BasePlugin, IPluginConfig<LegacyXReconnec
             Console.WriteLine($"[{ModuleName}] Reconnect lookup failed: {exception.Message}");
             Print(player, "Last Played session is temporarily unavailable.");
         }
+    }
+
+    private HookResult OnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
+    {
+        var victim = @event.Userid;
+        var attacker = @event.Attacker;
+        // World damage, suicides and team switches are not kills.
+        if (victim == null || !victim.IsValid || attacker == null || !attacker.IsValid || attacker == victim) return HookResult.Continue;
+        if (_pendingKills.Count >= 50) return HookResult.Continue;
+        var weapon = KillWeaponPattern.Replace(@event.Weapon ?? string.Empty, string.Empty).Trim();
+        _pendingKills.Add(new Dictionary<string, object?>
+        {
+            ["event_id"] = $"kill-{Config.ServerId}-{Guid.NewGuid():N}",
+            ["server_id"] = Config.ServerId,
+            ["attacker_steam_id"] = attacker.IsBot || attacker.SteamID == 0 ? null : attacker.SteamID.ToString(),
+            ["attacker_name"] = KillFeedName(attacker.PlayerName),
+            ["victim_steam_id"] = victim.IsBot || victim.SteamID == 0 ? null : victim.SteamID.ToString(),
+            ["victim_name"] = KillFeedName(victim.PlayerName),
+            ["weapon"] = string.IsNullOrEmpty(weapon) ? "world" : weapon[..Math.Min(64, weapon.Length)],
+            ["headshot"] = @event.Headshot,
+            ["timestamp"] = DateTimeOffset.UtcNow.ToString("o"),
+        });
+        return HookResult.Continue;
+    }
+
+    private static string KillFeedName(string? name)
+    {
+        var trimmed = (name ?? string.Empty).Trim();
+        if (trimmed.Length == 0) return "Player";
+        return trimmed.Length > 64 ? trimmed[..64] : trimmed;
+    }
+
+    /// <summary>Sends buffered kills in one request every two seconds.</summary>
+    private void FlushKills()
+    {
+        if (_pendingKills.Count == 0 || !Ready()) return;
+        var batch = _pendingKills.ToArray();
+        _pendingKills.Clear();
+        _ = PostAsync("/api/v1/plugin/killfeed/events", batch);
+    }
+
+    private async Task PostAsync(string path, object payload)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{Config.ApiBaseUrl}{path}");
+            request.Headers.Add("x-plugin-id", Config.PluginId);
+            request.Headers.Add("x-plugin-secret", Config.PluginSecret);
+            request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            using var response = await Http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) Console.WriteLine($"[{ModuleName}] {path} rejected: {(int)response.StatusCode}");
+        }
+        catch (Exception exception) { Console.WriteLine($"[{ModuleName}] {path} delivery failed: {exception.Message}"); }
     }
 
     private async Task SendEventAsync(object payload)

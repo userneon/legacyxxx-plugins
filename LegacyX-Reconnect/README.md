@@ -20,7 +20,8 @@ MatchZy owns 5v5 readiness, live match state and soft map transitions. Reconnect
 2. Future CS2 host дээр repository root `.env.example`-ийг `CounterStrikeSharp/.env` болгон secret-free placeholder-оос нь server-local scoped token-тойгоор бэлдэнэ.
 3. `LEGACYX_API_BASE_URL`, `LEGACYX_RECONNECT_PLUGIN_ID`, `LEGACYX_RECONNECT_PLUGIN_TOKEN`, `LEGACYX_SERVER_ID`, `LEGACYX_SERVER_ADDRESS` нь Reconnect-ийн ганц runtime identity source байна.
 4. Сонголтоор `LEGACYX_GOTV_ADDRESS` (ip:port): тохируулсан үед heartbeat нь `gotv_address`-ийг илгээж вэбсайтын Play хуудсанд "Spectate" товч гарна. Heartbeat бүр `max_players` (server-ийн слот)-ийг мөн илгээнэ.
-5. `config/LegacyXReconnect.json.example` нь зөвхөн mode, heartbeat, chat default агуулна; API URL, server ID/address, token оруулахгүй.
+5. Kill feed: `EventPlayerDeath` бүрийг 2 секунд тутамд багцлан `/api/v1/plugin/killfeed/events` руу илгээнэ (API зөвхөн сүүлийн 50-ийг санах ойд барина, DB-д хадгалахгүй). `LEGACYX_RECONNECT_KILLFEED_ENABLED=false`-аар унтраана.
+6. `config/LegacyXReconnect.json.example` нь зөвхөн mode, heartbeat, chat default агуулна; API URL, server ID/address, token оруулахгүй.
 5. Server ID/address pair-ийг Root API-ийн `RECONNECT_SERVER_REGISTRY`-д reviewed backend deployment-оор бүртгэнэ.
 
 Одоогоор CS2 server/VPS байхгүй учраас DLL copy, runtime config, API restart, server restart хийхгүй.
