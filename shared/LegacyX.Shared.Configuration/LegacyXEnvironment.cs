@@ -19,6 +19,12 @@ public sealed class LegacyXEnvironment
         return _values.TryGetValue(key, out var fileValue) ? fileValue : fallback;
     }
 
+    public int GetInt(string key, int fallback, int minimum, int maximum)
+    {
+        var raw = Get(key, fallback.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return int.TryParse(raw, out var parsed) ? Math.Clamp(parsed, minimum, maximum) : fallback;
+    }
+
     public string GetModule(string module, string setting, string fallback = "")
     {
         var prefix = $"LEGACYX_{Normalize(module)}_";

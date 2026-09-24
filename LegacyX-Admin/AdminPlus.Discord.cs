@@ -1,964 +1,102 @@
+using System;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using System.Net.Http;
 using System.Threading.Tasks;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Diagnostics;
-using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
-using CounterStrikeSharp.API.Modules.Entities;
-using CounterStrikeSharp.API.Modules.Commands;
-using CounterStrikeSharp.API.Modules.Cvars;
-using CounterStrikeSharp.API.Modules.Utils;
-using CounterStrikeSharp.API.Modules.Timers;
 using LegacyX.Shared.Configuration;
 
 namespace AdminPlus;
 
+// LEGACY-X policy: Discord is an opt-in Call channel for player !admin/report alerts only.
+// Every moderation, connection, chat, match and status event remains inside the game/API/database.
 public static class Discord
 {
-    private static readonly HttpClient _httpClient = new()
-    {
-        Timeout = TimeSpan.FromSeconds(10)
-    };
-    
-    public static void Dispose()
-    {
-        try
-        {
-            _httpClient?.Dispose();
-        }
-        catch (Exception ex)
-        {
-            AdminPlus.LogError($"Discord HttpClient dispose error: {ex.Message}");
-        }
-    }
-
-    public static void StartStatusTimer(AdminPlus plugin)
-    {
-        if (string.IsNullOrWhiteSpace(ServerStatusWebhook))
-        {
-            return;
-        }
-        
-        _statusTimer = plugin.AddTimer(180f, () =>
-        {
-            try
-            {
-                var playerCount = Utilities.GetPlayers().Count(p => p.IsValid && !p.IsBot);
-                var maxPlayers = Server.MaxPlayers;
-                var currentMap = Server.MapName;
-                
-                var serverIp = AdminPlus.GetServerAddress();
-                
-                var uptime = GetServerUptime();
-                var timeLeft = GetMapTimeLeft();
-
-                _ = SendServerStatus(plugin, "Online", playerCount, maxPlayers, currentMap, uptime, serverIp, timeLeft);
-            }
-            catch (Exception ex)
-            {
-                AdminPlus.LogError($"Discord status timer error: {ex.Message}");
-            }
-        }, TimerFlags.REPEAT);
-    }
-
-    public static void StopStatusTimer()
-    {
-        try
-        {
-            _statusTimer?.Kill();
-            _statusTimer = null;
-        }
-        catch (Exception ex)
-        {
-            AdminPlus.LogError($"Discord status timer stop error: {ex.Message}");
-        }
-    }
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false,
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-    };
-
-    private static string BanWebhook = "";
-    private static string AdminActionsWebhook = "";
-    private static string CommunicationWebhook = "";
-    private static string ServerStatusWebhook = "";
-    private static string ConnectionLogsWebhook = "";
-    private static string ChatLogsWebhook = "";
-    private static string ReportAndCalladminWebhook = "";
-    private static string ReportAndCalladminWebhookMentionUserId = "";
-    private static string ServerConnectUrl = "";
-    private static bool DiscordMatchModeAllowed;
-    public static string ConfiguredServerAddress = "";
-    private static Timer? _statusTimer;
+    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(6) };
+    private static string _callChannelWebhook = string.Empty;
+    private static string _callChannelMention = string.Empty;
+    public static string ConfiguredServerAddress = string.Empty;
 
     public static void LoadConfig()
     {
-        try
-        {
-            var environment = LegacyXEnvironmentLoader.Load();
-            if (!environment.GetModuleBoolean("ADMIN", "DISCORD_ENABLED", false))
-            {
-                BanWebhook = AdminActionsWebhook = CommunicationWebhook = ServerStatusWebhook = "";
-                ConnectionLogsWebhook = ChatLogsWebhook = ReportAndCalladminWebhook = "";
-                ReportAndCalladminWebhookMentionUserId = "@everyone";
-                ConfiguredServerAddress = environment.Get("LEGACYX_SERVER_ADDRESS");
-                ServerConnectUrl = "";
-                DiscordMatchModeAllowed = false;
-                return;
-            }
-
-            BanWebhook = environment.GetModule("ADMIN", "DISCORD_BAN_WEBHOOK");
-            AdminActionsWebhook = environment.GetModule("ADMIN", "DISCORD_ACTIONS_WEBHOOK");
-            CommunicationWebhook = environment.GetModule("ADMIN", "DISCORD_COMMUNICATION_WEBHOOK");
-            ServerStatusWebhook = environment.GetModule("ADMIN", "DISCORD_STATUS_WEBHOOK");
-            ConnectionLogsWebhook = environment.GetModule("ADMIN", "DISCORD_CONNECTION_WEBHOOK");
-            ChatLogsWebhook = environment.GetModule("ADMIN", "DISCORD_CHAT_WEBHOOK");
-            ReportAndCalladminWebhook = environment.GetModule("ADMIN", "DISCORD_REPORT_WEBHOOK");
-            ReportAndCalladminWebhookMentionUserId = environment.GetModule("ADMIN", "DISCORD_REPORT_MENTION", "@everyone");
-            ConfiguredServerAddress = environment.Get("LEGACYX_SERVER_ADDRESS");
-            ServerConnectUrl = BuildServerConnectUrl(
-                environment.GetModule("ADMIN", "DISCORD_CONNECT_URL"),
-                environment.Get("LEGACYX_SERVER_ID"));
-            DiscordMatchModeAllowed = IsDiscordMatchModeAllowed(
-                environment.Get("LEGACYX_SERVER_MODE"),
-                environment.GetModule("ADMIN", "DISCORD_MATCH_MODES", "competitive_5v5"));
-        }
-        catch (Exception ex)
-        {
-            AdminPlus.LogError($"Config load error: {ex.Message}");
-        }
+        var environment = LegacyXEnvironmentLoader.Load();
+        ConfiguredServerAddress = environment.Get("LEGACYX_SERVER_ADDRESS");
+        _callChannelMention = environment.GetModule("ADMIN", "CALL_CHANNEL_MENTION", string.Empty);
+        _callChannelWebhook = environment.GetModuleBoolean("ADMIN", "CALL_CHANNEL_ENABLED", false)
+            ? NormalizeCallWebhook(environment.GetModule("ADMIN", "CALL_CHANNEL_WEBHOOK"))
+            : string.Empty;
     }
 
-    private static string BuildServerConnectUrl(string configuredUrl, string serverId)
-    {
-        if (string.IsNullOrWhiteSpace(configuredUrl) || string.IsNullOrWhiteSpace(serverId))
-        {
-            return "";
-        }
+    public static void Dispose() => Http.Dispose();
 
-        if (!Uri.TryCreate(configuredUrl, UriKind.Absolute, out var baseUri) || baseUri.Scheme != Uri.UriSchemeHttps)
-        {
-            AdminPlus.LogError("Discord connect URL must be an absolute HTTPS URL.");
-            return "";
-        }
+    // Kept as no-ops so upstream AdminPlus call sites remain compatible without any outbound event delivery.
+    public static void StartStatusTimer(AdminPlus plugin) { }
+    public static void StopStatusTimer() { }
+    public static void RegisterDiscordCommands(AdminPlus plugin) { }
+    public static Task SendCommunicationLog(string playerName, ulong playerSteamId, string adminName, ulong adminSteamId, string reason, int duration, string actionType, bool isApplied, AdminPlus plugin) => Task.CompletedTask;
+    public static Task SendAdminActionLog(string action, string targetName, ulong targetSteamId, string adminName, ulong adminSteamId, string reason, AdminPlus plugin) => Task.CompletedTask;
+    public static Task SendBanLog(string playerName, string steamId, string adminName, string reason, string duration, bool isUnban, AdminPlus plugin) => Task.CompletedTask;
+    public static Task SendChatLog(string playerName, string steamId, string message, string channel, AdminPlus plugin) => Task.CompletedTask;
+    public static Task SendConnectionLog(string playerName, string steamId, string action, AdminPlus plugin) => Task.CompletedTask;
+    public static Task SendServerStatus(AdminPlus plugin, string status, int playerCount, int maxPlayers, string currentMap, string uptime, string serverIp = "", string timeLeft = "") => Task.CompletedTask;
 
-        var separator = string.IsNullOrWhiteSpace(baseUri.Query) ? "?" : "&";
-        return $"{baseUri}{separator}server={Uri.EscapeDataString(serverId)}";
-    }
-
-    private static bool IsDiscordMatchModeAllowed(string configuredMode, string configuredAllowlist)
-    {
-        var mode = configuredMode.Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(mode)) return false;
-
-        return configuredAllowlist
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(value => value.ToLowerInvariant())
-            .Contains(mode, StringComparer.Ordinal);
-    }
-
-    public static async Task SendCommunicationLog(string playerName, ulong playerSteamId, string adminName, ulong adminSteamId, string reason, int duration, string actionType, bool isApplied, AdminPlus plugin)
-    {
-        if (string.IsNullOrWhiteSpace(CommunicationWebhook))
-        {
-            return;
-        }
-
-        if (plugin == null) return;
-
-        string emoji = actionType.ToLower() switch
-        {
-            "mute" => "🔇",
-            "gag" => "🤐", 
-            "silence" => "🔕",
-            _ => "💬"
-        };
-
-        string actionText = actionType.ToLower() switch
-        {
-            "mute" => isApplied ? plugin.Localizer["Discord.CommunicationLog.Muted"].Value : plugin.Localizer["Discord.CommunicationLog.Unmuted"].Value,
-            "gag" => isApplied ? plugin.Localizer["Discord.CommunicationLog.Gagged"].Value : plugin.Localizer["Discord.CommunicationLog.Ungagged"].Value,
-            "silence" => isApplied ? plugin.Localizer["Discord.CommunicationLog.Silenced"].Value : plugin.Localizer["Discord.CommunicationLog.Unsilenced"].Value,
-            _ => actionType
-        };
-
-        int color = isApplied ? 16711680 : 65280; 
-
-        string steamId3 = ConvertToSteamId3(playerSteamId.ToString());
-
-        var fields = new List<object>
-        {
-            new { name = plugin.Localizer["Discord.CommunicationLog.PlayerName"].Value, value = $"▶ {playerName}", inline = true },
-            new { name = plugin.Localizer["Discord.CommunicationLog.SteamID"].Value, value = $"▶ `{steamId3}`", inline = true },
-            new { name = plugin.Localizer["Discord.CommunicationLog.AdminName"].Value, value = $"▶ {adminName}", inline = true },
-            new { name = plugin.Localizer["Discord.CommunicationLog.Reason"].Value, value = $"▶ {reason}", inline = true },
-            new { name = plugin.Localizer["Discord.CommunicationLog.ActionType"].Value, value = $"▶ {actionType}", inline = true }
-        };
-
-        if (isApplied)
-        {
-            string durationText;
-            if (duration > 0)
-            {
-                durationText = plugin.Localizer["Duration.Temporary", duration].Value;
-            }
-            else
-            {
-                durationText = plugin.Localizer["Duration.Forever"].Value;
-            }
-            fields.Add(new { name = plugin.Localizer["Discord.CommunicationLog.Duration"].Value, value = $"▶ {durationText}", inline = true });
-        }
-
-        var embedObject = new
-        {
-            embeds = new[]
-            {
-                new
-                {
-                    title = $"{emoji} {plugin.Localizer["Discord.CommunicationLog.Title"].Value}",
-                    description = $"**{playerName}** {actionText.ToLower()}",
-                    color = color,
-                    fields = fields.ToArray(),
-                    footer = new { text = plugin.Localizer["Discord.CommunicationLog.Footer"].Value },
-                    timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-                }
-            }
-        };
-
-        await SendMessageWithFallback("communication", embedObject);
-    }
-
-    public static async Task SendAdminActionLog(string action, string targetName, ulong targetSteamId, string adminName, ulong adminSteamId, string reason, AdminPlus plugin)
-    {
-        if (string.IsNullOrWhiteSpace(AdminActionsWebhook))
-        {
-            return;
-        }
-
-        if (plugin == null) return;
-
-        string emoji = action.ToLower() switch
-        {
-            "kick" => "👢",
-            "slay" => "💀",
-            "slap" => "👋",
-            "noclip" => "👻",
-            "god" => "🛡️",
-            "respawn" => "🔄",
-            "teleport" => "📡",
-            "speed" => "🏃",
-            "gravity" => "⬆️",
-            "hp" => "❤️",
-            "armor" => "🛡️",
-            "money" => "💰",
-            "weapon" => "🔫",
-            "freeze" => "❄️",
-            "unfreeze" => "🔥",
-            "glow" => "✨",
-            "drug" => "💊",
-            "shake" => "📳",
-            "rcon" => "🎮",
-            "team" => "👥",
-            "rename" => "🏷️",
-            "swap" => "🔄",
-            "beacon" => "📡",
-            "blind" => "👁️",
-            "color" => "🎨",
-            "bury" => "⛏️",
-            "clean" => "🧹",
-            "goto" => "➡️",
-            "bring" => "⬅️",
-            "hrespawn" => "🔄",
-            "sethp" => "❤️",
-            "map" => "🗺️",
-            "wsmap" => "🗺️",
-            "who" => "👤",
-            "rr" => "🔄",
-            "players" => "👥",
-            "vote" => "🗳️",
-            "votemap" => "🗳️",
-            "votekick" => "🗳️",
-            "rvote" => "🗳️",
-            "cancelvote" => "❌",
-            "admin" => "👑",
-            "strip" => "🚫",
-            _ => "⚡"
-        };
-
-        string steamId3 = ConvertToSteamId3(targetSteamId.ToString());
-
-        var fields = new List<object>
-        {
-            new { name = plugin.Localizer["Discord.AdminActionLog.Action"].Value, value = $"▶ {action}", inline = true },
-            new { name = plugin.Localizer["Discord.AdminActionLog.Target"].Value, value = $"▶ {targetName}", inline = true },
-            new { name = plugin.Localizer["Discord.AdminActionLog.SteamID"].Value, value = $"▶ `{steamId3}`", inline = true },
-            new { name = plugin.Localizer["Discord.AdminActionLog.Admin"].Value, value = $"▶ {adminName}", inline = true }
-        };
-
-        if (!string.IsNullOrWhiteSpace(reason))
-        {
-            string fieldName = action.ToLower() switch
-            {
-                "slap" => plugin.Localizer["Discord.AdminActionLog.Damage"].Value,
-                "money" => plugin.Localizer["Discord.AdminActionLog.Amount"].Value,
-                "armor" => plugin.Localizer["Discord.AdminActionLog.Amount"].Value,
-                "beacon" => plugin.Localizer["Discord.AdminActionLog.Beacon"].Value,
-                "freeze" => plugin.Localizer["Discord.AdminActionLog.Freeze"].Value,
-                "gravity" => plugin.Localizer["Discord.AdminActionLog.Gravity"].Value,
-                "noclip" => plugin.Localizer["Discord.AdminActionLog.Noclip"].Value,
-                "weapon" => plugin.Localizer["Discord.AdminActionLog.Weapon"].Value,
-                "hp" => plugin.Localizer["Discord.AdminActionLog.HP"].Value,
-                "speed" => plugin.Localizer["Discord.AdminActionLog.Speed"].Value,
-                "god" => plugin.Localizer["Discord.AdminActionLog.God"].Value,
-                "glow" => plugin.Localizer["Discord.AdminActionLog.Glow"].Value,
-                "shake" => plugin.Localizer["Discord.AdminActionLog.Shake"].Value,
-                "blind" => plugin.Localizer["Discord.AdminActionLog.Blind"].Value,
-                "drug" => plugin.Localizer["Discord.AdminActionLog.Drug"].Value,
-                _ => plugin.Localizer["Discord.AdminActionLog.Reason"].Value
-            };
-            
-            string displayValue = action.ToLower() switch
-            {
-                "beacon" when reason == "applied" => plugin.Localizer["Discord.AdminActionLog.Applied"].Value,
-                "beacon" when reason == "removed" => plugin.Localizer["Discord.AdminActionLog.Removed"].Value,
-                "freeze" when reason != "permanent" => $"{reason} {plugin.Localizer["Discord.AdminActionLog.Seconds"].Value}",
-                "gravity" => reason,
-                "shake" => $"{reason} {plugin.Localizer["Discord.AdminActionLog.Seconds"].Value}",
-                "blind" => $"{reason} {plugin.Localizer["Discord.AdminActionLog.Seconds"].Value}",
-                "drug" => $"{reason} {plugin.Localizer["Discord.AdminActionLog.Seconds"].Value}",
-                _ => reason
-            };
-            
-            fields.Add(new { name = fieldName, value = $"▶ {displayValue}", inline = true });
-        }
-
-        var embedObject = new
-        {
-            embeds = new[]
-            {
-                new
-                {
-                    title = $"{emoji} {plugin.Localizer["Discord.AdminActionLog.Title"].Value}",
-                    description = $"**{adminName}** {action.ToLower()}ed **{targetName}**",
-                    color = 16776960,
-                    fields = fields.ToArray(),
-                    footer = new { text = plugin.Localizer["Discord.AdminActionLog.Footer"].Value },
-                    timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-                }
-            }
-        };
-
-        await SendMessageWithFallback("adminActions", embedObject);
-    }
-
-    public static async Task SendBanMessage(string playerName, ulong playerSteamId, string adminName, ulong adminSteamId, string reason, int duration, bool isBan)
-    {
-        if (string.IsNullOrWhiteSpace(BanWebhook))
-        {
-            return;
-        }
-
-        int color = isBan ? (duration == 0 ? 16711680 : 16738740) : 3447003;
-        string title = isBan ? "🔨 Player Banned" : "✅ Player Unbanned";
-        
-        string adminValue = adminSteamId == 0 ?
-            $"**{adminName}**" :
-            $"**[{adminName}](https://steamcommunity.com/profiles/{adminSteamId}) [{adminSteamId}]**";
-
-        List<object> fields = new()
-        {
-            new { name = "👤 Admin", value = adminValue, inline = true },
-            new { name = "🎯 Player", value = $"**[{playerName}](https://steamcommunity.com/profiles/{playerSteamId}) [{playerSteamId}]**", inline = true }
-        };
-
-        if (isBan)
-        {
-            fields.Add(new { name = '\u200b', value = '\u200b', inline = true });
-
-            if (duration == 0)
-            {
-                fields.Add(new { name = "⏰ Duration", value = "`Permanent`", inline = true });
-            }
-            else
-            {
-                fields.Add(new { name = "⏰ Duration", value = $"`{duration} minutes`", inline = true });
-                fields.Add(new { name = "📅 End Time", value = $"`{DateTime.Now.AddMinutes(duration):dd-MM-yyyy HH:mm:ss}`", inline = true });
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(reason))
-        {
-            fields.Add(new { name = "📝 Reason", value = $"`{reason}`", inline = true });
-        }
-
-        if (fields.Count < 6)
-        {
-            fields.Add(new { name = '\u200b', value = '\u200b', inline = true });
-        }
-
-        var embedObject = new
-        {
-            embeds = new[]
-            {
-                new
-                {
-                    title,
-                    color,
-                    fields,
-                    timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
-                    footer = new { text = "AdminPlus Bot" }
-                }
-            }
-        };
-
-        string jsonString = JsonSerializer.Serialize(embedObject, JsonOptions);
-        using StringContent stringContent = new(jsonString, Encoding.UTF8, "application/json");
-
-        try
-        {
-            using HttpResponseMessage response = await _httpClient.PostAsync(BanWebhook, stringContent).ConfigureAwait(false);
-            string responseContent = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-            }
-            else
-            {
-            }
-        }
-        catch (HttpRequestException)
-        {
-        }
-        catch (Exception)
-        {
-        }
-    }
-
-
-    public static async Task SendServerStatus(AdminPlus plugin, string status, int playerCount, int maxPlayers, string currentMap, string uptime, string serverIp = "", string timeLeft = "")
-    {
-        if (!DiscordMatchModeAllowed) return;
-
-        if (string.IsNullOrWhiteSpace(ServerStatusWebhook))
-        {
-            return;
-        }
-
-        var ctPlayers = new List<string>();
-        var tPlayers = new List<string>();
-        
-        try
-        {
-            foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && p.TeamNum == 3))
-            {
-                ctPlayers.Add(player.PlayerName);
-            }
-            
-            foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && p.TeamNum == 2))
-            {
-                tPlayers.Add(player.PlayerName);
-            }
-        }
-        catch (Exception ex)
-        {
-            AdminPlus.LogError($"Discord player list error: {ex.Message}");
-        }
-
-        var onlineAdmins = 0;
-        try
-        {
-            if (!AdminPlus.AreAdminsHiddenFromList())
-            foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot))
-            {
-                if (plugin.HasEffectivePermission(player, "@css/root") ||
-                    plugin.HasEffectivePermission(player, "@css/ban") ||
-                    plugin.HasEffectivePermission(player, "@css/generic"))
-                {
-                    onlineAdmins++;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            AdminPlus.LogError($"Discord admin count error: {ex.Message}");
-        }
-
-        var ctNames = ctPlayers.Count > 0 ? string.Join("\n", ctPlayers.Select(p => $"```ansi\n\u001b[0;34m🔵 {p}\u001b[0m\n```")) : $"```ansi\n\u001b[0;34m🔵 {plugin.Localizer["Discord.ServerStatus.Empty"].Value}\u001b[0m\n```";
-        var tNames = tPlayers.Count > 0 ? string.Join("\n", tPlayers.Select(p => $"```ansi\n\u001b[0;33m🟡 {p}\u001b[0m\n```")) : $"```ansi\n\u001b[0;33m🟡 {plugin.Localizer["Discord.ServerStatus.Empty"].Value}\u001b[0m\n```";
-
-        var mapImageUrl = GetMapImageUrl(currentMap);
-        
-        var serverHostname = "CS2 Server";
-        try
-        {
-            var hostnameConVar = ConVar.Find("hostname");
-            if (hostnameConVar != null && !string.IsNullOrEmpty(hostnameConVar.StringValue))
-            {
-                serverHostname = hostnameConVar.StringValue;
-            }
-        }
-        catch (Exception)
-        {
-        }
-        
-        object? components = string.IsNullOrWhiteSpace(ServerConnectUrl)
-            ? null
-            : new[]
-            {
-                new
-                {
-                    type = 1,
-                    components = new[]
-                    {
-                        new
-                        {
-                            type = 2,
-                            style = 5,
-                            label = "Connect to Server",
-                            emoji = new { name = "🎮" },
-                            url = ServerConnectUrl
-                        }
-                    }
-                }
-            };
-
-        var embedObject = new
-        {
-            embeds = new[]
-            {
-                new
-                {
-                    title = $"🎮 {serverHostname}",
-                    description = plugin.Localizer["Discord.ServerStatus.Description"].Value,
-                    color = 0x00ff88,
-                    image = !string.IsNullOrEmpty(mapImageUrl) ? new { url = mapImageUrl } : null,
-                    fields = new object[]
-                    {
-                        new { name = $"🗺️ {plugin.Localizer["Discord.ServerStatus.Map"].Value}", value = $"```ansi\n\u001b[2;31m{currentMap}\u001b[0m\n```", inline = true },
-                        new { name = plugin.Localizer["Discord.ServerStatus.Players"].Value, value = $"```ansi\n\u001b[2;32m{playerCount}\u001b[0m/\u001b[2;37m{maxPlayers}\u001b[0m\n```", inline = true },
-                        new { name = plugin.Localizer["Discord.ServerStatus.ServerIP"].Value, value = $"```ansi\n\u001b[2;36m{serverIp}\u001b[0m\n```", inline = false },
-                        new { name = plugin.Localizer["Discord.ServerStatus.CTTeam"].Value, value = ctNames, inline = true },
-                        new { name = plugin.Localizer["Discord.ServerStatus.TTeam"].Value, value = tNames, inline = true },
-                        new { name = plugin.Localizer["Discord.ServerStatus.OnlineAdmin"].Value, value = $"```ansi\n\u001b[2;35m👑 {onlineAdmins} {plugin.Localizer["Discord.ServerStatus.AdminCount"].Value}\u001b[0m\n```", inline = true },
-                    },
-                    footer = new { text = plugin.Localizer["Discord.ServerStatus.Footer"].Value },
-                    timestamp = DateTime.UtcNow
-                }
-            },
-            components
-        };
-
-        try
-        {
-            await SendMessageWithFallback("serverStatus", embedObject);
-        }
-        catch (Exception)
-        {
-        }
-    }
-
-    private static string GetWebhookUrl(string webhookType)
-    {
-        return webhookType switch
-        {
-            "ban" => BanWebhook,
-            "banLogs" => BanWebhook,
-            "adminActions" => AdminActionsWebhook,
-            "communication" => CommunicationWebhook,
-            "serverStatus" => ServerStatusWebhook,
-            "connectionLogs" => ConnectionLogsWebhook,
-            "chatLogs" => ChatLogsWebhook,
-            "reports" => ReportAndCalladminWebhook,
-            _ => ""
-        };
-    }
-
-    public static async Task SendConnectionLog(string playerName, string steamId, string action, AdminPlus plugin)
-    {
-        if (string.IsNullOrWhiteSpace(ConnectionLogsWebhook))
-            return;
-
-        try
-        {
-            var steamId3 = ConvertToSteamId3(steamId);
-            
-            string emoji = action == "Connect" ? "🟢" : "🔴";
-            int color = action == "Connect" ? 0x00ff00 : 0xff0000;
-            string actionText = action == "Connect" ? plugin.Localizer["Discord.ConnectionLog.Connected"].Value : plugin.Localizer["Discord.ConnectionLog.Disconnected"].Value;
-
-            var embedObject = new
-            {
-                embeds = new[]
-                {
-                    new
-                    {
-                        title = $"{emoji} {actionText}",
-                        description = $"**{playerName}** {actionText.ToLower()}",
-                        color = color,
-                        fields = new[]
-                        {
-                            new { name = plugin.Localizer["Discord.ConnectionLog.PlayerName"].Value, value = $"▶ {playerName}", inline = true },
-                            new { name = plugin.Localizer["Discord.ConnectionLog.SteamID"].Value, value = $"▶ `{steamId3}`", inline = true },
-                            new { name = "⏰ Time", value = $"<t:{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}:R>", inline = true }
-                        },
-                        footer = new
-                        {
-                            text = plugin.Localizer["Discord.ConnectionLog.Footer"].Value
-                        },
-                        timestamp = DateTime.UtcNow
-                    }
-                }
-            };
-
-            await SendMessageWithFallback("connectionLogs", embedObject);
-        }
-        catch (Exception)
-        {
-        }
-    }
-
-    public static async Task SendBanLog(string playerName, string steamId, string adminName, string reason, string duration, bool isUnban, AdminPlus plugin)
-    {
-        if (string.IsNullOrWhiteSpace(BanWebhook))
-            return;
-
-        try
-        {
-            var steamId3 = ConvertToSteamId3(steamId);
-            
-            string emoji = isUnban ? "✅" : "🔨";
-            int color = isUnban ? 0x00ff00 : 0xff0000;
-            string actionText = isUnban ? plugin.Localizer["Discord.BanLog.Unbanned"].Value : plugin.Localizer["Discord.BanLog.Banned"].Value;
-
-            var embedObject = new
-            {
-                embeds = new[]
-                {
-                    new
-                    {
-                        title = $"{emoji} {actionText}",
-                        description = $"**{playerName}** {actionText.ToLower()}",
-                        color = color,
-                        fields = isUnban ? new[]
-                        {
-                            new { name = plugin.Localizer["Discord.BanLog.PlayerName"].Value, value = $"▶ {playerName}", inline = true },
-                            new { name = plugin.Localizer["Discord.BanLog.SteamID"].Value, value = $"▶ `{steamId3}`", inline = true },
-                            new { name = plugin.Localizer["Discord.BanLog.AdminName"].Value, value = $"▶ {adminName}", inline = true },
-                            new { name = plugin.Localizer["Discord.BanLog.Reason"].Value, value = $"▶ {reason}", inline = true }
-                        } : new[]
-                        {
-                            new { name = plugin.Localizer["Discord.BanLog.PlayerName"].Value, value = $"▶ {playerName}", inline = true },
-                            new { name = plugin.Localizer["Discord.BanLog.SteamID"].Value, value = $"▶ `{steamId3}`", inline = true },
-                            new { name = plugin.Localizer["Discord.BanLog.AdminName"].Value, value = $"▶ {adminName}", inline = true },
-                            new { name = plugin.Localizer["Discord.BanLog.Reason"].Value, value = $"▶ {reason}", inline = true },
-                            new { name = plugin.Localizer["Discord.BanLog.Duration"].Value, value = $"▶ {duration}", inline = true }
-                        },
-                        footer = new
-                        {
-                            text = plugin.Localizer["Discord.BanLog.Footer"].Value
-                        },
-                        timestamp = DateTime.UtcNow
-                    }
-                }
-            };
-
-            await SendMessageWithFallback("banLogs", embedObject);
-        }
-        catch (Exception)
-        {
-        }
-    }
-
-
-    public static async Task SendChatLog(string playerName, string steamId, string message, string channel, AdminPlus plugin)
-    {
-        if (string.IsNullOrWhiteSpace(ChatLogsWebhook))
-            return;
-
-        try
-        {
-            var steamId3 = ConvertToSteamId3(steamId);
-            
-            var embedObject = new
-            {
-                embeds = new[]
-                {
-                    new
-                    {
-                        title = plugin.Localizer["Discord.ChatLog.Title", playerName].Value,
-                        description = $"**{plugin.Localizer["Discord.ChatLog.Message"].Value}**\n```{message}```",
-                        color = 0x00ff88,
-                        fields = new[]
-                        {
-                            new { name = plugin.Localizer["Discord.ChatLog.SteamID"].Value, value = $"`{steamId3}`", inline = true },
-                            new { name = plugin.Localizer["Discord.ChatLog.Channel"].Value, value = $"`{channel}`", inline = true },
-                            new { name = plugin.Localizer["Discord.ChatLog.Time"].Value, value = $"<t:{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}:R>", inline = true }
-                        },
-                        footer = new
-                        {
-                            text = plugin.Localizer["Discord.ChatLog.Footer"].Value
-                        },
-                        timestamp = DateTime.UtcNow
-                    }
-                }
-            };
-
-            await SendMessageWithFallback("chatLogs", embedObject);
-        }
-        catch (Exception)
-        {
-        }
-    }
-
+    // This is the sole allowed outbound Discord event: an in-game player report / !admin call.
     public static async Task SendPlayerReport(string reporterName, string reporterSteamId, string reportedName, string reportedSteamId, string reason, string serverIp, AdminPlus plugin)
     {
-        if (string.IsNullOrWhiteSpace(ReportAndCalladminWebhook))
-            return;
+        if (string.IsNullOrWhiteSpace(_callChannelWebhook)) return;
 
-        try
+        var payload = new
         {
-            var reporterSteamId3 = ConvertToSteamId3(reporterSteamId);
-            var reportedSteamId3 = ConvertToSteamId3(reportedSteamId);
-            
-            var serverHostname = "CS2 Server";
-            try
+            content = NormalizeMention(_callChannelMention),
+            allowed_mentions = new { parse = Array.Empty<string>() },
+            embeds = new[]
             {
-                var hostnameConVar = ConVar.Find("hostname");
-                if (hostnameConVar != null && !string.IsNullOrEmpty(hostnameConVar.StringValue))
+                new
                 {
-                    serverHostname = hostnameConVar.StringValue;
-                }
-            }
-            catch { }
-
-            var embedObject = new
-            {
-                content = GetReportMentionContent(),
-                embeds = new[]
-                {
-                    new
+                    title = "LEGACY-X player call",
+                    color = 0xd9b45f,
+                    fields = new[]
                     {
-                        title = $"🚨 {plugin.Localizer["Discord.Report.Title"].Value}",
-                        description = plugin.Localizer["Discord.Report.Description"].Value,
-                        color = 0xeb4034,
-                        fields = new[]
-                        {
-                            new
-                            {
-                                name = plugin.Localizer["Discord.Report.Reporter"].Value,
-                                value = $"**{plugin.Localizer["Discord.Report.PlayerName"].Value}:** {reporterName}\n**SteamID:** {reporterSteamId3}\n**Steam:** [{plugin.Localizer["Discord.Report.SteamProfile"].Value}](https://steamcommunity.com/profiles/{reporterSteamId}/)",
-                                inline = false
-                            },
-                            new
-                            {
-                                name = plugin.Localizer["Discord.Report.Reported"].Value,
-                                value = $"**{plugin.Localizer["Discord.Report.PlayerName"].Value}:** {reportedName}\n**SteamID:** {reportedSteamId3}\n**Steam:** [{plugin.Localizer["Discord.Report.SteamProfile"].Value}](https://steamcommunity.com/profiles/{reportedSteamId}/)",
-                                inline = false
-                            },
-                            new
-                            {
-                                name = plugin.Localizer["Discord.Report.Reason"].Value,
-                                value = reason,
-                                inline = false
-                            },
-                            new
-                            {
-                                name = plugin.Localizer["Discord.Report.DirectConnect"].Value,
-                                value = $"**[`connect {serverIp}`]** - {plugin.Localizer["Discord.Report.ClickToConnect"].Value}",
-                                inline = false
-                            }
-                        },
-                        footer = new { text = plugin.Localizer["Discord.Report.Footer"].Value },
-                        timestamp = DateTime.UtcNow
-                    }
-                }
+                        new { name = "Reporter", value = $"{Safe(reporterName)}\nSteamID: `{Safe(reporterSteamId)}`", inline = true },
+                        new { name = "Reported player", value = $"{Safe(reportedName)}\nSteamID: `{Safe(reportedSteamId)}`", inline = true },
+                        new { name = "Reason", value = Safe(reason), inline = false },
+                        new { name = "Server", value = Safe(serverIp), inline = false },
+                    },
+                    timestamp = DateTime.UtcNow,
+                },
+            },
+        };
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, _callChannelWebhook)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
             };
-
-            await SendMessageWithFallback("reports", embedObject);
+            using var response = await Http.SendAsync(request).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+                AdminPlus.LogError($"Call channel delivery failed ({(int)response.StatusCode}).");
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            AdminPlus.LogError($"Call channel delivery error: {exception.Message}");
         }
     }
 
-    private static string ConvertToSteamId3(string steamId)
+    private static string NormalizeCallWebhook(string value)
     {
-        try
-        {
-            if (string.IsNullOrEmpty(steamId))
-                return steamId;
-
-            if (ulong.TryParse(steamId, out ulong steamId64))
-            {
-                var accountId = (steamId64 - 76561197960265728) & 0xFFFFFFFF;
-                return $"U:1:{accountId}";
-            }
-            
-            return steamId;
-        }
-        catch
-        {
-            return steamId; 
-        }
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+            return string.Empty;
+        if (!(uri.Host.Equals("discord.com", StringComparison.OrdinalIgnoreCase) || uri.Host.Equals("discordapp.com", StringComparison.OrdinalIgnoreCase)))
+            return string.Empty;
+        return uri.AbsolutePath.StartsWith("/api/webhooks/", StringComparison.Ordinal) ? uri.ToString() : string.Empty;
     }
 
-    private static string GetReportMentionRole()
+    private static string NormalizeMention(string value)
     {
-        return ReportAndCalladminWebhookMentionUserId; 
+        // Explicit role/user mention only; never allow @everyone/@here from configuration.
+        return value.StartsWith("<@&", StringComparison.Ordinal) && value.EndsWith('>') ? value : string.Empty;
     }
 
-    private static string GetReportMentionContent()
-    {
-        var mention = ReportAndCalladminWebhookMentionUserId;
-        
-        if (string.IsNullOrWhiteSpace(mention) || mention == "none" || mention == "")
-        {
-            return "";
-        }
-        else if (mention == "@everyone")
-        {
-            return "@everyone";
-        }
-        else if (mention == "@here")
-        {
-            return "@here";
-        }
-        else if (mention.StartsWith("@&"))
-        {
-            return mention;
-        }
-        else if (mention.StartsWith("<@") && mention.EndsWith(">"))
-        {
-            return mention;
-        }
-        else
-        {
-            return $"<@&{mention}>";
-        }
-    }
-
-    private static string GetMapImageUrl(string mapName)
-    {
-        var baseUrl = "https://raw.githubusercontent.com/ghostcap-gaming/cs2-map-images/main/cs2/";
-        return $"{baseUrl}{mapName.ToLower()}.png";
-    }
-
-    private static async Task<bool> SendDirectToDiscord(string webhookUrl, object embedData)
-    {
-        if (string.IsNullOrWhiteSpace(webhookUrl))
-            return false;
-
-        try
-        {
-            string jsonString = JsonSerializer.Serialize(embedData, JsonOptions);
-            using StringContent stringContent = new(jsonString, Encoding.UTF8, "application/json");
-
-            var executionUrl = webhookUrl.Contains("?", StringComparison.Ordinal)
-                ? $"{webhookUrl}&with_components=true"
-                : $"{webhookUrl}?with_components=true";
-            using HttpResponseMessage response = await _httpClient.PostAsync(executionUrl, stringContent).ConfigureAwait(false);
-            string responseContent = await response.Content.ReadAsStringAsync();
-
-            if (response.IsSuccessStatusCode)
-                return true;
-
-            Console.WriteLine($"[AdminPlus] Discord webhook failed ({response.StatusCode}): {responseContent}");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            AdminPlus.LogError($"Discord webhook error: {ex.Message}");
-            return false;
-        }
-    }
-
-    private static async Task SendMessageWithFallback(string webhookType, object embedData)
-    {
-        var webhookUrl = GetWebhookUrl(webhookType);
-        if (string.IsNullOrWhiteSpace(webhookUrl))
-            return;
-
-        await SendDirectToDiscord(webhookUrl, embedData);
-    }
-
-    public static void RegisterDiscordCommands(AdminPlus plugin)
-    {
-        plugin.AddCommand("css_discord_status", "Send server status to Discord", (player, commandInfo) => OnDiscordStatusCommand(plugin, player, commandInfo));
-    }
-
-    [CommandHelper(minArgs: 0, usage: "", whoCanExecute: CommandUsage.CLIENT_AND_SERVER)]
-    public static void OnDiscordStatusCommand(AdminPlus plugin, CCSPlayerController? player, CommandInfo commandInfo)
-    {
-        if (player != null && !player.IsValid)
-            return;
-
-        try
-        {
-            var playerCount = Utilities.GetPlayers().Count(p => p.IsValid && !p.IsBot);
-            var maxPlayers = Server.MaxPlayers;
-            var currentMap = Server.MapName;
-            
-            var serverIp = AdminPlus.GetServerAddress();
-            
-            var uptime = GetServerUptime();
-            var timeLeft = GetMapTimeLeft();
-
-            _ = SendServerStatus(plugin, "Online", playerCount, maxPlayers, currentMap, uptime, serverIp, timeLeft);
-
-            var message = "Server status sent to Discord!";
-            if (player != null)
-            {
-                player.PrintToChat($" {ChatColors.Green}[AdminPlus] {message}");
-            }
-            else
-            {
-                Console.WriteLine($"[AdminPlus] {message}");
-            }
-        }
-        catch (Exception)
-        {
-        }
-    }
-
-    private static string GetServerUptime()
-    {
-        try
-        {
-            var uptime = DateTime.Now - Process.GetCurrentProcess().StartTime;
-            return $"{uptime.Days}d {uptime.Hours}h {uptime.Minutes}m";
-        }
-        catch
-        {
-            return "Unknown";
-        }
-    }
-
-    private static string GetMapTimeLeft()
-    {
-        try
-        {
-            var mpTimelimit = ConVar.Find("mp_timelimit");
-            if (mpTimelimit != null)
-            {
-                var timeLimit = mpTimelimit.GetPrimitiveValue<int>();
-                if (timeLimit > 0)
-                {
-                    return $"{timeLimit} minutes";
-                }
-            }
-            return "Unlimited";
-        }
-        catch
-        {
-            return "Unknown";
-        }
-    }
+    private static string Safe(string? value) => string.IsNullOrWhiteSpace(value) ? "Not supplied" : value.Trim()[..Math.Min(value.Trim().Length, 900)];
 }

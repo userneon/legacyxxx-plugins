@@ -21,7 +21,7 @@ public partial class AdminPlus
         "asay", "csay", "hsay", "psay", "say",
         "addadmin", "removeadmin", "adminlist", "adminreload", "admin_reload",
         "vote", "votemap", "rvote", "cancelvote", "votekick", "voteban", "votegag", "votemute", "votesilence",
-        "report", "calladmin", "version", "help", "adminhelp",
+        "report", "calladmin", "callmanager", "version", "help", "adminhelp",
         "css_admin", "css_admins", "css_hideadmin", "css_ban", "css_ipban", "css_unban", "css_lastban",
         "css_baninfo", "css_banlist", "css_kick", "css_map", "css_wsmap", "css_workshop", "css_rcon", "css_cvar",
         "css_who", "css_rr", "css_slap", "css_slay", "css_money", "css_armor", "css_mute", "css_gag",
@@ -29,7 +29,7 @@ public partial class AdminPlus
         "css_asay", "css_csay", "css_hsay", "css_psay", "css_say", "css_addadmin", "css_removeadmin",
         "css_adminlist", "css_adminreload", "css_admin_reload", "css_adminmenu", "css_vote", "css_votemap",
         "css_rvote", "css_cancelvote", "css_votekick", "css_voteban", "css_votegag", "css_votemute",
-        "css_votesilence", "css_report", "css_calladmin", "css_version", "css_adminhelp", "css_players",
+        "css_votesilence", "css_report", "css_calladmin", "css_callmanager", "css_version", "css_adminhelp", "css_players",
         "css_cleanall", "css_cleanmute", "css_cleangag", "css_cleanbans", "css_cleanipbans", "css_cleansteambans",
         "css_discord_status", "css_rename", "css_team", "css_swap", "css_noclip", "css_god", "css_hp", "css_speed",
         "css_unspeed", "css_give", "css_strip", "css_freeze", "css_unfreeze", "css_blind", "css_unblind",
@@ -121,6 +121,9 @@ public partial class AdminPlus
 
     private void DispatchPluginChatCommand(CCSPlayerController player, string commandToken, string argumentLine)
     {
+        if (!RequireCommandStamina(player, commandToken))
+            return;
+
         switch (commandToken.ToLowerInvariant())
         {
             case "admin":

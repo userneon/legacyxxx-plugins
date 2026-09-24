@@ -1,5 +1,5 @@
 {
-  "Prefix": "{green}[LEGACY-X Admin]{default}",
+  "Prefix": "{green}LEGACY-X • {default}",
   "Console": "Console",
   "UnknownPlayer": "Unknown",
   "NoMatchingClient": "{red}Nenhum jogador correspondente foi encontrado.{default}",

@@ -113,6 +113,7 @@ public partial class AdminPlus : BasePlugin
         EnsureAdminConfigFiles();
         EnsurePluginDataFiles();
         LoadMenuConfigFile();
+        InitializeWebsiteAdminPolicySync();
 
             BannedUserPath = Path.Combine(Server.GameDirectory, "csgo/cfg/banned_user.cfg");
             BannedIpPath = Path.Combine(Server.GameDirectory, "csgo/cfg/banned_ip.cfg");
@@ -139,6 +140,8 @@ public partial class AdminPlus : BasePlugin
         RegisterHelpCommands();
         
         RegisterReportCommands();
+        RegisterStaminaCommandGuards();
+        RegisterEventHandler<EventRoundEnd>(OnAdminRoundEnd);
         RegisterListener<Listeners.OnTick>(OnInternalMenuTick);
         AddCommandListener("say", OnInternalMenuSay, HookMode.Pre);
         AddCommandListener("say_team", OnInternalMenuSay, HookMode.Pre);
@@ -666,7 +669,7 @@ public partial class AdminPlus : BasePlugin
         catch (Exception ex)
         {
             if (caller != null && caller.IsValid)
-                caller.PrintToChat($"{{green}}[LEGACY-X Admin]{{default}} Failed to get admin list: {ex.Message}");
+                caller.PrintToChat(LegacyXChat.System($"Failed to get admin list: {ex.Message}"));
             else
                 LogError($"Admins command error: {ex.Message}");
         }
@@ -875,7 +878,7 @@ public partial class AdminPlus : BasePlugin
     private static string GetPrefixedMessage(string key, params object[] args)
     {
         var message = _instance?.Localizer[key, args] ?? key;
-        var prefix = _instance?.Localizer["Prefix"] ?? "{green}[LEGACY-X Admin]{default}";
+        var prefix = LegacyXChat.Prefix;
         return message.Replace("{Prefix}", prefix);
     }
     
@@ -922,7 +925,37 @@ public partial class AdminPlus : BasePlugin
     private void RegisterReportCommands()
     {
         AddCommand("css_report", "Report a player", OnReportCommand);
-        AddCommand("css_calladmin", "Call an admin", OnReportCommand);
+        AddCommand("css_calladmin", "Call an online Admin", OnCallAdminCommand);
+        AddCommand("css_callmanager", "Call an online Manager", OnCallManagerCommand);
+    }
+
+    private void OnCallAdminCommand(CCSPlayerController? caller, CommandInfo? commandInfo) => SendStaffAssistanceCall(caller, 500, "ADMIN", new[] { "ADMIN", "MANAGER", "OWNER" });
+    private void OnCallManagerCommand(CCSPlayerController? caller, CommandInfo? commandInfo) => SendStaffAssistanceCall(caller, 750, "MANAGER", new[] { "MANAGER", "OWNER" });
+
+    private void SendStaffAssistanceCall(CCSPlayerController? caller, int requiredStamina, string roleName, string[] eligibleRoles)
+    {
+        if (caller == null || !caller.IsValid || caller.IsBot) return;
+        if (!CheckReportCooldown(caller.SteamID.ToString()))
+        {
+            caller.Print(Localizer["Report.GlobalCooldown"]);
+            return;
+        }
+        var recipients = Utilities.GetPlayers().Where(player => player != null && player.IsValid && !player.IsBot && player.SteamID != caller.SteamID && adminStamina.TryGetValue(player.SteamID, out var stamina) && stamina >= requiredStamina && adminStaffRoles.TryGetValue(player.SteamID, out var staffRole) && eligibleRoles.Contains(staffRole, StringComparer.OrdinalIgnoreCase)).ToList();
+        if (recipients.Count == 0)
+        {
+            caller.Print($"NO ONLINE {roleName} IS AVAILABLE");
+            return;
+        }
+        var callerName = SanitizeName(caller.PlayerName);
+        foreach (var recipient in recipients) recipient.Print($"{roleName} ASSISTANCE REQUEST: {callerName} NEEDS HELP");
+        _lastReportTime[caller.SteamID] = DateTime.Now;
+        caller.Print($"{roleName} ASSISTANCE REQUEST SENT");
+    }
+
+    private HookResult OnAdminRoundEnd(EventRoundEnd @event, GameEventInfo info)
+    {
+        PlayerExtensions.PrintToAll("NEED STAFF ASSISTANCE? !CALLADMIN — CALL AN ADMIN | !CALLMANAGER — CALL A MANAGER");
+        return HookResult.Continue;
     }
 
 
@@ -1124,19 +1157,14 @@ public static class PlayerExtensions
 {
     public static void Print(this CCSPlayerController controller, string message = "")
     {
-        var prefix = AdminPlus._instance?.Localizer?["Prefix"] ?? "";
-        if (!string.IsNullOrEmpty(prefix))
-            controller.PrintToChat($"{prefix} {message}");
-        else
-            controller.PrintToChat(message);
+        controller.PrintToChat(LegacyXChat.System(message));
     }
     
         public static void PrintToAll(string message)
         {
             try
             {
-                var prefix = AdminPlus._instance?.Localizer?["Prefix"] ?? "";
-                string fullMessage = !string.IsNullOrEmpty(prefix) ? $"{prefix} {message}" : message;
+                string fullMessage = LegacyXChat.System(message);
                 
                 if (Server.MaxPlayers <= 0)
                 {

@@ -17,6 +17,8 @@ namespace AdminPlus;
 
 public partial class AdminPlus
 {
+    private sealed record BanMenuTarget(ulong SteamId, string PlayerName, string IpAddress);
+
     private static readonly List<string> PredefinedMaps = new()
     {
         "de_vertigo", "de_mirage", "de_inferno", "de_anubis", "de_nuke",
@@ -58,27 +60,30 @@ public partial class AdminPlus
             return;
         }
         
-        if (caller == null || !caller.IsValid || !HasEffectivePermission(caller, "@css/generic"))
+        if (caller == null || !caller.IsValid || !RequireCommandStamina(caller, "admin"))
         {
             caller?.Print(Localizer["NoPermission"]);
             return;
         }
 
-        if (!HasEffectivePermission(caller, "@css/ban"))
+        var menu = CreateMenu("LEGACY-X ADMIN | MAIN MENU");
+        List<ChatMenuOptionData> options = [];
+
+        if (HasCommandAccess(caller, "addadmin"))
+            options.Add(new ChatMenuOptionData("ADMINISTRATION & PERMISSIONS", () => ShowAdminManageMenu(caller)));
+        if (new[] { "ban", "kick", "mute", "gag", "slay", "slap", "respawn", "money", "armor", "team" }.Any(command => HasCommandAccess(caller, command)))
+            options.Add(new ChatMenuOptionData("PLAYER MODERATION & TOOLS", () => ShowPlayerCommands(caller)));
+        if (new[] { "map", "rr", "clean" }.Any(command => HasCommandAccess(caller, command)))
+            options.Add(new ChatMenuOptionData("SERVER & MATCH CONTROL", () => ShowServerCommands(caller)));
+        if (new[] { "freeze", "weapon" }.Any(command => HasCommandAccess(caller, command)))
+            options.Add(new ChatMenuOptionData("GAMEPLAY & FUN TOOLS", () => ShowFunRootMenu(caller)));
+        if (HasCommandAccess(caller, "banlist")) options.Add(new ChatMenuOptionData("PUNISHMENT HISTORY", () => BanListMenu(caller, info)));
+
+        if (options.Count == 0)
         {
             caller.Print(Localizer["NoPermission"]);
             return;
         }
-
-        var menu = CreateMenu(Localizer["Menu.Title"]);
-        List<ChatMenuOptionData> options = [];
-
-        if (HasEffectivePermission(caller, "@css/root"))
-            options.Add(new ChatMenuOptionData(Localizer["Menu.Option.AdminManage"], () => ShowAdminManageMenu(caller)));
-
-        options.Add(new ChatMenuOptionData(Localizer["Menu.ServerCommands"], () => ShowServerCommands(caller)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.PlayerCommands"], () => ShowPlayerCommands(caller)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Title"], () => ShowFunRootMenu(caller)));
 
         foreach (var menuOptionData in options)
         {
@@ -95,20 +100,20 @@ public partial class AdminPlus
 
     private void ShowFunRootMenu(CCSPlayerController admin)
     {
-        if (!HasEffectivePermission(admin, "@css/slay"))
+        if (!new[] { "freeze", "weapon" }.Any(command => HasCommandAccess(admin, command)))
         {
             admin.Print(Localizer["NoPermission"]);
             return;
         }
 
-        var m = CreateMenu(Localizer["Menu.Fun.Title"]);
+        var m = CreateMenu("GAMEPLAY & FUN TOOLS");
         if (m == null) return;
         
-        m.AddMenuOption(Localizer["Menu.Fun.Cat.Teleport"], (p, o) => ShowFunTeleportMenu(admin));
-        m.AddMenuOption(Localizer["Menu.Fun.Cat.PlayerFx"], (p, o) => ShowFunPlayerFxMenu(admin));
-        m.AddMenuOption(Localizer["Menu.Fun.Cat.Weapons"], (p, o) => ShowFunWeaponsMenu(admin));
-        m.AddMenuOption(Localizer["Menu.Fun.Cat.Physics"], (p, o) => ShowFunPhysicsMenu(admin));
-        m.AddMenuOption(Localizer["Menu.Fun.Cat.Visual"], (p, o) => ShowFunVisualMenu(admin));
+        if (HasCommandAccess(admin, "goto")) m.AddMenuOption(Localizer["Menu.Fun.Cat.Teleport"], (p, o) => ShowFunTeleportMenu(admin));
+        if (HasCommandAccess(admin, "freeze")) m.AddMenuOption(Localizer["Menu.Fun.Cat.PlayerFx"], (p, o) => ShowFunPlayerFxMenu(admin));
+        if (HasCommandAccess(admin, "weapon")) m.AddMenuOption(Localizer["Menu.Fun.Cat.Weapons"], (p, o) => ShowFunWeaponsMenu(admin));
+        if (HasCommandAccess(admin, "gravity")) m.AddMenuOption(Localizer["Menu.Fun.Cat.Physics"], (p, o) => ShowFunPhysicsMenu(admin));
+        if (HasCommandAccess(admin, "glow")) m.AddMenuOption(Localizer["Menu.Fun.Cat.Visual"], (p, o) => ShowFunVisualMenu(admin));
         {
             m.ExitButton = true;
             OpenMenu(admin, m);
@@ -176,9 +181,7 @@ public partial class AdminPlus
 
     private void RunServerCmd(CCSPlayerController admin, string cmd)
     {
-        AdminPlus._menuInvokerName = admin.PlayerName;
-        Server.ExecuteCommand(cmd);
-        AddTimer(0.1f, () => { AdminPlus._menuInvokerName = null; });
+        RunStaminaCheckedServerCommand(admin, cmd);
     }
 
     private void ShowFunTeleportMenu(CCSPlayerController admin)
@@ -531,7 +534,7 @@ public partial class AdminPlus
 
     private void ShowAdminManageMenu(CCSPlayerController admin)
     {
-        if (!HasEffectivePermission(admin, "@css/root"))
+        if (!HasCommandAccess(admin, "addadmin"))
         {
             admin.Print(Localizer["NoPermission"]);
             return;
@@ -797,26 +800,20 @@ public partial class AdminPlus
 
     private void ShowPlayerCommands(CCSPlayerController admin)
     {
-        if (!HasEffectivePermission(admin, "@css/ban"))
-        {
-            admin.Print(Localizer["NoPermission"]);
-            return;
-        }
-
-        var menu = CreateMenu(Localizer["Menu.PlayerCommands"]);
+        var menu = CreateMenu("PLAYER MODERATION & TOOLS");
         List<ChatMenuOptionData> options = [];
 
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Ban"], () => ShowPlayerList(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Kick"], () => ShowKickPlayerMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Slay"], () => ShowSlayMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Slap"], () => ShowSlapMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Mute"], () => ShowMutePlayerMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Gag"], () => ShowGagPlayerMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Silence"], () => ShowSilencePlayerMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Teleport.Respawn"], () => ShowRespawnMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Money"], () => ShowMoneyMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Armor"], () => ShowArmorMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Cat.TeamOps"], () => ShowFunTeamOpsMenu(admin)));
+        if (HasCommandAccess(admin, "ban")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Ban"], () => ShowPlayerList(admin)));
+        if (HasCommandAccess(admin, "kick")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Kick"], () => ShowKickPlayerMenu(admin)));
+        if (HasCommandAccess(admin, "slay")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Slay"], () => ShowSlayMenu(admin)));
+        if (HasCommandAccess(admin, "slap")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Slap"], () => ShowSlapMenu(admin)));
+        if (HasCommandAccess(admin, "mute")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Mute"], () => ShowMutePlayerMenu(admin)));
+        if (HasCommandAccess(admin, "gag")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Gag"], () => ShowGagPlayerMenu(admin)));
+        if (HasCommandAccess(admin, "silence")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Silence"], () => ShowSilencePlayerMenu(admin)));
+        if (HasCommandAccess(admin, "respawn")) options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Teleport.Respawn"], () => ShowRespawnMenu(admin)));
+        if (HasCommandAccess(admin, "money")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Money"], () => ShowMoneyMenu(admin)));
+        if (HasCommandAccess(admin, "armor")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Armor"], () => ShowArmorMenu(admin)));
+        if (HasCommandAccess(admin, "team")) options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Cat.TeamOps"], () => ShowFunTeamOpsMenu(admin)));
 
         foreach (var menuOptionData in options)
         {
@@ -1058,23 +1055,22 @@ public partial class AdminPlus
 
     private void ShowServerCommands(CCSPlayerController admin)
     {
-        if (!HasEffectivePermission(admin, "@css/generic"))
+        if (!new[] { "map", "rr", "clean" }.Any(command => HasCommandAccess(admin, command)))
         {
             admin.Print(Localizer["NoPermission"]);
             return;
         }
 
-        var menu = CreateMenu(Localizer["Menu.ServerCommands"]);
+        var menu = CreateMenu("SERVER & MATCH CONTROL");
         List<ChatMenuOptionData> options = [];
 
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.ChangeMap"], () => ShowMapSelectionMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Cat.Cleanup"], () => ShowFunCleanupMenu(admin)));
-        options.Add(new ChatMenuOptionData(Localizer["Menu.Option.RoundRestart"], () =>
+        if (HasCommandAccess(admin, "map")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.ChangeMap"], () => ShowMapSelectionMenu(admin)));
+        if (HasCommandAccess(admin, "clean")) options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Cat.Cleanup"], () => ShowFunCleanupMenu(admin)));
+        if (HasCommandAccess(admin, "rr")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.RoundRestart"], () =>
         {
-            if (HasEffectivePermission(admin, "@css/generic"))
+            if (HasCommandAccess(admin, "rr"))
             {
-                Server.ExecuteCommand("mp_restartgame 1");
-                PlayerExtensions.PrintToAll(Localizer["Round.Restarted", admin.PlayerName]);
+                RunServerCmd(admin, "css_rr");
             }
             else admin.Print(Localizer["NoPermission"]);
         }));
@@ -1168,7 +1164,11 @@ public partial class AdminPlus
         foreach (var p in Utilities.GetPlayers()!)
         {
             if (p == null || !p.IsValid || p.IsBot) continue;
-            menu.AddMenuOption(SanitizeName(p.PlayerName), (ply, opt) => ShowBanTypeMenu(admin, p));
+            var target = new BanMenuTarget(
+                p.SteamID,
+                SanitizeName(p.PlayerName),
+                string.IsNullOrWhiteSpace(p.IpAddress) ? "-" : p.IpAddress);
+            menu.AddMenuOption(target.PlayerName, (ply, opt) => ShowBanTypeMenu(admin, target));
         }
 
         if (!menu.MenuOptions.Any())
@@ -1178,7 +1178,7 @@ public partial class AdminPlus
         OpenMenu(admin, menu);
     }
 
-    private void ShowBanTypeMenu(CCSPlayerController admin, CCSPlayerController target)
+    private void ShowBanTypeMenu(CCSPlayerController admin, BanMenuTarget target)
     {
         if (!HasEffectivePermission(admin, "@css/ban"))
         {
@@ -1190,12 +1190,13 @@ public partial class AdminPlus
         if (menu == null) return;
         
         menu.AddMenuOption(Localizer["Menu.Option.SteamIdBan"], (ply, opt) => ShowDurationMenu(admin, target));
-        menu.AddMenuOption(Localizer["Menu.Option.IpBan"], (ply, opt) => ShowReasonMenu(admin, target, 0, true));
+        if (target.IpAddress != "-")
+            menu.AddMenuOption(Localizer["Menu.Option.IpBan"], (ply, opt) => ShowReasonMenu(admin, target, 0, true));
         menu.ExitButton = true;
         OpenMenu(admin, menu);
     }
 
-    private void ShowDurationMenu(CCSPlayerController admin, CCSPlayerController target)
+    private void ShowDurationMenu(CCSPlayerController admin, BanMenuTarget target)
     {
         if (!HasEffectivePermission(admin, "@css/ban"))
         {
@@ -1221,7 +1222,7 @@ public partial class AdminPlus
         OpenMenu(admin, menu);
     }
 
-    private void ShowReasonMenu(CCSPlayerController admin, CCSPlayerController target, int minutes, bool isIpBan)
+    private void ShowReasonMenu(CCSPlayerController admin, BanMenuTarget target, int minutes, bool isIpBan)
     {
         if (!HasEffectivePermission(admin, "@css/ban"))
         {
@@ -1248,49 +1249,81 @@ public partial class AdminPlus
                     return;
                 }
 
-                var safeName = SanitizeName(target.PlayerName);
-
-                if (isIpBan)
-                {
-                    string ip = target.IpAddress ?? "-";
-                    var line = $"addip \"{ip}\" expiry:0 // {reason}";
-
-                    lock (_lock)
-                    {
-                        IpBans[ip] = (0, line, safeName);
-                        File.WriteAllLines(BannedIpPath, IpBans.Values.Select(x => x.line));
-                    }
-
-                    target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
-                    PlayerExtensions.PrintToAll(Localizer["IpBan.AddedNick", admin.PlayerName, safeName, reason]);
-                    LogAction($"{admin.PlayerName} ip-banned {safeName} ({ip}). Reason: {reason}");
-                }
-                else
-                {
-                    var steamId = target.SteamID.ToString();
-                    var ip = target.IpAddress ?? "-";
-                    var expiry = minutes == 0 ? 0 : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + minutes * 60;
-                    var line = $"banid \"{steamId}\" \"{safeName}\" ip:{ip} expiry:{expiry} // {reason}";
-
-                    lock (_lock)
-                    {
-                        SteamBans[steamId] = (expiry, line, safeName, ip);
-                        File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(x => x.line));
-                    }
-
-                    target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
-                    if (minutes == 0)
-                        PlayerExtensions.PrintToAll(Localizer["PermabannedReason", admin.PlayerName, safeName, reason]);
-                    else
-                        PlayerExtensions.PrintToAll(Localizer["BannedReason", admin.PlayerName, safeName, minutes, reason]);
-
-                    LogAction($"{admin.PlayerName} banned {safeName} ({steamId}) [IP:{ip}] for {minutes} minutes. Reason: {reason}");
-                }
+                ShowBanConfirmationMenu(admin, target, minutes, isIpBan, reason);
             });
         }
 
         menu.ExitButton = true;
         OpenMenu(admin, menu);
+    }
+
+    private void ShowBanConfirmationMenu(CCSPlayerController admin, BanMenuTarget target, int minutes, bool isIpBan, string reason)
+    {
+        if (!HasEffectivePermission(admin, "@css/ban"))
+        {
+            admin.Print(Localizer["NoPermission"]);
+            return;
+        }
+
+        var menu = CreateMenu($"Confirm ban: {target.PlayerName}");
+        if (menu == null) return;
+
+        var duration = minutes == 0 ? Localizer["Duration.Forever"] : $"{minutes} {Localizer["Duration.Minute"]}";
+        menu.AddMenuOption($"Target: {target.PlayerName}", (ply, opt) => { });
+        menu.AddMenuOption($"Duration: {duration}", (ply, opt) => { });
+        menu.AddMenuOption($"Reason: {reason}", (ply, opt) => { });
+        menu.AddMenuOption(Localizer["Menu.ConfirmYes"], (ply, opt) => ApplyMenuBan(admin, target, minutes, isIpBan, reason));
+        menu.AddMenuOption(Localizer["Menu.ConfirmNo"], (ply, opt) => ShowReasonMenu(admin, target, minutes, isIpBan));
+        menu.ExitButton = true;
+        OpenMenu(admin, menu);
+    }
+
+    private void ApplyMenuBan(CCSPlayerController admin, BanMenuTarget target, int minutes, bool isIpBan, string reason)
+    {
+        if (!HasEffectivePermission(admin, "@css/ban"))
+        {
+            admin.Print(Localizer["NoPermission"]);
+            return;
+        }
+
+        var safeName = target.PlayerName;
+        var steamId = target.SteamId.ToString();
+        var expiry = minutes == 0 ? 0 : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + minutes * 60;
+
+        if (isIpBan)
+        {
+            if (target.IpAddress == "-")
+            {
+                admin.Print("IP snapshot is unavailable for this player.");
+                return;
+            }
+
+            var line = $"addip \"{target.IpAddress}\" expiry:0 // {reason}";
+            lock (_lock)
+            {
+                IpBans[target.IpAddress] = (0, line, safeName);
+                File.WriteAllLines(BannedIpPath, IpBans.Values.Select(x => x.line));
+            }
+            PlayerExtensions.PrintToAll(Localizer["IpBan.AddedNick", admin.PlayerName, safeName, reason]);
+            LogAction($"{admin.PlayerName} ip-banned {safeName} ({target.IpAddress}). Reason: {reason}");
+        }
+        else
+        {
+            var line = $"banid \"{steamId}\" \"{safeName}\" ip:{target.IpAddress} expiry:{expiry} // {reason}";
+            lock (_lock)
+            {
+                SteamBans[steamId] = (expiry, line, safeName, target.IpAddress);
+                File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(x => x.line));
+            }
+            if (minutes == 0)
+                PlayerExtensions.PrintToAll(Localizer["PermabannedReason", admin.PlayerName, safeName, reason]);
+            else
+                PlayerExtensions.PrintToAll(Localizer["BannedReason", admin.PlayerName, safeName, minutes, reason]);
+            LogAction($"{admin.PlayerName} banned {safeName} ({steamId}) [IP:{target.IpAddress}] for {minutes} minutes. Reason: {reason}");
+        }
+
+        var connectedTarget = Utilities.GetPlayers().FirstOrDefault(p => p != null && p.IsValid && p.SteamID == target.SteamId);
+        connectedTarget?.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
     }
 
     private void BanListMenu(CCSPlayerController? caller, CommandInfo info)

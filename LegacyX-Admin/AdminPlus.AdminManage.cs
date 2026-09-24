@@ -56,7 +56,8 @@ public partial class AdminPlus
                             "@css/cheats",
                             "@css/root"
                         ),
-                        ["immunity"] = 100
+                        ["stamina"] = 1000,
+                        ["immunity"] = 1000
                     }
                 };
 
@@ -259,6 +260,11 @@ public partial class AdminPlus
 
     private void CmdAddAdmin(CCSPlayerController? caller, CommandInfo info)
     {
+        if (_websiteAdminPolicyClient != null)
+        {
+            SendWebsitePolicyManagedMessage(caller);
+            return;
+        }
         bool isConsoleCommand = caller == null;
         
         if (isConsoleCommand)
@@ -287,6 +293,7 @@ public partial class AdminPlus
         var normalizedFlag = NormalizeAdminFlag(groupArg);
         var resolvedGroup = isFlagInput ? ResolveGroupForFlag(normalizedFlag) : null;
         if (!int.TryParse(info.GetArg(3), out var immunity)) immunity = 0;
+        immunity = Math.Clamp(immunity, 0, 1000);
 
         if (!TryParseSteam64(idRaw, out var s64) || s64 == 0)
         {
@@ -319,6 +326,7 @@ public partial class AdminPlus
         {
             ["identity"] = key,
             ["name"] = playerName,
+            ["stamina"] = immunity,
             ["immunity"] = immunity
         };
         if (isFlagInput && !string.IsNullOrWhiteSpace(resolvedGroup))
@@ -348,6 +356,11 @@ public partial class AdminPlus
 
     private void CmdRemoveAdmin(CCSPlayerController? caller, CommandInfo info)
     {
+        if (_websiteAdminPolicyClient != null)
+        {
+            SendWebsitePolicyManagedMessage(caller);
+            return;
+        }
         bool isConsoleCommand = caller == null;
         
         if (isConsoleCommand)
@@ -491,6 +504,14 @@ public partial class AdminPlus
         if (!isConsoleCommand && (caller == null || !caller.IsValid || !HasEffectivePermission(caller, "@css/root")))
         {
             caller?.Print(Localizer["NoPermission"]);
+            return;
+        }
+
+        if (_websiteAdminPolicyClient != null)
+        {
+            _ = RefreshWebsiteAdminPolicyAsync();
+            if (caller != null && caller.IsValid) caller.Print("{green}LEGACY-X • {default}ADMIN POLICY REFRESH REQUESTED FROM WEBSITE");
+            else Console.WriteLine("[LEGACY-X Admin] Website admin policy refresh requested.");
             return;
         }
 

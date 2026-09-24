@@ -1,4 +1,5 @@
 ﻿using CounterStrikeSharp.API.Core;
+using LegacyX.Shared.Configuration;
 using System.Text;
 
 namespace WeaponPaints;
@@ -9,8 +10,6 @@ public static class PlayerExtensions
 	{
 		if (WeaponPaints._localizer == null) return;
 
-		StringBuilder _message = new(WeaponPaints._localizer["wp_prefix"]);
-		_message.Append(message);
-		controller.PrintToChat(_message.ToString());
+			controller.PrintToChat(LegacyXChat.System(message));
 	}
 }

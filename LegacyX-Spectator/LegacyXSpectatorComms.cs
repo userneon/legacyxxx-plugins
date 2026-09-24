@@ -14,7 +14,7 @@ public sealed class LegacyXSpectatorCommsConfig : BasePluginConfig
     public bool EnforceCompetitiveVoiceCvars { get; set; } = true;
     public bool BlockLivingGlobalChat { get; set; } = true;
     public bool PreservePluginCommands { get; set; } = true;
-    public string ChatPrefix { get; set; } = "{Lime}[LEGACY-X]{Default}";
+    public string ChatPrefix { get; set; } = LegacyXChat.Prefix;
 }
 
 public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpectatorCommsConfig>
@@ -50,7 +50,7 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
     public void OnRules(CCSPlayerController? player, CommandInfo? command)
     {
         if (player == null || !player.IsValid) return;
-        player.PrintToChat($"{Config.ChatPrefix} Spectators can text-chat only with the spectator/dead channel. Do not relay live information.");
+        player.PrintToChat(LegacyXChat.System("Spectators can text-chat only with the spectator/dead channel. Do not relay live information."));
     }
 
     private HookResult OnSay(CCSPlayerController? sender, CommandInfo command)
@@ -107,7 +107,7 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
             ChatChannel.Terrorist => "{Red}[T]",
             _ => "{Blue}[CT]",
         };
-        return $"{Config.ChatPrefix} {label} {{Default}}{sender.PlayerName}: {message}";
+        return $"{label} {{Default}}{sender.PlayerName}: {message}";
     }
 
     private static string Normalize(string raw)

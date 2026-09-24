@@ -18,6 +18,8 @@ namespace AdminPlus;
 public partial class AdminPlus
 {
     private Dictionary<ulong, int> adminImmunity = new();
+    private Dictionary<ulong, int> adminStamina = new();
+    private Dictionary<ulong, string> adminStaffRoles = new();
     private Dictionary<ulong, (DateTime seenAt, string ip)> recentSeen = new();
 
     private string FormatDiscordBanDurationMinutes(int minutes) =>
@@ -30,6 +32,8 @@ public partial class AdminPlus
         try
         {
             adminImmunity.Clear();
+            adminStamina.Clear();
+            adminStaffRoles.Clear();
             recentSeen.Clear();
         }
         catch (Exception ex)
@@ -40,7 +44,7 @@ public partial class AdminPlus
 
     public void RegisterBanCommands()
     {
-        AddCommand("ban", Localizer["Ban.Usage"], CmdBan);
+        AddCommand("ban", "Use !admin → Ban to select player, duration, reason and confirmation", CmdBanMenuOnly);
         AddCommand("ipban", Localizer["IpBan.Usage"], CmdIpBan);
         AddCommand("unban", Localizer["Unban.Usage"], CmdUnban);
         AddCommand("lastban", Localizer["LastBan.Header"], CmdLastBan);
@@ -55,6 +59,24 @@ public partial class AdminPlus
         AddCommand("css_cleanbans", "Clean all bans from console", CmdCleanBans);
         AddCommand("css_cleanipbans", "Clean all IP bans from console", CmdCleanIpBans);
         AddCommand("css_cleansteambans", "Clean all SteamID bans from console", CmdCleanSteamBans);
+    }
+
+    private void CmdBanMenuOnly(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (caller == null)
+        {
+            CmdBan(null, info);
+            return;
+        }
+
+        if (!caller.IsValid || !HasEffectivePermission(caller, "@css/ban"))
+        {
+            if (caller.IsValid) caller.Print(Localizer["NoPermission"]);
+            return;
+        }
+
+        caller.Print("Use !admin → Ban. Select player, duration, reason, then confirm.");
+        ShowPlayerList(caller);
     }
 
     private void CmdBan(CCSPlayerController? caller, CommandInfo info)
@@ -669,6 +691,9 @@ public partial class AdminPlus
                 LogError($"Admin file not found for ban sync: {path}");
                 return;
             }
+            adminImmunity.Clear();
+            adminStamina.Clear();
+            adminStaffRoles.Clear();
             var json = JsonDocument.Parse(File.ReadAllText(path));
             foreach (var admin in json.RootElement.EnumerateObject())
             {
@@ -678,6 +703,10 @@ public partial class AdminPlus
                     if (TryParseSteamId(admin.Name, out var steamId))
                         adminImmunity[steamId] = imm;
                 }
+                if (obj.TryGetProperty("stamina", out var staminaVal) && staminaVal.TryGetInt32(out var stamina) && TryParseSteamId(admin.Name, out var staminaSteamId))
+                    adminStamina[staminaSteamId] = Math.Clamp(stamina, 0, 1000);
+                if (obj.TryGetProperty("staffRole", out var roleVal) && TryParseSteamId(admin.Name, out var roleSteamId))
+                    adminStaffRoles[roleSteamId] = (roleVal.GetString() ?? string.Empty).Trim().ToUpperInvariant();
             }
         }
         catch (Exception ex)

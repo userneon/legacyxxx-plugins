@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -18,6 +18,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-Spectator", "LegacyX-Spectator\LegacyX-Spectator.csproj", "{C929ED66-D14C-4B5D-BDCF-1D1C3625D73E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-WeaponPaints", "LegacyX-WeaponPaints\LegacyX-WeaponPaints.csproj", "{5C8C597F-4408-431C-A94D-635B7C47B26F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-PlayerTelemetry", "LegacyX-PlayerTelemetry\LegacyX-PlayerTelemetry.csproj", "{A0E638FD-46D8-455D-9A40-4C07BDDA25A9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-Phantom", "LegacyX-Phantom\LegacyX-Phantom.csproj", "{7F3769F5-BCC2-4A36-B913-BCA6E1856959}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,5 +61,13 @@ Global
 		{5C8C597F-4408-431C-A94D-635B7C47B26F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5C8C597F-4408-431C-A94D-635B7C47B26F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5C8C597F-4408-431C-A94D-635B7C47B26F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A0E638FD-46D8-455D-9A40-4C07BDDA25A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0E638FD-46D8-455D-9A40-4C07BDDA25A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0E638FD-46D8-455D-9A40-4C07BDDA25A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0E638FD-46D8-455D-9A40-4C07BDDA25A9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F3769F5-BCC2-4A36-B913-BCA6E1856959}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F3769F5-BCC2-4A36-B913-BCA6E1856959}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F3769F5-BCC2-4A36-B913-BCA6E1856959}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F3769F5-BCC2-4A36-B913-BCA6E1856959}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
