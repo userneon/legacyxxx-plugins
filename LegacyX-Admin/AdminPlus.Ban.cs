@@ -119,7 +119,9 @@ public partial class AdminPlus
             return;
         }
 
-        if (target == null && caller == null)
+        // From the console or RCON (e.g. the LEGACY-X Discord bot) an offline player can be banned by
+        // SteamID (SteamID64, STEAM_X:Y:Z or [U:1:N]); the ban applies when they next connect.
+        if (target == null && caller == null && !TryNormalizeSteamId(targetInput, out _))
         {
             Console.WriteLine(Localizer["Ban.TargetNotFoundConsole", targetInput]);
             return;
@@ -245,7 +247,8 @@ public partial class AdminPlus
         }
         else
         {
-            steamId = targetInput.Contains("STEAM_") ? targetInput : "";
+            // Stored as SteamID64, the key EnforceBan looks up on connect.
+            steamId = TryNormalizeSteamId(targetInput, out var normalizedSteamId) ? normalizedSteamId : "";
             playerName = "ConsoleBanned";
             ip = targetInput.Contains(".") ? targetInput : "-";
 
@@ -404,7 +407,12 @@ public partial class AdminPlus
         string key = info.GetArg(1);
         bool removed = false;
         
-        if (!key.Contains("STEAM_") && !key.Contains("."))
+        // A SteamID in any format unbans that SteamID64 directly, whether or not the player is online.
+        if (TryNormalizeSteamId(key, out var normalizedKey))
+        {
+            key = normalizedKey;
+        }
+        else if (!key.Contains("."))
         {
             var target = GetPlayerFromInput(key, true);
             if (target != null && target.IsValid)
@@ -769,6 +777,37 @@ public partial class AdminPlus
                 }
             }
         });
+    }
+
+    private const ulong SteamId64Base = 76561197960265728UL;
+
+    /// <summary>SteamID64 (7656119…), STEAM_X:Y:Z or [U:1:N] → SteamID64 as text.</summary>
+    internal static bool TryNormalizeSteamId(string input, out string steamId64)
+    {
+        steamId64 = "";
+        input = input.Trim();
+
+        if (Regex.IsMatch(input, @"^7656119\d{10}$"))
+        {
+            steamId64 = input;
+            return true;
+        }
+
+        var legacy = Regex.Match(input, @"^STEAM_[0-5]:([01]):(\d{1,10})$");
+        if (legacy.Success && ulong.TryParse(legacy.Groups[2].Value, out var z))
+        {
+            steamId64 = (SteamId64Base + z * 2 + ulong.Parse(legacy.Groups[1].Value)).ToString();
+            return true;
+        }
+
+        var steam3 = Regex.Match(input, @"^\[U:1:(\d{1,10})\]$");
+        if (steam3.Success && ulong.TryParse(steam3.Groups[1].Value, out var accountId))
+        {
+            steamId64 = (SteamId64Base + accountId).ToString();
+            return true;
+        }
+
+        return false;
     }
 
     private CCSPlayerController? GetPlayerFromInput(string input, bool forConsole = false)
