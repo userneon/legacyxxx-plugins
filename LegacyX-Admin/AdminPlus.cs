@@ -110,10 +110,9 @@ public partial class AdminPlus : BasePlugin
             return;
         }
 
-        EnsureAdminConfigFiles();
         EnsurePluginDataFiles();
         LoadMenuConfigFile();
-        InitializeWebsiteAdminPolicySync();
+        InitializeStaffAuthorization();
         InitializeCentralBans();
 
             BannedUserPath = Path.Combine(Server.GameDirectory, "csgo/cfg/banned_user.cfg");
@@ -175,12 +174,13 @@ public partial class AdminPlus : BasePlugin
         AddCommand("admins", Localizer["Admins.Usage"], CmdAdmins);
         AddCommand("css_admins", "List online admins in console", CmdAdmins);
         RegisterHideAdminCommands();
-        LoadImmunity();
+        AuthorizeOnlinePlayers();
         AddCommand("version", "Print LEGACY-X Admin name and version to console", CmdPluginVersion);
         AddCommand("css_version", "Print LEGACY-X Admin name and version to console", CmdPluginVersion);
         
         RegisterListener<Listeners.OnClientAuthorized>((slot, id) =>
         {
+            OnStaffPlayerAuthorized(slot, id);
             EnforceBan(slot);
             ScheduleBanRechecks(slot);
             CheckCentralBan(slot);
@@ -189,6 +189,7 @@ public partial class AdminPlus : BasePlugin
 
         RegisterListener<Listeners.OnClientDisconnect>((slot) =>
         {
+            OnStaffPlayerDisconnected(slot);
             CleanupMenuForSlot(slot);
             var player = Utilities.GetPlayerFromSlot(slot);
             if (player != null && player.IsValid && !player.IsBot)
@@ -331,6 +332,7 @@ public partial class AdminPlus : BasePlugin
             CleanupAllFunTimers();
             
             Discord.Dispose();
+            ClearAllStaffPermissions();
             CleanupBanSystem();
             CleanupCommands();
             CleanupMenu();
@@ -682,55 +684,8 @@ public partial class AdminPlus : BasePlugin
         if (player == null || !player.IsValid)
             return false;
 
-        if (AdminManager.PlayerHasPermissions(player, permission) || AdminManager.PlayerHasPermissions(player, "@css/root"))
-            return true;
-
-        try
-        {
-            if (!ReadAdminsFile(out var adminsRoot))
-                return false;
-
-            var steamKey = player.SteamID.ToString();
-            if (!adminsRoot.TryGetPropertyValue(steamKey, out var adminNode) || adminNode is not JsonObject adminObj)
-                return false;
-
-            if (HasPermissionInFlagsArray(adminObj["flags"] as JsonArray, permission))
-                return true;
-
-            if (adminObj["groups"] is not JsonArray groups || groups.Count == 0)
-                return false;
-
-            var groupsFile = Path.Combine(Server.GameDirectory, "csgo", "addons", "counterstrikesharp", "configs", "admin_groups.json");
-            if (!File.Exists(groupsFile))
-                return false;
-
-            var groupsText = File.ReadAllText(groupsFile);
-            if (string.IsNullOrWhiteSpace(groupsText))
-                return false;
-
-            var groupRoot = JsonNode.Parse(groupsText) as JsonObject;
-            if (groupRoot == null)
-                return false;
-
-            foreach (var groupNode in groups)
-            {
-                var groupName = groupNode?.GetValue<string>();
-                if (string.IsNullOrWhiteSpace(groupName))
-                    continue;
-
-                if (!groupRoot.TryGetPropertyValue(groupName, out var gNode) || gNode is not JsonObject groupObj)
-                    continue;
-
-                if (HasPermissionInFlagsArray(groupObj["flags"] as JsonArray, permission))
-                    return true;
-            }
-        }
-        catch (Exception ex)
-        {
-            LogError($"Effective permission fallback error: {ex.Message}");
-        }
-
-        return false;
+        // Staff permissions exist only as CounterStrikeSharp admin data granted from the LEGACY-X API.
+        return AdminManager.PlayerHasPermissions(player, permission) || AdminManager.PlayerHasPermissions(player, "@css/root");
     }
 
     internal static string GetServerAddress()
@@ -766,24 +721,6 @@ public partial class AdminPlus : BasePlugin
         catch { }
 
         return $"{ip}:{port}";
-    }
-
-    private static bool HasPermissionInFlagsArray(JsonArray? flags, string permission)
-    {
-        if (flags == null) return false;
-
-        foreach (var flagNode in flags)
-        {
-            var flag = flagNode?.GetValue<string>();
-            if (string.IsNullOrWhiteSpace(flag))
-                continue;
-
-            if (string.Equals(flag, permission, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(flag, "@css/root", StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-
-        return false;
     }
 
     private void StartCleanup()

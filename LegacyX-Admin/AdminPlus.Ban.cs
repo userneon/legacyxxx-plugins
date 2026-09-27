@@ -689,40 +689,6 @@ public partial class AdminPlus
             Console.WriteLine(Localizer["BanInfo.NotFoundConsole", key]);
     }
 
-    private void LoadImmunity()
-    {
-        try
-        {
-            var path = Path.Combine(Server.GameDirectory, "csgo/addons/counterstrikesharp/configs/admins.json");
-            if (!File.Exists(path)) 
-            {
-                LogError($"Admin file not found for ban sync: {path}");
-                return;
-            }
-            adminImmunity.Clear();
-            adminStamina.Clear();
-            adminStaffRoles.Clear();
-            var json = JsonDocument.Parse(File.ReadAllText(path));
-            foreach (var admin in json.RootElement.EnumerateObject())
-            {
-                var obj = admin.Value;
-                if (obj.TryGetProperty("immunity", out var immVal) && immVal.TryGetInt32(out var imm))
-                {
-                    if (TryParseSteamId(admin.Name, out var steamId))
-                        adminImmunity[steamId] = imm;
-                }
-                if (obj.TryGetProperty("stamina", out var staminaVal) && staminaVal.TryGetInt32(out var stamina) && TryParseSteamId(admin.Name, out var staminaSteamId))
-                    adminStamina[staminaSteamId] = Math.Clamp(stamina, 0, 1000);
-                if (obj.TryGetProperty("staffRole", out var roleVal) && TryParseSteamId(admin.Name, out var roleSteamId))
-                    adminStaffRoles[roleSteamId] = (roleVal.GetString() ?? string.Empty).Trim().ToUpperInvariant();
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(Localizer["Immunity.LoadError", ex.Message]);
-        }
-    }
-
     private bool TryParseSteamId(string input, out ulong steamId)
     {
         steamId = 0;

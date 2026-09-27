@@ -605,20 +605,6 @@ namespace MatchZy
             Server.PrintToChatAll($"{adminChatPrefix} {message}");
         }
 
-        [ConsoleCommand("reload_admins", "Reload admins of MatchZy")]
-        public void OnReloadAdmins(CCSPlayerController? player, CommandInfo? command)
-        {
-            if (IsPlayerAdmin(player, "reload_admins", "@css/config"))
-            {
-                LoadAdmins();
-                UpdatePlayersMap();
-            }
-            else
-            {
-                SendPlayerNotAdminMessage(player);
-            }
-        }
-
         [ConsoleCommand("css_match", "Starts match mode")]
         public void OnMatchCommand(CCSPlayerController? player, CommandInfo? command)
         {

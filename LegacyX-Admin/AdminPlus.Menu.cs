@@ -532,267 +532,30 @@ public partial class AdminPlus
         return all.Where(p => (p.PlayerName ?? "").Contains(token, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Read-only: staff are managed on the website, so the menu only shows who is authorized here.</summary>
     private void ShowAdminManageMenu(CCSPlayerController admin)
     {
-        if (!HasCommandAccess(admin, "addadmin"))
-        {
-            admin.Print(Localizer["NoPermission"]);
-            return;
-        }
-
-        var menu = CreateMenu(Localizer["Menu.AdminManage"]);
-        if (menu == null) return;
-
-        menu.AddMenuOption(Localizer["Menu.Option.AddAdmin"], (ply, opt) => ShowAddAdminPlayerMenu(admin));
-        menu.AddMenuOption(Localizer["Menu.Option.RemoveAdmin"], (ply, opt) => OpenRemoveAdminMenu(admin));
-        menu.AddMenuOption(Localizer["Menu.Option.ListAdmins"], (ply, opt) => ShowAdminListMenu(admin));
-
-        menu.ExitButton = true;
-        OpenMenu(admin, menu);
-    }
-
-    private void ShowAddAdminPlayerMenu(CCSPlayerController admin)
-    {
         if (!HasEffectivePermission(admin, "@css/root"))
         {
             admin.Print(Localizer["NoPermission"]);
             return;
         }
 
-        var menu = CreateMenu(Localizer["Menu.AdminAdd.ChoosePlayer"]);
+        var menu = CreateMenu("ONLINE STAFF · MANAGED ON LEGACYX.CC");
         if (menu == null) return;
 
-        foreach (var p in Utilities.GetPlayers()!)
+        var staff = OnlineStaff();
+        if (staff.Count == 0) menu.AddMenuOption("No authorized staff online", (ply, opt) => { });
+        foreach (var grant in staff)
         {
-            if (p == null || !p.IsValid || p.IsBot) continue;
-            menu.AddMenuOption($"{SanitizeName(p.PlayerName)} [{p.SteamID}]", (ply, opt) =>
-            {
-                ShowAddAdminGroupMenu(admin, p.SteamID.ToString(), SanitizeName(p.PlayerName));
-            });
+            var name = FindOnlineHuman(grant.SteamId) is { } player ? SanitizeName(player.PlayerName) : grant.SteamId.ToString();
+            menu.AddMenuOption($"{name} · {LegacyX.Admin.Authorization.StaffPermissions.For(grant.Role).Name}", (ply, opt) => { });
         }
-
-        if (!menu.MenuOptions.Any())
-            menu.AddMenuOption(Localizer["Menu.NoPlayers"], (ply, opt) => { });
-
-        menu.ExitButton = true;
-        OpenMenu(admin, menu);
-    }
-
-    private void ShowAddAdminGroupMenu(CCSPlayerController admin, string steamId, string playerName)
-    {
-        if (!HasEffectivePermission(admin, "@css/root"))
+        menu.AddMenuOption("Re-check with website", (ply, opt) =>
         {
-            admin.Print(Localizer["NoPermission"]);
-            return;
-        }
-
-        var menu = CreateMenu(Localizer["Menu.AdminAdd.ChooseGroup"]);
-        if (menu == null) return;
-
-        var groups = new[] { "#css/root", "#css/admin", "#css/mod", "#css/vip" };
-        foreach (var group in groups)
-        {
-            menu.AddMenuOption(group, (ply, opt) =>
-            {
-                ShowAddAdminImmunityMenu(admin, steamId, playerName, group);
-            });
-        }
-
-        menu.ExitButton = true;
-        OpenMenu(admin, menu);
-    }
-
-    private void ShowAddAdminImmunityMenu(CCSPlayerController admin, string steamId, string playerName, string group)
-    {
-        if (!HasEffectivePermission(admin, "@css/root"))
-        {
-            admin.Print(Localizer["NoPermission"]);
-            return;
-        }
-
-        var menu = CreateMenu(Localizer["Menu.AdminAdd.ChooseImmunity"]);
-        if (menu == null) return;
-
-        var immLevels = new Dictionary<string, int>
-        {
-            { "10 (" + Localizer["Menu.Immunity.Low"] + ")", 10 },
-            { "50 (" + Localizer["Menu.Immunity.Mid"] + ")", 50 },
-            { "90 (" + Localizer["Menu.Immunity.High"] + ")", 90 },
-            { "100 (" + Localizer["Menu.Immunity.Root"] + ")", 100 }
-        };
-
-        foreach (var entry in immLevels)
-        {
-            menu.AddMenuOption(entry.Key, (ply, opt) =>
-            {
-                ShowAddAdminConfirmMenu(admin, steamId, playerName, group, entry.Value);
-            });
-        }
-
-        menu.ExitButton = true;
-        OpenMenu(admin, menu);
-    }
-
-    private void ShowAddAdminConfirmMenu(CCSPlayerController admin, string steamId, string playerName, string group, int immunity)
-    {
-        if (!HasEffectivePermission(admin, "@css/root"))
-        {
-            admin.Print(Localizer["NoPermission"]);
-            return;
-        }
-
-        var menu = CreateMenu(Localizer["Menu.AdminAdd.Confirm"]);
-        if (menu == null) return;
-
-        string info = $"{playerName} [{steamId}]<br/>Grup: {group}<br/>Immunity: {immunity}";
-        menu.AddMenuOption(Localizer["Menu.ConfirmYes"] + " → " + info, (ply, opt) =>
-        {
-            if (!HasEffectivePermission(admin, "@css/root"))
-            {
-                admin.Print(Localizer["NoPermission"]);
-                return;
-            }
-
-            if (!ReadAdminsFile(out var root)) root = new JsonObject();
-            if (root.ContainsKey(steamId))
-            {
-                if (ulong.TryParse(steamId, out var steam64))
-                {
-                    var steamId3 = ConvertToSteamID3(steam64);
-                    admin.Print(Localizer["Admin.Exists", $"{playerName} {steamId3}"]);
-                }
-                else
-                {
-                    admin.Print(Localizer["Admin.Exists", $"{playerName} {steamId}"]);
-                }
-                return;
-            }
-
-            var obj = new JsonObject
-            {
-                ["identity"] = steamId,
-                ["name"] = playerName,
-                ["immunity"] = immunity,
-                ["groups"] = new JsonArray(group)
-            };
-
-            root[steamId] = obj;
-            WriteAdminsFile(root);
-            LoadImmunity();
-
-            admin.Print(Localizer["Admin.Added", playerName, group, immunity]);
+            _ = RefreshOnlineStaffAsync();
+            admin.Print("{green}LEGACY-X • {default}STAFF PERMISSIONS RE-CHECKED WITH THE WEBSITE");
         });
-
-        menu.AddMenuOption(Localizer["Menu.ConfirmNo"], (ply, opt) => ShowAdminManageMenu(admin));
-        menu.ExitButton = true;
-        OpenMenu(admin, menu);
-    }
-
-    private void OpenRemoveAdminMenu(CCSPlayerController admin)
-    {
-        if (!HasEffectivePermission(admin, "@css/root"))
-        {
-            admin.Print(Localizer["NoPermission"]);
-            return;
-        }
-
-        var menu = CreateMenu(Localizer["Menu.RemoveAdmin"]);
-        if (menu == null) return;
-
-        if (!ReadAdminsFile(out var root) || root.Count == 0)
-        {
-            menu.AddMenuOption(Localizer["Admin.List.Empty"], (ply, opt) => { });
-        }
-        else
-        {
-            var ordered = root.Select(kv =>
-            {
-                int imm = 0;
-                string name = kv.Key;
-                if (kv.Value is JsonObject obj)
-                {
-                    imm = obj["immunity"]?.GetValue<int?>() ?? 0;
-                    name = obj["name"]?.GetValue<string>() ?? kv.Key;
-                }
-                return new { SteamId = kv.Key, Name = name, Immunity = imm };
-            }).OrderByDescending(x => x.Immunity).ToList();
-
-            foreach (var entry in ordered)
-                menu.AddMenuOption($"{entry.Name} [{entry.SteamId}] (Imm:{entry.Immunity})", (ply, opt) =>
-                {
-                    ShowRemoveAdminConfirmMenu(admin, entry.SteamId, entry.Name, entry.Immunity);
-                });
-        }
-
-        menu.ExitButton = true;
-        OpenMenu(admin, menu);
-    }
-
-    private void ShowRemoveAdminConfirmMenu(CCSPlayerController admin, string steamId, string name, int immunity)
-    {
-        if (!HasEffectivePermission(admin, "@css/root"))
-        {
-            admin.Print(Localizer["NoPermission"]);
-            return;
-        }
-
-        var menu = CreateMenu(Localizer["Menu.RemoveAdmin"]);
-        if (menu == null) return;
-
-        string info = $"{name} [{steamId}] (Imm:{immunity})";
-        menu.AddMenuOption(Localizer["Menu.ConfirmYes"] + " → " + info, (ply, opt) =>
-        {
-            if (!HasEffectivePermission(admin, "@css/root"))
-            {
-                admin.Print(Localizer["NoPermission"]);
-                return;
-            }
-
-            if (ReadAdminsFile(out var root) && root.ContainsKey(steamId))
-            {
-                root.Remove(steamId);
-                WriteAdminsFile(root);
-                LoadImmunity();
-                admin.Print(Localizer["Admin.Removed", name]);
-            }
-            else admin.Print(Localizer["Admin.NotFound", steamId]);
-        });
-
-        menu.AddMenuOption(Localizer["Menu.ConfirmNo"], (ply, opt) => ShowAdminManageMenu(admin));
-        menu.ExitButton = true;
-        OpenMenu(admin, menu);
-    }
-
-    private void ShowAdminListMenu(CCSPlayerController admin)
-    {
-        if (!HasEffectivePermission(admin, "@css/root"))
-        {
-            admin.Print(Localizer["NoPermission"]);
-            return;
-        }
-
-        var menu = CreateMenu(Localizer["Admin.List.Header"]);
-        if (menu == null) return;
-
-        if (!ReadAdminsFile(out var root) || root.Count == 0)
-            menu.AddMenuOption(Localizer["Admin.List.Empty"], (ply, opt) => { });
-        else
-        {
-            var ordered = root.Select(kv =>
-            {
-                int imm = 0;
-                string name = kv.Key;
-                if (kv.Value is JsonObject obj)
-                {
-                    imm = obj["immunity"]?.GetValue<int?>() ?? 0;
-                    name = obj["name"]?.GetValue<string>() ?? kv.Key;
-                }
-                return new { Name = name, Immunity = imm };
-            }).OrderByDescending(x => x.Immunity).ToList();
-
-            foreach (var entry in ordered)
-                menu.AddMenuOption(Localizer["Admin.List.RowSimple", entry.Name, entry.Immunity], (ply, opt) => { });
-        }
 
         menu.ExitButton = true;
         OpenMenu(admin, menu);

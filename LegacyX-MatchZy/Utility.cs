@@ -51,76 +51,6 @@ namespace MatchZy
             }
         }
 
-        private void LoadAdmins()
-        {
-            string fileName = "MatchZy/admins.json";
-            string filePath = Path.Join(Server.GameDirectory + "/csgo/cfg", fileName);
-
-            if (File.Exists(filePath))
-            {
-                try
-                {
-                    using (StreamReader fileReader = File.OpenText(filePath))
-                    {
-                        string jsonContent = fileReader.ReadToEnd();
-                        if (!string.IsNullOrEmpty(jsonContent))
-                        {
-                            JsonSerializerOptions options = new()
-                            {
-                                AllowTrailingCommas = true,
-                            };
-                            loadedAdmins = JsonSerializer.Deserialize<Dictionary<string, string>>(jsonContent, options) ?? new Dictionary<string, string>();
-                        }
-                        else
-                        {
-                            // Handle the case where the JSON content is empty or null
-                            loadedAdmins = new Dictionary<string, string>();
-                        }
-                    }
-                    foreach (var kvp in loadedAdmins)
-                    {
-                        Log($"[ADMIN] Username: {kvp.Key}, Role: {kvp.Value}");
-                    }
-                }
-                catch (Exception e)
-                {
-                    Log($"[LoadAdmins FATAL] An error occurred: {e.Message}");
-                }
-            }
-            else
-            {
-                Log("[LoadAdmins] The JSON file does not exist. Creating one with default content");
-                Dictionary<string, string> defaultAdmins = new()
-                {
-                    { "steamid", "" }
-                };
-
-                try
-                {
-                    JsonSerializerOptions options = new()
-                    {
-                        WriteIndented = true,
-                    };
-                    string defaultJson = JsonSerializer.Serialize(defaultAdmins, options);
-                    string? directoryPath = Path.GetDirectoryName(filePath);
-                    if (directoryPath != null)
-                    {
-                        if (!Directory.Exists(directoryPath))
-                        {
-                            Directory.CreateDirectory(directoryPath);
-                        }
-                    }
-                    File.WriteAllText(filePath, defaultJson);
-
-                    Log("[LoadAdmins] Created a new JSON file with default content.");
-                }
-                catch (Exception e)
-                {
-                    Log($"[LoadAdmins FATAL] Error creating the JSON file: {e.Message}");
-                }
-            }
-        }
-
         private bool IsPlayerAdmin(CCSPlayerController? player, string command = "", params string[] permissions)
         {
             if (everyoneIsAdmin.Value) return true; // Everyone is treated as admin if matchzy_everyone_is_admin is true.
@@ -129,9 +59,9 @@ namespace MatchZy
             {
                 Command = command
             };
-            if (attr.CanExecuteCommand(player)) return true; // Admin exists in admins.json of CSSharp
+            // Staff permissions come only from CounterStrikeSharp, which LegacyX-Admin fills from the LEGACY-X API.
+            if (attr.CanExecuteCommand(player)) return true;
             if (player == null) return true; // Sent via server, hence should be treated as an admin.
-            if (loadedAdmins.ContainsKey(player.SteamID.ToString())) return true; // Admin exists in admins.json of MatchZy
             return false;
         }
 
@@ -1938,7 +1868,7 @@ namespace MatchZy
                     Directory.CreateDirectory(directoryPath);
                 }
             }
-            if (!File.Exists(whitelistPath)) File.WriteAllLines(whitelistPath, new[] { "Steamid1", "Steamid2" });
+            if (!File.Exists(whitelistPath)) File.WriteAllText(whitelistPath, string.Empty);
 
             var whiteList = File.ReadAllLines(whitelistPath);
 

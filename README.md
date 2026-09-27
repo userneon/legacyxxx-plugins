@@ -10,7 +10,6 @@ This repository contains **source only** for LEGACY-X CS2 server plugins. It has
 | LegacyX-AFKManager | `LegacyX-AFKManager/LegacyX-AFKManager.csproj` | `LegacyX-AFKManager.dll` | MatchZy-aware AFK, C4 and spectator policy |
 | LegacyX-Community | `LegacyX-Community/LegacyX-Community.csproj` | `LegacyX-Community.dll` | Player progress, rank and clan lookup through Root API |
 | LegacyX-MatchZy | `LegacyX-MatchZy/LegacyX-MatchZy.csproj` | `LegacyX-MatchZy.dll` | Competitive match lifecycle and Match Core bridge |
-| LegacyX-Reconnect | `LegacyX-Reconnect/LegacyX-Reconnect.csproj` | `LegacyX-Reconnect.dll` | Reconnect session events and `css_reconnect` |
 | LegacyX-Spectator | `LegacyX-Spectator/LegacyX-Spectator.csproj` | `LegacyX-Spectator.dll` | Competitive spectator/alive communication isolation |
 | LegacyX-WeaponPaints | `LegacyX-WeaponPaints/LegacyX-WeaponPaints.csproj` | `LegacyX-WeaponPaints.dll` | Root API-controlled skin/loadout claim, apply and acknowledgement |
 
@@ -22,11 +21,35 @@ The shared `LegacyX.Shared.Configuration` library is referenced by every project
 
 > Never put `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, browser credentials, Root API service keys, RCON secrets, or plugin tokens in source or plugin-local JSON/cfg. Plugins speak to the LEGACY-X Root API using scoped tokens from the one central environment file.
 
-## Build and future deployment
+## Build, test and package
 
 ```bash
-./scripts/build-all.sh
+./scripts/build-all.sh                                   # compile every plugin (Release)
+dotnet test tests/LegacyX.Admin.Authorization.Tests      # LegacyX-Admin authorization unit tests
+./scripts/package.sh                                     # → dist/legacyx-cs2 (runtime files only)
+dotnet run --project tests/LegacyX.PackageLoadTest -- dist/legacyx-cs2   # load the package like CounterStrikeSharp does
 ```
+
+`dist/legacyx-cs2/` mirrors `game/csgo/` on the server; copy its contents there:
+
+```text
+addons/counterstrikesharp/
+  plugins/LegacyX-Admin/            LegacyX-Admin.dll, .deps.json, lang/
+  plugins/LegacyX-AFKManager/       LegacyX-AFKManager.dll, .deps.json
+  plugins/LegacyX-Community/        LegacyX-Community.dll, .deps.json
+  plugins/LegacyX-MatchZy/          LegacyX-MatchZy.dll, .deps.json, CsvHelper, Dapper, Microsoft.Data.Sqlite,
+                                    MySqlConnector, Newtonsoft.Json, SQLitePCLRaw.*, runtimes/{linux,win}-x64 SQLite, lang/, spawns/
+  plugins/LegacyX-Spectator/        LegacyX-Spectator.dll, .deps.json
+  plugins/LegacyX-WeaponPaints/     LegacyX-WeaponPaints.dll, .deps.json, MenuManagerApi, Newtonsoft.Json, lang/, gamedata/
+  shared/LegacyX.Shared.Configuration/LegacyX.Shared.Configuration.dll   (loaded once for all plugins)
+  .env.example                      copy to .env and fill in
+cfg/MatchZy/                        MatchZy cfg files
+MANIFEST.sha256
+```
+
+CounterStrikeSharp.API and its dependencies (Microsoft.Extensions.*, McMaster, Serilog, …) are never
+packaged: the server's CounterStrikeSharp install provides them. The package script fails if one slips in.
+In-game staff come from the website only: see [Admin authorization](docs/ADMIN_AUTHORIZATION.md).
 
 The source-only preparation, future host layout and intentional no-deploy boundary are documented in [Phase A deployment preparation](docs/PHASE_A_DEPLOYMENT_PREPARATION.md). The per-module environment and local configuration ownership matrix is in [Plugin Registry](docs/PLUGIN_REGISTRY.md).
 

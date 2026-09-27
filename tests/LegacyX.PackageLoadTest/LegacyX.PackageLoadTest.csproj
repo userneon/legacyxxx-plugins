@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Loads dist/legacyx-cs2 the way CounterStrikeSharp's PluginManager does (McMaster plugin loader,
+       shared/ folder, PreferSharedTypes) and checks every plugin resolves. Test-only; never packaged. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.368" />
+  </ItemGroup>
+</Project>

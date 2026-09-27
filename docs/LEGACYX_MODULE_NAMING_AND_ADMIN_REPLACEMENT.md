@@ -14,7 +14,6 @@ The upstream source baseline is `debr1sj/CS2-AdminPlus` commit `1225a03ee4f393ea
 | AFKManager | `LegacyX-AFKManager/` | `LegacyX-AFKManager.dll` / `LEGACY-X AFK Manager` | AFK, C4, spectator and anti-camp policy |
 | Community | `LegacyX-Community/` | `LegacyX-Community.dll` / `LEGACY-X Community` | Player-facing XP/rank/clan lookup |
 | MatchZy | `LegacyX-MatchZy/` | `LegacyX-MatchZy.dll` / `LEGACY-X MatchZy` | Competitive lifecycle and Match Core bridge |
-| Reconnect | `LegacyX-Reconnect/` | `LegacyX-Reconnect.dll` / `LEGACY-X Reconnect` | Last Played and reconnect session events |
 | Spectator Comms | `LegacyX-Spectator/` | `LegacyX-Spectator.dll` / `LEGACY-X Spectator` | Anti-ghosting spectator/alive communication policy |
 | WeaponPaints SkinBridge | `LegacyX-WeaponPaints/` | `LegacyX-WeaponPaints.dll` / `LEGACY-X WeaponPaints` | Website-controlled cosmetic claim/apply/ack |
 

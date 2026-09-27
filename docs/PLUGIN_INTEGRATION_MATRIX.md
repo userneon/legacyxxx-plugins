@@ -6,7 +6,6 @@
 | LegacyX-AFKManager | No website transaction contract. | No direct database access. | `LEGACYX_AFKMANAGER_ENABLED`. | AFK/C4/spectator policy on a staging server. |
 | LegacyX-Community | Scoped Root API player-progress/clan lookup. | Root API only. | API base URL, server ID, `COMMUNITY_PLUGIN_ID/TOKEN`. | Token must be scoped to the intended server/module. |
 | LegacyX-MatchZy | Optional Match Core event bridge. | Root API only when Match Core is enabled. | `MATCHZY_ENABLED`; Match Core URL/ID/token/server ID when enabled. | Start/end a staging match and inspect Root API audit/event result. |
-| LegacyX-Reconnect | Scoped session/heartbeat/reconnect contract. | Root API only. | API base URL, server ID/address/mode, `RECONNECT_PLUGIN_ID/TOKEN`. | Join, leave and reconnect a staging player. |
 | LegacyX-Spectator | Game-local chat/voice isolation. | No direct database access. | `LEGACYX_SPECTATOR_COMMS_ENABLED`. | Verify live-player versus spectator chat/voice isolation. |
 | LegacyX-WeaponPaints | Website-created Skinchanger jobs are claimed and acknowledged by the plugin. | Root API owns loadout persistence and job state; plugin has no database credentials. | API base URL, server ID, `SKINBRIDGE_PLUGIN_ID/TOKEN`, poll seconds. | Equip a staging loadout; observe queued → applied/failed acknowledgement. |
 

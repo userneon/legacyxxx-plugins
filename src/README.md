@@ -8,7 +8,6 @@ The canonical source folders are now the LEGACY-X runtime module names. The `src
 | `src/LegacyX-MatchZy/` | `LegacyX-MatchZy/` |
 | `src/LegacyX-AFKManager/` | `LegacyX-AFKManager/` |
 | `src/LegacyX-Community/` | `LegacyX-Community/` |
-| `src/LegacyX-Reconnect/` | `LegacyX-Reconnect/` |
 | `src/LegacyX-Spectator/` | `LegacyX-Spectator/` |
 | `src/LegacyX-WeaponPaints/` | `LegacyX-WeaponPaints/` |
 

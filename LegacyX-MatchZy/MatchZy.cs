@@ -57,8 +57,6 @@ namespace MatchZy
         private Dictionary<int, bool> playerReadyStatus = new Dictionary<int, bool>();
         private Dictionary<int, CCSPlayerController> playerData = new Dictionary<int, CCSPlayerController>();
 
-        // Admin Data
-        private Dictionary<string, string> loadedAdmins = new Dictionary<string, string>();
 
         // Timers
         public CounterStrikeSharp.API.Modules.Timers.Timer? unreadyPlayerMessageTimer = null;
@@ -92,8 +90,6 @@ namespace MatchZy
                 Console.WriteLine($"[{ModuleName}] Disabled by central environment.");
                 return;
             }
-
-            LoadAdmins();
 
             database.InitializeDatabase(ModuleDirectory);
 
@@ -150,7 +146,6 @@ namespace MatchZy
                 { ".settings", OnMatchSettingsCommand },
                 { ".whitelist", OnWLCommand },
                 { ".globalnades", OnSaveNadesAsGlobalCommand },
-                { ".reload_admins", OnReloadAdmins },
                 { ".tactics", OnPracCommand },
                 { ".prac", OnPracCommand },
                 { ".showspawns", OnShowSpawnsCommand },

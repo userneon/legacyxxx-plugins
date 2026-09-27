@@ -17,7 +17,7 @@ LEGACY-X AFK Manager нь CounterStrikeSharp дээр ажиллах, MatchZy co
 
 ## Why this policy
 
-MatchZy warmup нь LEGACY-X дээр 5v5 ready lobby-ийн үүрэгтэй. Тиймээс ready дараагүй, найзаа хүлээж байгаа, server reconnect хийж байгаа тоглогчийг warmup дээр AFK гэж шийтгэхгүй. Live match эхэлсний дараа удаан хөдөлгөөнгүй player багийн тоглолтод нөлөөлөх тул эхлээд warning, дараа нь spectator transfer хийнэ. Шууд kick хийхгүй бөгөөд тоглогч `Reconnect`/Last Played flow-оор буцаж орох боломжтой үлдэнэ.
+MatchZy warmup нь LEGACY-X дээр 5v5 ready lobby-ийн үүрэгтэй. Тиймээс ready дараагүй, найзаа хүлээж байгаа, server reconnect хийж байгаа тоглогчийг warmup дээр AFK гэж шийтгэхгүй. Live match эхэлсний дараа удаан хөдөлгөөнгүй player багийн тоглолтод нөлөөлөх тул эхлээд warning, дараа нь spectator transfer хийнэ. Шууд kick хийхгүй.
 
 ## Build
 

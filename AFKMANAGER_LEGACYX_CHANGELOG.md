@@ -23,7 +23,7 @@ Base source: [NiGHT757/AFKManager](https://github.com/NiGHT757/AFKManager). The 
 
 ## Decision rationale
 
-LEGACY-X-ийн 5v5 server дээр AFK Manager-ийг шууд kick engine болгох нь reconnect болон Last Played flow-тэй муу зохицно. Иймээс production default нь warning → spectator transfer байна. Kick нь spectator-аас ч disabled бөгөөд staff/queue/reconnect behavior-ийг аль болох эвдэхгүй.
+LEGACY-X-ийн 5v5 server дээр AFK Manager-ийг шууд kick engine болгох нь дахин холбогдож буй тоглогчтой муу зохицно. Иймээс production default нь warning → spectator transfer байна. Kick нь spectator-аас ч disabled бөгөөд staff/queue/reconnect behavior-ийг аль болох эвдэхгүй.
 
 Anti-camp behavior-ийг мөн default-оор идэвхгүй болгосон. Competitive player нэг байрлалд angle барьж байх үед зөвхөн position/camera хөдөлгөөнгүй гэдгээр AFK гэж буруу шийдэх эрсдэлтэй. Хэрэв тусгай public/DM server дээр anti-camp хэрэгтэй бол Match server-ийн config-оос тусад нь enable хийж болно.
 
@@ -49,7 +49,7 @@ Copy the DLL and JSON to the CounterStrikeSharp plugin/config paths described in
 
 ## Validation status
 
-Final validation must include .NET 8 build for AFK Manager, MatchZy and AdminPlus, `git diff --check`, secret scan, and a live CS2 smoke test. The live smoke test should cover warmup ready lobby, live 5v5 AFK warning/transfer, C4 transfer, admin immunity, map change cleanup and Last Played/reconnect behavior.
+Final validation must include .NET 8 build for AFK Manager, MatchZy and AdminPlus, `git diff --check`, secret scan, and a live CS2 smoke test. The live smoke test should cover warmup ready lobby, live 5v5 AFK warning/transfer, C4 transfer, admin immunity, map change cleanup and player rejoin behavior.
 
 ## Final local validation
 
