@@ -289,6 +289,7 @@ public partial class AdminPlus : BasePlugin
             var player = @event.Userid;
             if (player != null && player.IsValid)
             {
+                OnStaffPlayerConnectFull(player);
                 EnforceBan(player.Slot);
                 ScheduleBanRechecks(player.Slot);
             }

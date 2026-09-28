@@ -94,6 +94,19 @@ public partial class AdminPlus
         _ = AuthorizeAsync(new[] { id }, "connect");
     }
 
+    /// <summary>
+    /// Main thread, from player_connect_full. A map change reconnects every player without a new
+    /// OnClientAuthorized, after the disconnect cleared their permissions: re-apply a still-valid grant
+    /// at once, otherwise ask the API.
+    /// </summary>
+    private void OnStaffPlayerConnectFull(CCSPlayerController player)
+    {
+        if (!_authorizationActive || player == null || !player.IsValid || player.IsBot || player.SteamID == 0) return;
+        var grant = _authorizationStore.Get(player.SteamID, DateTimeOffset.UtcNow);
+        if (grant != null) SyncPlayerPermissions(player, grant);
+        else _ = AuthorizeAsync(new[] { player.SteamID }, "connect");
+    }
+
     private void OnStaffPlayerDisconnected(int slot)
     {
         if (!_authorizationActive) return;
@@ -172,8 +185,11 @@ public partial class AdminPlus
         if (grant == null || !grant.IsStaff) return;
 
         var role = StaffPermissions.For(grant.Role);
-        AdminManager.AddPlayerPermissions(player, role.Flags.ToArray());
-        AdminManager.SetPlayerImmunity(player, role.Immunity);
+        // Keyed by SteamID, not the controller: right after a connect or map change the controller's
+        // AuthorizedSteamID can still be empty, and the controller-based calls then silently do nothing.
+        var steamId = new SteamID(player.SteamID);
+        AdminManager.AddPlayerPermissions(steamId, role.Flags.ToArray());
+        AdminManager.SetPlayerImmunity(steamId, role.Immunity);
         adminImmunity[player.SteamID] = (int)role.Immunity;
         adminStamina[player.SteamID] = role.Stamina;
         adminStaffRoles[player.SteamID] = role.Name;
