@@ -50,9 +50,19 @@ all from one shared install:
 ```bash
 sudo ./scripts/cs2-host.sh install --env legacyx-srv-HOST.env     # once
 sudo ./scripts/cs2-host.sh add 27015 <GSLT> competitive de_dust2  # per server
-sudo ./scripts/cs2-host.sh update                                 # CS2 or plugin update
+sudo ./scripts/cs2-host.sh add 27016 <GSLT> casual de_dust2 20 fun LEGACY-X FUN #1
+sudo ./scripts/cs2-host.sh update                                 # by hand, if ever needed
 ./scripts/cs2-host.sh status | logs 27015
 ```
+
+Updates run by themselves: `install` turns on a timer (`autoupdate on|off|check`) that looks every 10
+minutes. A new CS2 build is applied at once, and so is the CounterStrikeSharp release that follows it
+(plugins are down until it arrives); a newer CounterStrikeSharp on its own and new commits of this
+repository wait for 05:00 (`AUTOUPDATE_HOUR`) so matches are not cut. Every update re-patches
+`gameinfo.gi` and keeps `.env`, `configs/` (incl. `core.json`) and each server's
+`/etc/legacyx/cs2/<port>.conf`. What it cannot do alone: a WeaponPaints signature broken by a CS2
+update needs a fix in `LegacyX-WeaponPaints/gamedata/weaponpaints.json`, which the next pull then
+brings in. Log: `journalctl -u legacyx-cs2-autoupdate`.
 
 ## Deploy on a Linux host (terminal)
 
