@@ -10,6 +10,7 @@
  *   dist/legacyx-cs2/addons/counterstrikesharp/shared/LegacyX.Shared.Configuration/
  *                                                                   the one shared config library
  *   dist/legacyx-cs2/addons/counterstrikesharp/.env.example
+ *   dist/legacyx-cs2/addons/counterstrikesharp/gamedata/                  plugin signature files (weaponpaints.json)
  *   dist/legacyx-cs2/cfg/MatchZy/                                   MatchZy cfg files
  *   dist/legacyx-cs2/MANIFEST.sha256
  *
@@ -109,6 +110,16 @@ mkdirSync(join(cssRoot, 'shared', SHARED_LIBRARY), { recursive: true })
 cpSync(sharedStage, join(cssRoot, 'shared', SHARED_LIBRARY, `${SHARED_LIBRARY}.dll`))
 
 cpSync(join(root, '.env.example'), join(cssRoot, '.env.example'))
+// Signature files go where CounterStrikeSharp reads gamedata (addons/counterstrikesharp/gamedata/),
+// not only next to the plugin: WeaponPaints refuses to load without it there.
+for (const plugin of PLUGINS) {
+  const gamedata = join(root, plugin, 'gamedata')
+  if (!existsSync(gamedata)) continue
+  for (const name of readdirSync(gamedata).filter((file) => file.endsWith('.json'))) {
+    mkdirSync(join(cssRoot, 'gamedata'), { recursive: true })
+    cpSync(join(gamedata, name), join(cssRoot, 'gamedata', name))
+  }
+}
 cpSync(join(root, 'LegacyX-MatchZy', 'cfg', 'MatchZy'), join(packageRoot, 'cfg', 'MatchZy'), { recursive: true })
 rmSync(stageRoot, { recursive: true, force: true })
 
