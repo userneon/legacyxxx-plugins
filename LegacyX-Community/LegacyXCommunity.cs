@@ -93,6 +93,12 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         {
             foreach (var online in Utilities.GetPlayers()) ApplyScoreboardRank(online);
         }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
+        // The rank column only draws after a reveal arrives while Tab is open, and CS2 may never send the
+        // server the Tab button: with an icon mode on, reveal to everyone every second instead.
+        AddTimer(1.0f, () =>
+        {
+            if (scoreboardRankType != 0 && scoreboardRanks.Count > 0) RevealScoreboardRanks();
+        }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
         RegisterListener<Listeners.OnTick>(() =>
         {
             foreach (var player in Utilities.GetPlayers())
