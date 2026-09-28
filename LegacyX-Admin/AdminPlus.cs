@@ -827,7 +827,7 @@ public partial class AdminPlus : BasePlugin
         if (player?.IsValid == true)
         {
             var message = GetPrefixedMessage(key, args);
-            player.PrintToChat(message);
+            player.PrintToChat(LegacyXChat.Colorize(message));
         }
     }
     

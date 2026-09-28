@@ -2,6 +2,7 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
+using LegacyX.Shared.Configuration;
 using System;
 using System.Collections.Generic;
 
@@ -51,7 +52,7 @@ public partial class AdminPlus
         if (!CommandStaminaRequirements.TryGetValue(normalized, out var required)) return true;
         adminStamina.TryGetValue(caller.SteamID, out var available);
         if (available >= required) return true;
-        caller.PrintToChat($"{{green}}LEGACY-X • {{default}}STAMINA {required} REQUIRED ({available}/1000)");
+        caller.PrintToChat(LegacyXChat.System($"STAMINA {required} REQUIRED ({available}/1000)"));
         return false;
     }
 

@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="../../LegacyX-Admin/Authorization/*.cs" Link="Authorization/%(Filename)%(Extension)" />
     <Compile Include="../../shared/LegacyX.Shared.Configuration/LegacyXEnvironment.cs" Link="Shared/LegacyXEnvironment.cs" />
+    <Compile Include="../../shared/LegacyX.Shared.Configuration/LegacyXChat.cs" Link="Shared/LegacyXChat.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />

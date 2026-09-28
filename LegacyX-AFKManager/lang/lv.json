@@ -1,5 +1,5 @@
 {
-    "ChatPrefix": "{purple}[AFK]{default} » ",
+    "ChatPrefix": "{green}LEGACY-X • {default}",
     "ChatKickMessage": "{grey}{playerName}{default} tika {lime}kickots{default} par to, ka bija {darkred}AFK{default}.",
 	"ChatBombTransfer": "Bumba tika nodota → {red}{targetPlayerName}{default}, jo {red}{playerName}{default} ir {red}AFK{default}.",
     "ChatMoveMessage": "{grey}{playerName}{default} tika {lime}pārvietots{default} uz SPEC komandu par to, ka bija {darkred}AFK{default}.",

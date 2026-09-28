@@ -1,5 +1,5 @@
 {
-  "ChatPrefix": "{purple}[AFK]{default} » ",
+  "ChatPrefix": "{green}LEGACY-X • {default}",
   "ChatKickMessage": "{grey}{playerName}{default} was {lime}kicked{default} for being {darkred}AFK{default}.",
   "ChatBombTransfer": "Bomb transferred → {red}{targetPlayerName}{default} because {red}{playerName}{default} is {red}AFK{default}.",
   "ChatMoveMessage": "{grey}{playerName}{default} was {lime}moved{default} to SPEC being {darkred}AFK{default}.",

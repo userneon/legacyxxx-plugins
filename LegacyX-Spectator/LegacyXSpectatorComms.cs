@@ -107,7 +107,7 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
             ChatChannel.Terrorist => "{Red}[T]",
             _ => "{Blue}[CT]",
         };
-        return $"{label} {{Default}}{sender.PlayerName}: {message}";
+        return LegacyXChat.Colorize($"{label} {{Default}}") + $"{sender.PlayerName}: {message}";
     }
 
     private static string Normalize(string raw)

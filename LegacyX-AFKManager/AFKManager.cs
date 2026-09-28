@@ -504,7 +504,7 @@ public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
     
     private string ReplaceVars(CCSPlayerController player, string message, float timeAmount = 0.0f)
     {
-        return Localizer["ChatPrefix"] + message.Replace("{playerName}", player.PlayerName)
+        return message.Replace("{playerName}", player.PlayerName)
                       .Replace("{teamColor}", GetTeamColor(player.Team))
                       .Replace("{weaponName}", player.PlayerPawn?.Value?.WeaponServices?.ActiveWeapon?.Value?.DesignerName ?? "Unknown")
                       .Replace("{timeAmount}", $"{timeAmount:F1}")
