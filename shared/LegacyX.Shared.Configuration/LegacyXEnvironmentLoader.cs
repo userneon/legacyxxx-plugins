@@ -13,8 +13,10 @@ public static class LegacyXEnvironmentLoader
     private static LegacyXEnvironment LoadCore()
     {
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        // Servers sharing one install share this file; the port tells them apart.
+        var port = LegacyXEnvironment.DetectPort(Environment.GetCommandLineArgs(), Environment.GetEnvironmentVariable("LEGACYX_SERVER_PORT"));
         var envPath = ResolveEnvironmentPath();
-        if (envPath == null) return new LegacyXEnvironment(values, null);
+        if (envPath == null) return new LegacyXEnvironment(values, null, port);
 
         foreach (var line in File.ReadLines(envPath))
         {
@@ -29,7 +31,7 @@ public static class LegacyXEnvironmentLoader
             if (key.Length > 0) values[key] = value;
         }
 
-        return new LegacyXEnvironment(values, envPath);
+        return new LegacyXEnvironment(values, envPath, port);
     }
 
     private static string? ResolveEnvironmentPath()

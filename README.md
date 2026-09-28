@@ -32,10 +32,14 @@ connection. What each module sends or reads, and the token scope it needs:
 | LegacyX-WeaponPaints | `/plugin/skinchanger/loadout` | `skinchanger:read` |
 | LegacyX-AFKManager, LegacyX-Spectator | none | none |
 
-One server token carries all of these scopes. Setting up a server is one command on the VPS
-(`legacyxxx-backend`): `node --env-file=.env scripts/create-game-server.mjs <server-id> <host:port> [mode] [name]`
+One token carries all of these scopes. Setting up a machine is one command on the VPS
+(`legacyxxx-backend`): `node --env-file=.env scripts/create-game-server.mjs <host> "27015:competitive_5v5:LEGACY-X #1" "27016:fun:Fun #1"`
 creates the token and writes the complete `.env`; unzip the package into `game/csgo/`, upload that
 file as `addons/counterstrikesharp/.env`, restart. Nothing else to fill in.
+
+Every CS2 server on a machine can share one install and that one `.env`: each process knows itself
+by the port it was started with (`-port 27016`), so its id is `srv-27016`, its address
+`<host>:27016`, and `LEGACYX_27016_…` lines apply to it alone (see `.env.example`).
 
 ## One central environment
 
