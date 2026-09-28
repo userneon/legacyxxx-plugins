@@ -175,7 +175,8 @@ public partial class AdminPlus : BasePlugin
         AddCommand("admins", Localizer["Admins.Usage"], CmdAdmins);
         AddCommand("css_admins", "List online admins in console", CmdAdmins);
         RegisterHideAdminCommands();
-        AuthorizeOnlinePlayers();
+        // On a cold start nobody is connected yet (and the player list isn't readable); only a hot reload has players to authorize.
+        if (hotReload) AuthorizeOnlinePlayers();
         AddCommand("version", "Print LEGACY-X Admin name and version to console", CmdPluginVersion);
         AddCommand("css_version", "Print LEGACY-X Admin name and version to console", CmdPluginVersion);
         

@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
 namespace LegacyX.Shared.Configuration;
 
 public static class LegacyXEnvironmentLoader
@@ -38,19 +43,35 @@ public static class LegacyXEnvironmentLoader
     {
         var explicitPath = Environment.GetEnvironmentVariable("LEGACYX_ENV_FILE");
         if (!string.IsNullOrWhiteSpace(explicitPath) && File.Exists(explicitPath)) return Path.GetFullPath(explicitPath);
-
-        foreach (var start in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() }.Where(path => !string.IsNullOrWhiteSpace(path)))
+        // This library lives in addons/counterstrikesharp/shared/<name>/, so its own folder finds the .env first.
+        // AppContext.BaseDirectory and the working directory are the game's bin folder under CounterStrikeSharp.
+        return FindEnvironmentFile(new[]
         {
-            var directory = new DirectoryInfo(Path.GetFullPath(start));
+            Path.GetDirectoryName(typeof(LegacyXEnvironmentLoader).Assembly.Location),
+            AppContext.BaseDirectory,
+            Directory.GetCurrentDirectory(),
+        });
+    }
+
+    // Linux paths are case-sensitive: CounterStrikeSharp installs as addons/counterstrikesharp.
+    private static readonly string[] EnvironmentFolders = { "", "CounterStrikeSharp", "counterstrikesharp", "addons/counterstrikesharp", "csgo/addons/counterstrikesharp" };
+
+    /// <summary>Walks up from each start folder looking for .env (or .env.txt) directly or in a CounterStrikeSharp folder.</summary>
+    public static string? FindEnvironmentFile(IEnumerable<string?> starts)
+    {
+        foreach (var start in starts.Where(path => !string.IsNullOrWhiteSpace(path)))
+        {
+            var directory = new DirectoryInfo(Path.GetFullPath(start!));
             while (directory != null)
             {
-                // ".env.txt" too: Windows Notepad adds it, and game-panel file managers (AMP) can't rename it away.
-                foreach (var name in new[] { ".env", ".env.txt" })
+                foreach (var folder in EnvironmentFolders)
                 {
-                    var direct = Path.Combine(directory.FullName, name);
-                    if (File.Exists(direct)) return direct;
-                    var counterStrikeSharp = Path.Combine(directory.FullName, "CounterStrikeSharp", name);
-                    if (File.Exists(counterStrikeSharp)) return counterStrikeSharp;
+                    // ".env.txt" too: Windows Notepad adds it, and game-panel file managers (AMP) can't rename it away.
+                    foreach (var name in new[] { ".env", ".env.txt" })
+                    {
+                        var candidate = Path.Combine(directory.FullName, folder, name);
+                        if (File.Exists(candidate)) return candidate;
+                    }
                 }
                 directory = directory.Parent;
             }

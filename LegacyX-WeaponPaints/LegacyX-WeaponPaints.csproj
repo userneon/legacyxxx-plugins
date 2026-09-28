@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <None Update="gamedata\*.*" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="data\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

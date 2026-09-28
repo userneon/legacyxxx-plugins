@@ -101,14 +101,15 @@ namespace WeaponPaints;
 			if (config.ApiBaseUrl.Length < 1 || config.PluginSecret.Length < 24)
 			{
 				Logger.LogError("ApiBaseUrl and PluginSecret are required. Database credentials are intentionally unsupported in LEGACY-X SkinBridge.");
-				Unload(false);
+				// Not Unload(): unloading mid-load leaves callbacks behind that crash the server on map load.
+				_centralEnabled = false;
 				return;
 		}
 
 		if (!File.Exists(Path.GetDirectoryName(Path.GetDirectoryName(ModuleDirectory)) + "/gamedata/weaponpaints.json"))
 		{
 			Logger.LogError("You need to upload \"weaponpaints.json\" to \"gamedata directory\"!");
-			Unload(false);
+			_centralEnabled = false;
 			return;
 		}
 		

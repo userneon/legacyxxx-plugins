@@ -19,73 +19,23 @@ namespace WeaponPaints
 			return player is { IsValid: true, IsBot: false, IsHLTV: false, UserId: not null };
 		}
 
-		internal static void LoadSkinsFromFile(string filePath, ILogger logger)
-		{
-			var json = File.ReadAllText(filePath);
-			try
-			{
-				var deserializedSkins = JsonConvert.DeserializeObject<List<JObject>>(json);
-				WeaponPaints.SkinsList = deserializedSkins ?? [];
-			}
-			catch (FileNotFoundException)
-			{
-				logger?.LogError("Not found \"skins.json\" file");
-			}
-		}
-		
-		internal static void LoadPinsFromFile(string filePath, ILogger logger)
-		{
-			var json = File.ReadAllText(filePath);
-			try
-			{
-				var deserializedPins = JsonConvert.DeserializeObject<List<JObject>>(json);
-				WeaponPaints.PinsList = deserializedPins ?? [];
-			}
-			catch (FileNotFoundException)
-			{
-				logger?.LogError("Not found \"pins.json\" file");
-			}
-		}
+		internal static void LoadSkinsFromFile(string filePath, ILogger logger) => WeaponPaints.SkinsList = LoadList(filePath, logger);
+		internal static void LoadPinsFromFile(string filePath, ILogger logger) => WeaponPaints.PinsList = LoadList(filePath, logger);
+		internal static void LoadGlovesFromFile(string filePath, ILogger logger) => WeaponPaints.GlovesList = LoadList(filePath, logger);
+		internal static void LoadAgentsFromFile(string filePath, ILogger logger) => WeaponPaints.AgentsList = LoadList(filePath, logger);
+		internal static void LoadMusicFromFile(string filePath, ILogger logger) => WeaponPaints.MusicList = LoadList(filePath, logger);
 
-		internal static void LoadGlovesFromFile(string filePath, ILogger logger)
+		/// <summary>Item lists from data/*.json; missing or unreadable file = empty list and a warning, never a failed load.</summary>
+		private static List<JObject> LoadList(string filePath, ILogger logger)
 		{
 			try
 			{
-				var json = File.ReadAllText(filePath);
-				var deserializedSkins = JsonConvert.DeserializeObject<List<JObject>>(json);
-				WeaponPaints.GlovesList = deserializedSkins ?? [];
+				return JsonConvert.DeserializeObject<List<JObject>>(File.ReadAllText(filePath)) ?? [];
 			}
-			catch (FileNotFoundException)
+			catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
 			{
-				logger?.LogError("Not found \"gloves.json\" file");
-			}
-		}
-
-		internal static void LoadAgentsFromFile(string filePath, ILogger logger)
-		{
-			try
-			{
-				var json = File.ReadAllText(filePath);
-				var deserializedSkins = JsonConvert.DeserializeObject<List<JObject>>(json);
-				WeaponPaints.AgentsList = deserializedSkins ?? [];
-			}
-			catch (FileNotFoundException)
-			{
-				logger?.LogError("Not found \"agents.json\" file");
-			}
-		}
-
-		internal static void LoadMusicFromFile(string filePath, ILogger logger)
-		{
-			try
-			{
-				var json = File.ReadAllText(filePath);
-				var deserializedSkins = JsonConvert.DeserializeObject<List<JObject>>(json);
-				WeaponPaints.MusicList = deserializedSkins ?? [];
-			}
-			catch (FileNotFoundException)
-			{
-				logger?.LogError("Not found \"music.json\" file");
+				logger?.LogWarning("Could not read {File}: {Message}", Path.GetFileName(filePath), exception.Message);
+				return [];
 			}
 		}
 
