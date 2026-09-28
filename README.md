@@ -1,5 +1,7 @@
 # LEGACY-X CounterStrikeSharp Plugins
 
+> **Монгол гарын авлага:** [docs/GARIIN_AVLAGA_MN.md](docs/GARIIN_AVLAGA_MN.md): VPS суулгах, сервер нэмэх, GSLT, update, алдаа засах, бүгд жишээтэй.
+
 This repository contains **source only** for LEGACY-X CS2 server plugins. It has no game server, VPS installation, production secret, or deployed DLL. Every LEGACY-X module reads its server-side configuration from one future host file: `CounterStrikeSharp/.env`. The committed root `.env.example` is the only template.
 
 ## Canonical modules
