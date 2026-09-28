@@ -26,6 +26,8 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     // SteamID64 -> LEGACY-X rank (1-18) and ranked matches, from the API; re-applied every round
     // because the game resets the scoreboard fields.
     private readonly Dictionary<ulong, (int RankId, int Matches)> scoreboardRanks = new();
+    // Slots holding Tab last tick: the client only draws rank icons after a reveal sent while Tab is open.
+    private readonly HashSet<int> scoreboardOpen = new();
 
     public override string ModuleAuthor => "LEGACY-X Community";
     public override string ModuleName => "LEGACY-X Community";
@@ -73,8 +75,22 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         });
         RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
         {
-            if (@event.Userid is { } player) scoreboardRanks.Remove(player.SteamID);
+            if (@event.Userid is { } player)
+            {
+                scoreboardRanks.Remove(player.SteamID);
+                scoreboardOpen.Remove(player.Slot);
+            }
             return HookResult.Continue;
+        });
+        RegisterListener<Listeners.OnTick>(() =>
+        {
+            foreach (var player in Utilities.GetPlayers())
+            {
+                if (player.IsBot) continue;
+                var open = (player.Buttons & PlayerButtons.Scoreboard) != 0;
+                if (open && scoreboardOpen.Add(player.Slot)) RevealScoreboardRanks(player);
+                else if (!open) scoreboardOpen.Remove(player.Slot);
+            }
         });
     }
 
@@ -113,13 +129,14 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveWins");
     }
 
-    /// <summary>Asks clients to show everyone's rank in the Tab scoreboard.</summary>
-    private void RevealScoreboardRanks()
+    /// <summary>Asks clients (one, or everyone) to show every player's rank in the Tab scoreboard.</summary>
+    private void RevealScoreboardRanks(CCSPlayerController? player = null)
     {
         try
         {
             var message = UserMessage.FromPartialName("ServerRankRevealAll");
-            message.Recipients.AddAllPlayers();
+            if (player != null) message.Recipients.Add(player);
+            else message.Recipients.AddAllPlayers();
             message.Send();
         }
         catch (Exception exception)

@@ -483,6 +483,8 @@ namespace WeaponPaints
 
 			var model = player.TeamNum == 3 ? value.CT : value.T;
 			if (string.IsNullOrEmpty(model)) return;
+			// The site stores the full path (agents/models/.../x.vmdl); upstream data only the middle part.
+			var modelPath = model.EndsWith(".vmdl", StringComparison.OrdinalIgnoreCase) ? model : $"agents/models/{model}.vmdl";
 
 			if (player.PlayerPawn.Value == null)
 				return;
@@ -491,9 +493,7 @@ namespace WeaponPaints
 			{
 				Server.NextFrame(() =>
 				{
-					player.PlayerPawn.Value.SetModel(
-						$"agents/models/{model}.vmdl"
-					);
+					player.PlayerPawn.Value.SetModel(modelPath);
 				});
 			}
 			catch (Exception)

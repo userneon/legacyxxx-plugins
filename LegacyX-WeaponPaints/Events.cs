@@ -322,6 +322,17 @@ namespace WeaponPaints
 		private void RegisterListeners()
 		{
 			RegisterListener<Listeners.OnMapStart>(OnMapStart);
+			// Agents outside the map's default CT/T set are not loaded by the game; unloaded models render as ERROR.
+			if (Config.Additional.AgentEnabled)
+				RegisterListener<Listeners.OnServerPrecacheResources>(manifest =>
+				{
+					foreach (var agent in AgentsList)
+					{
+						var model = agent["model"]?.ToString();
+						if (string.IsNullOrWhiteSpace(model) || model == "null") continue;
+						manifest.AddResource(model.EndsWith(".vmdl", StringComparison.OrdinalIgnoreCase) ? model : $"agents/models/{model}.vmdl");
+					}
+				});
 
 			RegisterEventHandler<EventPlayerSpawn>(OnPlayerSpawn);
 			RegisterEventHandler<EventRoundStart>(OnRoundStart);
