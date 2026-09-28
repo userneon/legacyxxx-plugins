@@ -49,6 +49,8 @@ internal sealed class SkinchangerPayload
 internal sealed class SkinchangerEntry
 {
     [JsonPropertyName("category")] public string Category { get; set; } = string.Empty;
+    /// <summary>weapon:9, knife:500, glove:sport-gloves: the item the entry replaces.</summary>
+    [JsonPropertyName("slotKey")] public string SlotKey { get; set; } = string.Empty;
     [JsonPropertyName("teamScope")] public string TeamScope { get; set; } = "all";
     [JsonPropertyName("weaponDefindex")] public int? WeaponDefindex { get; set; }
     [JsonPropertyName("paintId")] public int? PaintId { get; set; }

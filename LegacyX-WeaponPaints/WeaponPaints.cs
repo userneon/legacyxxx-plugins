@@ -80,6 +80,7 @@ namespace WeaponPaints;
 		Utility.LoadPinsFromFile(ModuleDirectory + $"/data/collectibles_{_config.SkinsLanguage}.json", Logger);
 
 			RegisterListeners();
+			RegisterRefreshCommands();
 		}
 
 		public void OnConfigParsed(WeaponPaintsConfig config)

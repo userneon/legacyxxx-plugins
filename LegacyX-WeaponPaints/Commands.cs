@@ -35,7 +35,8 @@ public partial class WeaponPaints
 
 	private void OnCommandRefresh(CCSPlayerController? player, CommandInfo command)
 	{
-		if (!Config.Additional.CommandWpEnabled || !Config.Additional.SkinEnabled || !_gBCommandsAllowed) return;
+		// Reloading from the website is always allowed; CommandWpEnabled only gates the old in-game editing.
+		if (!Config.Additional.SkinEnabled || !_gBCommandsAllowed) return;
 		if (!Utility.IsPlayerValid(player)) return;
 
 		if (player == null || !player.IsValid || player.UserId == null || player.IsBot) return;
@@ -118,6 +119,19 @@ public partial class WeaponPaints
 		}
 	}
 
+	/// <summary>!rs (plus any CommandRefresh names): reload this player's loadout from the website.</summary>
+	private void RegisterRefreshCommands()
+	{
+		foreach (var name in _config.Additional.CommandRefresh.Append("rs").Distinct(StringComparer.OrdinalIgnoreCase))
+		{
+			AddCommand($"css_{name}", "Reload your skins from the website", (player, info) =>
+			{
+				if (!Utility.IsPlayerValid(player)) return;
+				OnCommandRefresh(player, info);
+			});
+		}
+	}
+
 	private void RegisterCommands()
 	{
 		_config.Additional.CommandStattrak.ForEach(c =>
@@ -139,14 +153,7 @@ public partial class WeaponPaints
 			});
 		});
 			
-		_config.Additional.CommandRefresh.ForEach(c =>
-		{
-			AddCommand($"css_{c}", "Skins refresh", (player, info) =>
-			{
-				if (!Utility.IsPlayerValid(player)) return;
-				OnCommandRefresh(player, info);
-			});
-		});
+		// Refresh commands (!rs) are registered in Load, menus or not.
 
 		if (Config.Additional.CommandKillEnabled)
 		{
