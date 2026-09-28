@@ -87,6 +87,11 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
             }
             return HookResult.Continue;
         });
+        // The game rewrites these fields (team changes, match state); keep them set, as other CS2 rank plugins do.
+        AddTimer(2.0f, () =>
+        {
+            foreach (var online in Utilities.GetPlayers()) ApplyScoreboardRank(online);
+        }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
         RegisterListener<Listeners.OnTick>(() =>
         {
             foreach (var player in Utilities.GetPlayers())
