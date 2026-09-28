@@ -44,10 +44,14 @@ public static class LegacyXEnvironmentLoader
             var directory = new DirectoryInfo(Path.GetFullPath(start));
             while (directory != null)
             {
-                var direct = Path.Combine(directory.FullName, ".env");
-                if (File.Exists(direct)) return direct;
-                var counterStrikeSharp = Path.Combine(directory.FullName, "CounterStrikeSharp", ".env");
-                if (File.Exists(counterStrikeSharp)) return counterStrikeSharp;
+                // ".env.txt" too: Windows Notepad adds it, and game-panel file managers (AMP) can't rename it away.
+                foreach (var name in new[] { ".env", ".env.txt" })
+                {
+                    var direct = Path.Combine(directory.FullName, name);
+                    if (File.Exists(direct)) return direct;
+                    var counterStrikeSharp = Path.Combine(directory.FullName, "CounterStrikeSharp", name);
+                    if (File.Exists(counterStrikeSharp)) return counterStrikeSharp;
+                }
                 directory = directory.Parent;
             }
         }
