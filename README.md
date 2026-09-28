@@ -41,6 +41,21 @@ Every CS2 server on a machine can share one install and that one `.env`: each pr
 by the port it was started with (`-port 27016`), so its id is `srv-27016`, its address
 `<host>:27016`, and `LEGACYX_27016_…` lines apply to it alone (see `.env.example`).
 
+## Deploy on a Linux host (terminal)
+
+On the game VPS, in a checkout of this repository (Metamod and CounterStrikeSharp already on the servers):
+
+```bash
+git pull
+./scripts/deploy.sh --env legacyx-srv-HOST.env /path/to/cs2/game/csgo [/path/to/another/game/csgo …]
+```
+
+It builds the package (or takes `--package legacyx-cs2.zip`, no .NET needed), copies only the plugin
+files into each `game/csgo`, installs the `.env` made by `create-game-server.mjs` (an existing one is
+kept when `--env` is left out) and touches nothing else. Restart the servers afterwards. Updating
+later is the same command without `--env`. On a game panel (no terminal), upload the unzipped
+`addons` and `cfg` folders into `game/csgo` and create `addons/counterstrikesharp/.env` there instead.
+
 ## One central environment
 
 The shared `LegacyX.Shared.Configuration` library is referenced by every project. It resolves future host process environment first, then `CounterStrikeSharp/.env`. Plugin-local JSON/cfg is allowed only for secret-free gameplay defaults or an upstream module's non-secret state.
