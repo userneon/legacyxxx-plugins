@@ -7,7 +7,7 @@ cannot break them by accident. Write new text to match anyway.
 | | Rule |
 |---|---|
 | Prefix | `LEGACY-X •`: "LEGACY-" white, "X" crimson, "•" grey, like the website logo. Added by `LegacyXChat.System`; never write a prefix yourself |
-| Case | normal sentences: capital first letter, the rest lower case. Keep game words as players write them: AFK, CT, T, HP, EXP, StatTrak |
+| Case | "LEGACY-X" is always in capitals. Everything else is a normal sentence: capital first letter, the rest lower case. Keep game words as players write them: AFK, CT, T, HP, EXP, StatTrak |
 | Body | dim grey (`{grey}`, or `{default}`) |
 | Emphasis | `{white}` for names, numbers, maps and commands. Go back with `{grey}` |
 | Green | `{green}` only for something that worked or is on: "Skins updated.", "You're ready.", "Live." |
