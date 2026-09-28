@@ -1,6 +1,7 @@
 // Copy to legacyx-rank.private.cfg on the CS2 server. Do not commit the copied file.
-// This config enables MatchZy -> LEGACY-X AdminPlus API rank event delivery.
+// This config enables MatchZy -> LEGACY-X API rank event delivery. config.cfg runs it automatically.
+// The token needs the stats:write scope (scripts/create-api-token.mjs in legacyxxx-backend).
 legacyx_rank_season "season-1"
-matchzy_remote_log_url "https://api.legacyx.cc/api/plugin/matchzy/events"
+matchzy_remote_log_url "https://api.legacyx.cc/api/v1/plugin/matchzy/events"
 matchzy_remote_log_header_key "x-plugin-secret"
 matchzy_remote_log_header_value "REPLACE_WITH_PLUGIN_INGEST_SECRET"

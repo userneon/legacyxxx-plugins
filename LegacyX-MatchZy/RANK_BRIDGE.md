@@ -8,7 +8,7 @@ MatchZy нь final `map_result` дээр Match ID, map number/name, winner, хо
 
 ```cfg
 legacyx_rank_season "season-1"
-matchzy_remote_log_url "https://api.legacyx.cc/api/plugin/matchzy/events"
+matchzy_remote_log_url "https://api.legacyx.cc/api/v1/plugin/matchzy/events"
 matchzy_remote_log_header_key "x-plugin-secret"
 matchzy_remote_log_header_value "YOUR_PLUGIN_INGEST_SECRET"
 ```
