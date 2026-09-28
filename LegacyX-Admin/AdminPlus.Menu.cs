@@ -1083,6 +1083,7 @@ public partial class AdminPlus
             else
                 PlayerExtensions.PrintToAll(Localizer["BannedReason", admin.PlayerName, safeName, minutes, reason]);
             LogAction($"{admin.PlayerName} banned {safeName} ({steamId}) [IP:{target.IpAddress}] for {minutes} minutes. Reason: {reason}");
+            ReportBan(steamId, minutes, reason, admin);
         }
 
         var connectedTarget = Utilities.GetPlayers().FirstOrDefault(p => p != null && p.IsValid && p.SteamID == target.SteamId);

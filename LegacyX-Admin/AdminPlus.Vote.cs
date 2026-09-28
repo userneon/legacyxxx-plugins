@@ -610,6 +610,7 @@ public partial class AdminPlus
             }
 
             _targetPlayer.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
+            ReportBan(steamId, minutes, reason, null, "Vote ban");
             PlayerExtensions.PrintToAll(Localizer["VoteBan.Success", _targetPlayer.PlayerName]);
             
             string durationText = FormatDiscordBanDurationMinutes(minutes);

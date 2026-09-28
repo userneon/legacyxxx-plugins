@@ -32,7 +32,7 @@ const packageRoot = join(outRoot, 'legacyx-cs2')
 const cssRoot = join(packageRoot, 'addons', 'counterstrikesharp')
 const stageRoot = join(outRoot, '.stage')
 
-export const PLUGINS = ['LegacyX-Admin', 'LegacyX-AFKManager', 'LegacyX-Community', 'LegacyX-MatchZy', 'LegacyX-Spectator', 'LegacyX-WeaponPaints']
+export const PLUGINS = ['LegacyX-Admin', 'LegacyX-AFKManager', 'LegacyX-Community', 'LegacyX-MatchZy', 'LegacyX-Spectator', 'LegacyX-Status', 'LegacyX-WeaponPaints']
 const SHARED_LIBRARY = 'LegacyX.Shared.Configuration'
 const NATIVE_RUNTIMES = new Set(['linux-x64', 'win-x64'])
 

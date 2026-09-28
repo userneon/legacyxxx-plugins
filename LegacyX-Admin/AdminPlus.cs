@@ -114,6 +114,7 @@ public partial class AdminPlus : BasePlugin
         LoadMenuConfigFile();
         InitializeStaffAuthorization();
         InitializeCentralBans();
+        InitializeCentralPenalties();
 
             BannedUserPath = Path.Combine(Server.GameDirectory, "csgo/cfg/banned_user.cfg");
             BannedIpPath = Path.Combine(Server.GameDirectory, "csgo/cfg/banned_ip.cfg");

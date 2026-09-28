@@ -185,6 +185,7 @@ public partial class AdminPlus
             }
 
             target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
+            ReportBan(steamId, minutes, reason, caller);
             bannedCount++;
         }
 
@@ -282,6 +283,7 @@ public partial class AdminPlus
             PlayerExtensions.PrintToAll(Localizer["Player.Ban.Success", executorName, safeName, Localizer["Duration.Temporary", minutes], reason]);
 
         LogAction($"{executorName} banned {safeName} ({steamId}) [IP:{ip}] for {minutes} minutes. Reason: {reason}");
+        ReportBan(steamId, minutes, reason, caller);
         
         string durationText = FormatDiscordBanDurationMinutes(minutes);
         AddTimer(0.1f, () => {
@@ -470,6 +472,10 @@ public partial class AdminPlus
             }
         }
 
+        // A SteamID is also unbanned on the website and every server, including bans issued from
+        // Discord or the website that this server's banned_user.cfg never had.
+        ReportUnban(key, caller);
+
         string executorName = GetExecutorName(caller);
 
         if (removed)
@@ -623,6 +629,7 @@ public partial class AdminPlus
                         SteamBans[steamId.ToString()] = (expiry, line, safeName, ip);
                         File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(x => x.line));
                     }
+                    ReportBan(steamId.ToString(), minutes, reason, admin);
 
                     if (minutes == 0)
                         PlayerExtensions.PrintToAll(Localizer["Player.Ban.Success", admin.PlayerName, safeName, Localizer["Duration.Forever"], reason]);

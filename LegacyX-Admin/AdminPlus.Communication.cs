@@ -361,6 +361,7 @@ public partial class AdminPlus
         
         if (removedCount > 0)
         {
+            ReportCommunicationLifted(steamId, type, caller);
             
             if (punishment != null)
             {
@@ -587,6 +588,7 @@ public partial class AdminPlus
         }
 
         SaveCommunicationData();
+        ReportCommunication(target.SteamID, type, duration, reason, caller);
 
         AddTimer(0.1f, () => {
             _ = Discord.SendCommunicationLog(target.PlayerName, target.SteamID, executorName, caller?.SteamID ?? 0, reason, duration, type, true, this);
