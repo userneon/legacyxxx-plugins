@@ -60,9 +60,11 @@ minutes. A new CS2 build is applied at once, and so is the CounterStrikeSharp re
 (plugins are down until it arrives); a newer CounterStrikeSharp on its own and new commits of this
 repository wait for 05:00 (`AUTOUPDATE_HOUR`) so matches are not cut. Every update re-patches
 `gameinfo.gi` and keeps `.env`, `configs/` (incl. `core.json`) and each server's
-`/etc/legacyx/cs2/<port>.conf`. What it cannot do alone: a WeaponPaints signature broken by a CS2
-update needs a fix in `LegacyX-WeaponPaints/gamedata/weaponpaints.json`, which the next pull then
-brings in. Log: `journalctl -u legacyx-cs2-autoupdate`.
+`/etc/legacyx/cs2/<port>.conf`. After each update `scripts/fix-gamedata.py` checks WeaponPaints'
+signature against the new `libserver.so`; if it no longer matches exactly once, it takes the one
+maintained by WeaponPaints upstream or swiftlys2 that does, and keeps retrying every 10 minutes
+while none does yet (skins stay off meanwhile; the servers keep running). A signature found that way
+is loaded at the next quiet-hour restart. Log: `journalctl -u legacyx-cs2-autoupdate`.
 
 ## Deploy on a Linux host (terminal)
 

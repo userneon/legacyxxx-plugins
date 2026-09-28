@@ -49,7 +49,7 @@ install_packages() {
   say "System packages"
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq
-  apt-get install -y -qq curl ca-certificates unzip tar git lib32gcc-s1 lib32stdc++6 >/dev/null
+  apt-get install -y -qq curl ca-certificates unzip tar git python3 lib32gcc-s1 lib32stdc++6 >/dev/null
   if [[ "$build_tools" == yes ]]; then
     # Building the plugins here needs .NET 8 SDK and Node 18+ (Ubuntu 24.04 has both; else use --package).
     command -v dotnet >/dev/null || apt-get install -y -qq dotnet-sdk-8.0 >/dev/null || die "No dotnet-sdk-8.0 package here: pass --package legacyx-cs2.zip."
@@ -136,6 +136,19 @@ install_legacyx() {
   chown -R "$CS2_USER:$CS2_USER" "$CSGO_DIR/addons" "$CSGO_DIR/cfg"
 }
 
+# WeaponPaints' signature can break with a CS2 update: check it against this build's libserver.so and,
+# if needed, take a maintained one that matches exactly once (scripts/fix-gamedata.py). Returns 0 when
+# the signature is valid, 3 when no source has one for this build yet (retried by the timer).
+fix_gamedata() {
+  local gamedata="$CSGO_DIR/addons/counterstrikesharp/gamedata/weaponpaints.json" rc=0
+  [[ -f "$gamedata" ]] || return 0
+  python3 "$REPO/scripts/fix-gamedata.py" "$CSGO_DIR/bin/linuxsteamrt64/libserver.so" "$gamedata" || rc=$?
+  chown "$CS2_USER:$CS2_USER" "$gamedata" 2>/dev/null || true
+  mkdir -p "$STATE_DIR"
+  if [[ $rc -eq 3 ]]; then : > "$STATE_DIR/gamedata-pending"; else rm -f "$STATE_DIR/gamedata-pending"; fi
+  return $rc
+}
+
 write_unit() {
   cat > "$UNIT" <<EOF
 [Unit]
@@ -206,6 +219,7 @@ cmd_install() {
   install_metamod
   install_counterstrikesharp
   install_legacyx "$package" "$env_file"
+  fix_gamedata || true
   mkdir -p "$CONF_DIR"
   write_unit
   cmd_autoupdate on
@@ -247,7 +261,9 @@ cmd_update() {
   local package=""
   [[ "${1:-}" == "--package" ]] && package="${2:-}"
   local running=()
-  for port in $(ports); do systemctl is-active --quiet "cs2@$port" && running+=("$port"); done
+  for port in $(ports); do
+    if systemctl is-active --quiet "cs2@$port"; then running+=("$port"); fi
+  done
   for port in "${running[@]}"; do systemctl stop "cs2@$port"; done
   update_cs2
   install_metamod
@@ -257,6 +273,7 @@ cmd_update() {
   else
     say "No .NET SDK here and no --package: the LEGACY-X plugins are left as they are."
   fi
+  fix_gamedata || true
   for port in "${running[@]}"; do systemctl start "cs2@$port"; done
   say "Updated. Restarted: ${running[*]:-none}"
 }
@@ -306,12 +323,31 @@ cmd_autoupdate_check() {
     fi
   fi
 
+  # Skins were left off by a CS2 update because no maintained signature matched yet: try again. A fix is
+  # already written to disk; the servers load it on their next start (at the quiet hour, like any
+  # non-urgent change, since skins are cosmetic and a restart would cut matches).
+  local restart_only=no
+  if [[ -f "$STATE_DIR/gamedata-pending" || -f "$STATE_DIR/gamedata-restart" ]]; then
+    if [[ -f "$STATE_DIR/gamedata-restart" ]] || fix_gamedata; then
+      : > "$STATE_DIR/gamedata-restart"
+      [[ ${#reasons[@]} -eq 0 ]] && restart_only=yes
+      reasons+=("WeaponPaints signature fixed")
+    fi
+  fi
+
   [[ ${#reasons[@]} -gt 0 ]] || exit 0
   if [[ "$urgent" == no && "$(date +%-H)" != "$AUTOUPDATE_HOUR" ]]; then
     say "Update waiting for ${AUTOUPDATE_HOUR}:00: ${reasons[*]}"
     exit 0
   fi
   say "Updating: ${reasons[*]}"
+  rm -f "$STATE_DIR/gamedata-restart"
+  if [[ "$restart_only" == yes ]]; then
+    for port in $(ports); do
+      if systemctl is-active --quiet "cs2@$port"; then systemctl restart "cs2@$port"; fi
+    done
+    return 0
+  fi
   if [[ "$pull" == yes ]]; then git_repo pull -q --ff-only || say "git pull failed; plugins stay at $(git_repo rev-parse --short HEAD)."; fi
   cmd_update
   # A CounterStrikeSharp release newer than the one current at the CS2 update is now installed.
