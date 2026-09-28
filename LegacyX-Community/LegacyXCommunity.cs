@@ -26,8 +26,8 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     // SteamID64 -> LEGACY-X rank (1-18) and ranked matches, from the API; re-applied every round
     // because the game resets the scoreboard fields.
     private readonly Dictionary<ulong, (int RankId, int Matches, int Exp, string Name)> scoreboardRanks = new();
-    // 0 = rank name as the clan tag, e.g. [OPERATOR I] (default: the only form CS2 reliably shows);
-    // 12 = skill-group icon, 11 = Premier rating (EXP). Switchable live with lx_scoreboard_type.
+    // The rank name is always the clan tag, shown as [OPERATOR I]. On top of it, the rank column can try
+    // 12 = skill-group icon or 11 = Premier rating (EXP); 0 = tag only (default). Switchable live with lx_scoreboard_type.
     private int scoreboardRankType = 0;
     private readonly HashSet<ulong> scoreboardLogged = new();
     // Slots holding Tab last tick: the client only draws rank icons after a reveal sent while Tab is open.
@@ -135,11 +135,8 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         if (scoreboardBlocked || !player.IsValid || player.IsBot || !scoreboardRanks.TryGetValue(player.SteamID, out var rank)) return;
         try
         {
-            if (scoreboardRankType == 0)
-            {
-                ApplyRankTag(player, rank.Name);
-                return;
-            }
+            ApplyRankTag(player, rank.Name);
+            if (scoreboardRankType == 0) return;
             player.CompetitiveRankType = (sbyte)scoreboardRankType;
             player.CompetitiveRanking = scoreboardRankType == 11 ? rank.Exp : rank.RankId;
             // The client hides a skill group below 10 wins; the rank itself is already earned on the site.
@@ -161,8 +158,9 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     /// <summary>The rank name as the player's clan tag: shown before the name in Tab, chat and the kill feed.</summary>
     private void ApplyRankTag(CCSPlayerController player, string rankName)
     {
-        var tag = $"[{rankName.ToUpperInvariant()}]";
-        if (tag.Length > 31) tag = tag[..30] + "]";
+        // The scoreboard puts the clan tag in brackets itself: [OPERATOR I] 777.
+        var tag = rankName.ToUpperInvariant();
+        if (tag.Length > 31) tag = tag[..31];
         var current = player.Clan ?? "";
         // MatchZy's coach tag ([TEAM COACH]) says more during a match; leave it.
         if (current.EndsWith("COACH]", StringComparison.Ordinal) || current == tag) return;
