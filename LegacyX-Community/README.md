@@ -12,6 +12,19 @@
 
 CS2 нь community серверт Rank баганын icon (`m_iCompetitiveRankType` 12) болон Premier тоог (11) тест дээр харуулаагүй тул тэдгээр нь `lx_scoreboard_type 12` / `11`-ээр туршихад л үлдсэн. `LEGACYX_COMMUNITY_SCOREBOARD_RANK_TYPE` анхны горимыг, `LEGACYX_COMMUNITY_SCOREBOARD_RANKS=false` бүгдийг унтраана.
 
+## Welcome
+
+Тоглогч серверт орсноос 4 секундын дараа зөвхөн тухайн тоглогчийн chat-д (бусдад харагдахгүй) гарна:
+
+```text
+LEGACY-X • Welcome to LEGACY-X, Temuujin.
+LEGACY-X • Operator I · 1,240 EXP. Type !rank for more.
+LEGACY-X • Your skins come from legacyx.cc. Type !rs to load them.
+```
+
+Цол, EXP нь API-аас (цолгүй бол "No rank yet…", API хүрэхгүй бол тэр мөр гарахгүй). Map солигдоход дахин
+гарахгүй (нэг тоглогчид 3 цагт нэг удаа). `LEGACYX_COMMUNITY_WELCOME=false` унтраана.
+
 ## Security
 
 Plugin нь `/api/v1/plugin/community/players/:steamId` endpoint рүү л явна. API URL, plugin identity болон scoped `x-plugin-secret` нь бүх LEGACY-X plugin-тэй адил future CS2 host-ийн **нэг** `CounterStrikeSharp/.env`-ээс уншигдана. `LegacyXCommunity.json.example` нь одоо зөвхөн secret-free chat presentation default агуулна. Staff/API secret, Supabase key, database credential-ийг plugin JSON/cfg болон Git-д хэзээ ч байрлуулахгүй.

@@ -19,6 +19,7 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public string PluginSecret { get; set; } = "";
     public string ChatPrefix { get; set; } = LegacyXChat.Prefix;
     public bool ScoreboardRanks { get; set; } = true;
+    public bool Welcome { get; set; } = true;
 }
 
 public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
@@ -35,6 +36,8 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     // Slots holding Tab last tick: the client only draws rank icons after a reveal sent while Tab is open.
     private readonly HashSet<int> scoreboardOpen = new();
     private bool scoreboardBlocked;
+    // SteamID64 -> when the player last got the welcome, so a map change does not repeat it.
+    private readonly Dictionary<ulong, DateTime> welcomed = new();
 
     public override string ModuleAuthor => "LEGACY-X Community";
     public override string ModuleName => "LEGACY-X Community";
@@ -48,6 +51,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         config.PluginId = environment.GetModule("COMMUNITY", "PLUGIN_ID", config.PluginId);
         config.PluginSecret = environment.GetModule("COMMUNITY", "PLUGIN_TOKEN", config.PluginSecret);
         config.ScoreboardRanks = environment.GetModuleBoolean("COMMUNITY", "SCOREBOARD_RANKS", config.ScoreboardRanks);
+        config.Welcome = environment.GetModuleBoolean("COMMUNITY", "WELCOME", config.Welcome);
         scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 0, 0, 12);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
@@ -56,13 +60,14 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     public override void Load(bool hotReload)
     {
         Console.WriteLine($"[{ModuleName}] Loaded — rank and EXP command ready.");
-        if (!Config.Enabled || !Config.ScoreboardRanks) return;
+        if (!Config.Enabled) return;
         RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
         {
             var player = @event.Userid;
-            if (player != null && player.IsValid && !player.IsBot) _ = LoadScoreboardRankAsync(player);
+            if (player != null && player.IsValid && !player.IsBot) _ = LoadScoreboardRankAsync(player, welcome: Config.Welcome);
             return HookResult.Continue;
         });
+        if (!Config.ScoreboardRanks) return;
         RegisterEventHandler<EventPlayerSpawn>((@event, info) =>
         {
             var player = @event.Userid;
@@ -114,11 +119,17 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     }
 
     /// <summary>Tab scoreboard: the player's LEGACY-X rank (1-18) in the rank column, as the 18-step skill-group icon.</summary>
-    private async Task LoadScoreboardRankAsync(CCSPlayerController player)
+    private async Task LoadScoreboardRankAsync(CCSPlayerController player, bool welcome = false)
     {
         var steamId = player.SteamID;
-        if (string.IsNullOrWhiteSpace(Config.ApiBaseUrl) || string.IsNullOrWhiteSpace(Config.PluginSecret)) return;
+        if (string.IsNullOrWhiteSpace(Config.ApiBaseUrl) || string.IsNullOrWhiteSpace(Config.PluginSecret))
+        {
+            if (welcome) Server.NextFrame(() => ScheduleWelcome(player, null));
+            return;
+        }
         var (status, profile) = await FetchProfileAsync(steamId.ToString());
+        if (welcome) Server.NextFrame(() => ScheduleWelcome(player, WelcomeRankLine(status, profile)));
+        if (!Config.ScoreboardRanks) return;
         if (status == System.Net.HttpStatusCode.NotFound)
         {
             Server.NextFrame(() => scoreboardRanks.Remove(steamId));
@@ -136,6 +147,39 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
             if (player.IsValid) ApplyScoreboardRank(player);
             RevealScoreboardRanks();
         });
+    }
+
+    /// <summary>
+    /// A short welcome in the joining player's own chat only (nobody else sees it), a few seconds after
+    /// they are in so it is not lost in the connect spam. Once per player per few hours, not every map.
+    /// </summary>
+    private void ScheduleWelcome(CCSPlayerController player, string? rankLine)
+    {
+        if (!player.IsValid || player.IsBot) return;
+        var steamId = player.SteamID;
+        if (welcomed.TryGetValue(steamId, out var last) && DateTime.UtcNow - last < TimeSpan.FromHours(3)) return;
+        if (welcomed.Count > 1000)
+            foreach (var old in welcomed.Where(entry => DateTime.UtcNow - entry.Value > TimeSpan.FromHours(3)).Select(entry => entry.Key).ToList()) welcomed.Remove(old);
+        welcomed[steamId] = DateTime.UtcNow;
+        AddTimer(4.0f, () =>
+        {
+            if (!player.IsValid || player.SteamID != steamId) return;
+            var name = new string(player.PlayerName.Where(c => c >= ' ' && c != '{' && c != '}').ToArray()).Trim();
+            player.PrintToChat(LegacyXChat.System(name.Length > 0 ? $"Welcome to LEGACY-X, {{white}}{name}{{grey}}." : "Welcome to LEGACY-X."));
+            if (rankLine != null) player.PrintToChat(LegacyXChat.System(rankLine));
+            player.PrintToChat(LegacyXChat.System("Your skins come from {white}legacyx.cc{grey}. Type {white}!rs{grey} to load them."));
+        });
+    }
+
+    /// <summary>The player's rank and EXP from the API, or null when it could not be read (then the line is left out).</summary>
+    private static string? WelcomeRankLine(System.Net.HttpStatusCode? status, JsonElement? profile)
+    {
+        if (status == System.Net.HttpStatusCode.NotFound) return "No rank yet. Play a 5v5 match to get one.";
+        if (profile is not { } found) return null;
+        var rankName = StringOrNull(found, "rank_name")?.Trim();
+        if (string.IsNullOrEmpty(rankName)) return null;
+        var exp = IntOrNull(found, "current_exp") ?? 0;
+        return $"{{white}}{rankName}{{grey}} · {{white}}{exp:N0}{{grey}} EXP. Type {{white}}!rank{{grey}} for more.";
     }
 
     private void ApplyScoreboardRank(CCSPlayerController player)
