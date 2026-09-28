@@ -116,6 +116,7 @@ namespace WeaponPaints
 			if (Config.Additional is { KnifeEnabled: false, SkinEnabled: false, GloveEnabled: false }) return;
 			
 			_fadeSeed = 0;
+			_skinErrorLogged = false;
 			_nextItemId = MinimumCustomItemId;
 		}
 
@@ -202,7 +203,15 @@ namespace WeaponPaints
 					GivePlayerWeaponSkin(player, weapon);
 				}
 			}
-			catch { }
+			catch (Exception exception)
+			{
+				// Once per map: a failing skin call (e.g. an outdated gamedata signature after a CS2 update) must be visible.
+				if (!_skinErrorLogged)
+				{
+					_skinErrorLogged = true;
+					Utility.Log($"LEGACY-X SkinBridge could not apply a skin: {exception.GetType().Name}: {exception.Message}");
+				}
+			}
 
 			return HookResult.Continue;
 		}
