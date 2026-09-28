@@ -72,6 +72,25 @@ public partial class AdminPlus
         WarnAboutLocalAdminFile();
         AddTimer(refreshSeconds, () => _ = RefreshOnlineStaffAsync(), TimerFlags.REPEAT);
         AddTimer(5.0f, RemoveExpiredStaff, TimerFlags.REPEAT);
+        // The game and MatchZy rewrite clan tags (team changes, map start); keep staff tags set.
+        AddTimer(2.0f, ApplyStaffTags, TimerFlags.REPEAT);
+    }
+
+    private static readonly HashSet<string> StaffTagNames = new(StringComparer.Ordinal) { "OWNER", "MANAGER", "ADMIN", "STAFF" };
+
+    /// <summary>Staff show their role before their name in Tab, chat and the kill feed: [OWNER] name.</summary>
+    private void ApplyStaffTags()
+    {
+        if (!_authorizationActive) return;
+        foreach (var player in OnlineHumans())
+        {
+            if (!adminStaffRoles.TryGetValue(player.SteamID, out var roleName)) continue;
+            var current = player.Clan ?? "";
+            // MatchZy's coach tag ([TEAM COACH]) says more during a match; leave it.
+            if (current == roleName || current.EndsWith("COACH]", StringComparison.Ordinal)) continue;
+            player.Clan = roleName; // the scoreboard adds the brackets
+            Utilities.SetStateChanged(player, "CCSPlayerController", "m_szClan");
+        }
     }
 
     /// <summary>Hot reload / map start: strip whatever admin data online players carry and ask the API again.</summary>
@@ -182,7 +201,16 @@ public partial class AdminPlus
     {
         if (player == null || !player.IsValid || player.IsBot || player.SteamID == 0) return;
         RemoveStaffData(player.SteamID);
-        if (grant == null || !grant.IsStaff) return;
+        if (grant == null || !grant.IsStaff)
+        {
+            // No longer staff: drop the role tag so the rank tag (LegacyX-Community) can come back.
+            if (StaffTagNames.Contains(player.Clan ?? ""))
+            {
+                player.Clan = "";
+                Utilities.SetStateChanged(player, "CCSPlayerController", "m_szClan");
+            }
+            return;
+        }
 
         var role = StaffPermissions.For(grant.Role);
         // Keyed by SteamID, not the controller: right after a connect or map change the controller's
@@ -193,6 +221,7 @@ public partial class AdminPlus
         adminImmunity[player.SteamID] = (int)role.Immunity;
         adminStamina[player.SteamID] = role.Stamina;
         adminStaffRoles[player.SteamID] = role.Name;
+        ApplyStaffTags();
     }
 
     private void RemoveStaffData(ulong steamId)

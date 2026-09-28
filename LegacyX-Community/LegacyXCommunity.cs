@@ -3,7 +3,9 @@ using System.Text.Json;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.Modules.UserMessages;
 using LegacyX.Shared.Configuration;
 
@@ -164,6 +166,8 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     /// <summary>The rank name as the player's clan tag: shown before the name in Tab, chat and the kill feed.</summary>
     private void ApplyRankTag(CCSPlayerController player, string rankName)
     {
+        // Staff (every LEGACY-X staff role carries @css/generic) show their role instead; LegacyX-Admin sets it.
+        if (AdminManager.PlayerHasPermissions(new SteamID(player.SteamID), "@css/generic")) return;
         // The scoreboard puts the clan tag in brackets itself: [OPERATOR I] 777.
         var tag = rankName.ToUpperInvariant();
         if (tag.Length > 31) tag = tag[..31];
