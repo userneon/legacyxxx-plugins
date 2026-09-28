@@ -44,10 +44,19 @@ public sealed class LegacyXStatus : BasePlugin
             Console.WriteLine($"[{ModuleName}] Not reporting: missing {string.Join(", ", settings.Missing)} in CounterStrikeSharp/.env.");
             return;
         }
+        // An empty CS2 server hibernates: no frames, so no timers and no reports, and the site would
+        // show it offline until someone joins. Keep it awake; server.cfg may reset the cvar per map.
+        if (settings.KeepAwake)
+        {
+            KeepAwake();
+            RegisterListener<Listeners.OnMapStart>(_ => KeepAwake());
+        }
         // One repeating timer for the plugin's lifetime; it keeps running across map changes.
         AddTimer(settings.IntervalSeconds, Report, TimerFlags.REPEAT);
         Console.WriteLine($"[{ModuleName}] Reporting {settings.ServerId} every {settings.IntervalSeconds}s to {settings.ApiBaseUrl}.");
     }
+
+    private static void KeepAwake() => Server.ExecuteCommand("sv_hibernate_when_empty 0");
 
     /// <summary>Runs on the game thread: read the server state, then send it in the background.</summary>
     private void Report()
@@ -192,9 +201,10 @@ public sealed record StatusSettings(
     string GotvAddress,
     string ServerMode,
     int IntervalSeconds,
+    bool KeepAwake,
     IReadOnlyList<string> Missing)
 {
-    public static readonly StatusSettings Disabled = new(false, "", "", "", "", "", "", "", "", 30, Array.Empty<string>());
+    public static readonly StatusSettings Disabled = new(false, "", "", "", "", "", "", "", "", 30, false, Array.Empty<string>());
 
     public static StatusSettings Load(LegacyXEnvironment environment)
     {
@@ -219,6 +229,7 @@ public sealed record StatusSettings(
             environment.Get("LEGACYX_SERVER_GOTV_ADDRESS").Trim(),
             environment.Get("LEGACYX_SERVER_MODE", "competitive_5v5").Trim(),
             environment.GetModuleInt("STATUS", "INTERVAL_SECONDS", 30, 10, 60),
+            environment.GetModuleBoolean("STATUS", "KEEP_AWAKE", true),
             missing);
     }
 }

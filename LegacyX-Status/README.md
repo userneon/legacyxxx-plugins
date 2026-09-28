@@ -21,5 +21,6 @@ Game → API → database; nothing is stored on the game server. If the API can'
 | `LEGACYX_STATUS_PLUGIN_ID` | `legacyx-live-snapshot` (the snapshot route only accepts this) |
 | `LEGACYX_STATUS_INTERVAL_SECONDS` | 10–60, default 30 |
 | `LEGACYX_STATUS_ENABLED` | `false` turns it off |
+| `LEGACYX_STATUS_KEEP_AWAKE` | default `true`: sets `sv_hibernate_when_empty 0` so an empty server keeps reporting (a hibernating server runs no timers) |
 
 Without the token, server id or address it logs what is missing and sends nothing. The token is never logged.
