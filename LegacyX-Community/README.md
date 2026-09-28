@@ -8,7 +8,9 @@
 
 ## Tab scoreboard rank
 
-Тоглогч серверт ороход plugin API-аас түүний `rank_id` (1–18)-г уншаад Tab-ын rank баганад CS2-ийн 18 шаттай skill-group icon болгож тавина (`m_iCompetitiveRankType = 12`). Раунд бүрт дахин тавьж, match дуусахад бүх тоглогчийн цолыг дахин уншина. Сайтад бүртгэлгүй тоглогчид icon тавихгүй. Icon нь Valve-ийн skill-group зураг тул манай цолны нэрээр биш, зөвхөн шатаараа (1–18) таарна. `LEGACYX_COMMUNITY_SCOREBOARD_RANKS=false` унтраана.
+Тоглогч серверт ороход plugin API-аас түүний цолыг уншаад нэрийн өмнө clan tag болгон тавина: `[OPERATOR I]`. Энэ нь Tab, чат болон killfeed дээр харагдана, 2 секунд тутамд дахин тавигдана, match дуусахад цол дахин уншигдана. Сайтад бүртгэлгүй тоглогчид шошго тавихгүй. MatchZy-ийн `[TEAM COACH]` шошгыг дарахгүй.
+
+CS2 нь community серверт Rank баганын icon (`m_iCompetitiveRankType` 12) болон Premier тоог (11) тест дээр харуулаагүй тул тэдгээр нь `lx_scoreboard_type 12` / `11`-ээр туршихад л үлдсэн. `LEGACYX_COMMUNITY_SCOREBOARD_RANK_TYPE` анхны горимыг, `LEGACYX_COMMUNITY_SCOREBOARD_RANKS=false` бүгдийг унтраана.
 
 ## Security
 

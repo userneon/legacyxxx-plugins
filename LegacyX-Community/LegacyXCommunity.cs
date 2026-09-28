@@ -25,9 +25,10 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     public required LegacyXCommunityConfig Config { get; set; }
     // SteamID64 -> LEGACY-X rank (1-18) and ranked matches, from the API; re-applied every round
     // because the game resets the scoreboard fields.
-    private readonly Dictionary<ulong, (int RankId, int Matches, int Exp)> scoreboardRanks = new();
-    // 12 = competitive skill-group icons (rank 1-18); 11 = Premier rating number (EXP). Switchable live with lx_scoreboard_type.
-    private int scoreboardRankType = 12;
+    private readonly Dictionary<ulong, (int RankId, int Matches, int Exp, string Name)> scoreboardRanks = new();
+    // 0 = rank name as the clan tag, e.g. [OPERATOR I] (default: the only form CS2 reliably shows);
+    // 12 = skill-group icon, 11 = Premier rating (EXP). Switchable live with lx_scoreboard_type.
+    private int scoreboardRankType = 0;
     private readonly HashSet<ulong> scoreboardLogged = new();
     // Slots holding Tab last tick: the client only draws rank icons after a reveal sent while Tab is open.
     private readonly HashSet<int> scoreboardOpen = new();
@@ -45,7 +46,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         config.PluginId = environment.GetModule("COMMUNITY", "PLUGIN_ID", config.PluginId);
         config.PluginSecret = environment.GetModule("COMMUNITY", "PLUGIN_TOKEN", config.PluginSecret);
         config.ScoreboardRanks = environment.GetModuleBoolean("COMMUNITY", "SCOREBOARD_RANKS", config.ScoreboardRanks);
-        scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 12, 0, 12);
+        scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 0, 0, 12);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
     }
@@ -119,9 +120,10 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         var rankId = IntOrNull(found, "rank_id") ?? 0;
         var matches = IntOrNull(found, "matches_completed") ?? 0;
         var exp = IntOrNull(found, "current_exp") ?? 0;
+        var rankName = StringOrNull(found, "rank_name")?.Trim() ?? "";
         Server.NextFrame(() =>
         {
-            if (rankId is >= 1 and <= 18) scoreboardRanks[steamId] = (rankId, matches, exp);
+            if (rankId is >= 1 and <= 18 && rankName.Length > 0) scoreboardRanks[steamId] = (rankId, matches, exp, rankName);
             else scoreboardRanks.Remove(steamId);
             if (player.IsValid) ApplyScoreboardRank(player);
             RevealScoreboardRanks();
@@ -133,6 +135,11 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         if (scoreboardBlocked || !player.IsValid || player.IsBot || !scoreboardRanks.TryGetValue(player.SteamID, out var rank)) return;
         try
         {
+            if (scoreboardRankType == 0)
+            {
+                ApplyRankTag(player, rank.Name);
+                return;
+            }
             player.CompetitiveRankType = (sbyte)scoreboardRankType;
             player.CompetitiveRanking = scoreboardRankType == 11 ? rank.Exp : rank.RankId;
             // The client hides a skill group below 10 wins; the rank itself is already earned on the site.
@@ -151,6 +158,20 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         }
     }
 
+    /// <summary>The rank name as the player's clan tag: shown before the name in Tab, chat and the kill feed.</summary>
+    private void ApplyRankTag(CCSPlayerController player, string rankName)
+    {
+        var tag = $"[{rankName.ToUpperInvariant()}]";
+        if (tag.Length > 31) tag = tag[..30] + "]";
+        var current = player.Clan ?? "";
+        // MatchZy's coach tag ([TEAM COACH]) says more during a match; leave it.
+        if (current.EndsWith("COACH]", StringComparison.Ordinal) || current == tag) return;
+        player.Clan = tag;
+        Utilities.SetStateChanged(player, "CCSPlayerController", "m_szClan");
+        if (scoreboardLogged.Add(player.SteamID))
+            Console.WriteLine($"[{ModuleName}] Rank tag for {player.SteamID}: {tag}.");
+    }
+
     /// <summary>Asks clients (one, or everyone) to show every player's rank in the Tab scoreboard.</summary>
     private void RevealScoreboardRanks(CCSPlayerController? player = null)
     {
@@ -167,14 +188,14 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         }
     }
 
-    /// <summary>Server console: lx_scoreboard_type 12 (skill-group icons) or 11 (Premier number), applied to everyone at once.</summary>
-    [ConsoleCommand("lx_scoreboard_type", "Tab rank display: 12 = skill-group icons, 11 = Premier rating (EXP)")]
+    /// <summary>Server console: lx_scoreboard_type 0 (rank tag), 12 (skill-group icon) or 11 (Premier number), for everyone at once.</summary>
+    [ConsoleCommand("lx_scoreboard_type", "Tab rank display: 0 = rank tag, 12 = skill-group icons, 11 = Premier rating (EXP)")]
     public void OnScoreboardType(CCSPlayerController? player, CommandInfo command)
     {
         if (player != null) return; // server console / RCON only
         if (!int.TryParse(command.GetArg(1), out var type) || type is < 0 or > 12)
         {
-            command.ReplyToCommand($"[{ModuleName}] lx_scoreboard_type is {scoreboardRankType}. Use 12 (skill-group icons) or 11 (Premier rating).");
+            command.ReplyToCommand($"[{ModuleName}] lx_scoreboard_type is {scoreboardRankType}. Use 0 (rank tag), 12 (skill-group icons) or 11 (Premier rating).");
             return;
         }
         scoreboardRankType = type;
