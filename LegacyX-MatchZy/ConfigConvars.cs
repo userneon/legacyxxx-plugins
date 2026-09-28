@@ -199,7 +199,7 @@ namespace MatchZy
 
             if (string.IsNullOrEmpty(args))
             {
-                chatPrefix = $" {ChatColors.Green}LEGACY-X •{ChatColors.Default}";
+                chatPrefix = $" {ChatColors.White}LEGACY-X •{ChatColors.Grey}";
                 return;
             }
 
@@ -219,7 +219,7 @@ namespace MatchZy
 
             if (string.IsNullOrEmpty(args))
             {
-                adminChatPrefix = $" {ChatColors.Green}LEGACY-X • {ChatColors.Red}ADMIN{ChatColors.Default}";
+                adminChatPrefix = $" {ChatColors.White}LEGACY-X • {ChatColors.Red}ADMIN{ChatColors.Grey}";
                 return;
             }
 

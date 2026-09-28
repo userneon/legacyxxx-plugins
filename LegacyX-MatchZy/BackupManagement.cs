@@ -108,7 +108,7 @@ namespace MatchZy
                 else
                 {
                     PrintToAllChat(Localizer["matchzy.restore.teamwantstorestore", stopTeamName, remainingStopTeam]);
-                    // Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{stopTeamName}{ChatColors.Default} wants to restore the game to the beginning of the current round. {ChatColors.Green}{remainingStopTeam}{ChatColors.Default}, please write !stop to confirm.");
+                    // Server.PrintToChatAll($"{chatPrefix} {ChatColors.White}{stopTeamName}{ChatColors.Grey} wants to restore the game to the beginning of the current round. {ChatColors.White}{remainingStopTeam}{ChatColors.Grey}, please write !stop to confirm.");
                 }
             }
         }

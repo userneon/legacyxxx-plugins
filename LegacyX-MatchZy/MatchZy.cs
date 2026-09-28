@@ -21,8 +21,8 @@ namespace MatchZy
 
         public override string ModuleDescription => "LEGACY-X 5v5 competitive matches, ready gate, stats and random map lifecycle";
 
-        public string chatPrefix = $" {ChatColors.Green}LEGACY-X •{ChatColors.Default}";
-        public string adminChatPrefix = $" {ChatColors.Green}LEGACY-X • {ChatColors.Red}ADMIN{ChatColors.Default}";
+        public string chatPrefix = $" {ChatColors.White}LEGACY-X •{ChatColors.Grey}";
+        public string adminChatPrefix = $" {ChatColors.White}LEGACY-X • {ChatColors.Red}ADMIN{ChatColors.Grey}";
 
         // Plugin start phase data
         public bool isPractice = false;
@@ -416,7 +416,7 @@ namespace MatchZy
                     {
                         if (messageCommandArg != "")
                         {
-                            Server.PrintToChatAll($"{adminChatPrefix} {messageCommandArg}");
+                            PrintToAllChat($"{{white}}ADMIN{{grey}} · {messageCommandArg}");
                         }
                         else
                         {
@@ -478,7 +478,7 @@ namespace MatchZy
                     if (IsPlayerAdmin(player, "css_rcon", "@css/rcon"))
                     {
                         Server.ExecuteCommand(messageCommandArg);
-                        ReplyToUserCommand(player, "Command sent successfully!");
+                        ReplyToUserCommand(player, "{green}DONE");
                     }
                     else
                     {

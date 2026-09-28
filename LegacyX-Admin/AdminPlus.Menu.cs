@@ -66,18 +66,16 @@ public partial class AdminPlus
             return;
         }
 
-        var menu = CreateMenu("LEGACY-X ADMIN | MAIN MENU");
+        var menu = CreateMenu("ADMIN");
         List<ChatMenuOptionData> options = [];
 
         if (HasCommandAccess(caller, "addadmin"))
-            options.Add(new ChatMenuOptionData("ADMINISTRATION & PERMISSIONS", () => ShowAdminManageMenu(caller)));
-        if (new[] { "ban", "kick", "mute", "gag", "slay", "slap", "respawn", "money", "armor", "team" }.Any(command => HasCommandAccess(caller, command)))
-            options.Add(new ChatMenuOptionData("PLAYER MODERATION & TOOLS", () => ShowPlayerCommands(caller)));
+            options.Add(new ChatMenuOptionData("STAFF", () => ShowAdminManageMenu(caller)));
+        if (new[] { "ban", "kick", "mute", "gag", "slay", "respawn", "team" }.Any(command => HasCommandAccess(caller, command)))
+            options.Add(new ChatMenuOptionData("PLAYERS", () => ShowPlayerCommands(caller)));
         if (new[] { "map", "rr", "clean" }.Any(command => HasCommandAccess(caller, command)))
-            options.Add(new ChatMenuOptionData("SERVER & MATCH CONTROL", () => ShowServerCommands(caller)));
-        if (new[] { "freeze", "weapon" }.Any(command => HasCommandAccess(caller, command)))
-            options.Add(new ChatMenuOptionData("GAMEPLAY & FUN TOOLS", () => ShowFunRootMenu(caller)));
-        if (HasCommandAccess(caller, "banlist")) options.Add(new ChatMenuOptionData("PUNISHMENT HISTORY", () => BanListMenu(caller, info)));
+            options.Add(new ChatMenuOptionData("SERVER", () => ShowServerCommands(caller)));
+        if (HasCommandAccess(caller, "banlist")) options.Add(new ChatMenuOptionData("BANS", () => BanListMenu(caller, info)));
 
         if (options.Count == 0)
         {
@@ -106,7 +104,7 @@ public partial class AdminPlus
             return;
         }
 
-        var m = CreateMenu("GAMEPLAY & FUN TOOLS");
+        var m = CreateMenu("FUN");
         if (m == null) return;
         
         if (HasCommandAccess(admin, "goto")) m.AddMenuOption(Localizer["Menu.Fun.Cat.Teleport"], (p, o) => ShowFunTeleportMenu(admin));
@@ -137,8 +135,7 @@ public partial class AdminPlus
 
         foreach (var pl in players)
         {
-            var botIndicator = pl.IsBot ? " [BOT]" : "";
-            var label = $"{SanitizeName(pl.PlayerName)}{botIndicator} [#{pl.UserId}]";
+            var label = pl.IsBot ? $"{SanitizeName(pl.PlayerName)} · BOT" : SanitizeName(pl.PlayerName);
             var token = $"#{pl.UserId}";
             m?.AddMenuOption(label, (p, o) => onPicked(token));
         }
@@ -460,9 +457,9 @@ public partial class AdminPlus
                 var tm = CreateMenu(Localizer["Menu.Fun.Prompt.Team"]);
                 if (tm == null) return;
                 
-                tm.AddMenuOption("Terrorist Team", (pp, oo) => RunServerCmd(admin, $"css_team {target} t"));
-                tm.AddMenuOption("CT Team", (pp, oo) => RunServerCmd(admin, $"css_team {target} ct"));
-                tm.AddMenuOption("Spectator", (pp, oo) => RunServerCmd(admin, $"css_team {target} spec"));
+                tm.AddMenuOption("T", (pp, oo) => RunServerCmd(admin, $"css_team {target} t"));
+                tm.AddMenuOption("CT", (pp, oo) => RunServerCmd(admin, $"css_team {target} ct"));
+                tm.AddMenuOption("SPECTATORS", (pp, oo) => RunServerCmd(admin, $"css_team {target} spec"));
                 tm.ExitButton = true;
                 OpenMenu(admin, tm);
             }, onlyAlive: true);
@@ -508,7 +505,7 @@ public partial class AdminPlus
                 Utilities.SetStateChanged(pawn, "CBaseModelEntity", "m_clrRender");
             }
         }
-        admin.Print($"{{green}}Drug effect cleared for {targets.Count()} player(s).");
+        admin.Print($"{{green}}EFFECT CLEARED{{grey}} · {{white}}{targets.Count()}");
     }
 
     private IEnumerable<CCSPlayerController> ResolveMenuTargets(string token)
@@ -541,20 +538,20 @@ public partial class AdminPlus
             return;
         }
 
-        var menu = CreateMenu("ONLINE STAFF · MANAGED ON LEGACYX.CC");
+        var menu = CreateMenu("STAFF ONLINE");
         if (menu == null) return;
 
         var staff = OnlineStaff();
-        if (staff.Count == 0) menu.AddMenuOption("No authorized staff online", (ply, opt) => { });
+        if (staff.Count == 0) menu.AddTextOption("NO STAFF ONLINE");
         foreach (var grant in staff)
         {
             var name = FindOnlineHuman(grant.SteamId) is { } player ? SanitizeName(player.PlayerName) : grant.SteamId.ToString();
             menu.AddMenuOption($"{name} · {LegacyX.Admin.Authorization.StaffPermissions.For(grant.Role).Name}", (ply, opt) => { });
         }
-        menu.AddMenuOption("Re-check with website", (ply, opt) =>
+        menu.AddMenuOption("REFRESH", (ply, opt) =>
         {
             _ = RefreshOnlineStaffAsync();
-            admin.Print("{green}LEGACY-X • {default}STAFF PERMISSIONS RE-CHECKED WITH THE WEBSITE");
+            admin.Print("{green}STAFF LIST UPDATED");
         });
 
         menu.ExitButton = true;
@@ -563,19 +560,16 @@ public partial class AdminPlus
 
     private void ShowPlayerCommands(CCSPlayerController admin)
     {
-        var menu = CreateMenu("PLAYER MODERATION & TOOLS");
+        var menu = CreateMenu("PLAYERS");
         List<ChatMenuOptionData> options = [];
 
         if (HasCommandAccess(admin, "ban")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Ban"], () => ShowPlayerList(admin)));
         if (HasCommandAccess(admin, "kick")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Kick"], () => ShowKickPlayerMenu(admin)));
         if (HasCommandAccess(admin, "slay")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Slay"], () => ShowSlayMenu(admin)));
-        if (HasCommandAccess(admin, "slap")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Slap"], () => ShowSlapMenu(admin)));
         if (HasCommandAccess(admin, "mute")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Mute"], () => ShowMutePlayerMenu(admin)));
         if (HasCommandAccess(admin, "gag")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Gag"], () => ShowGagPlayerMenu(admin)));
         if (HasCommandAccess(admin, "silence")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Silence"], () => ShowSilencePlayerMenu(admin)));
         if (HasCommandAccess(admin, "respawn")) options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Teleport.Respawn"], () => ShowRespawnMenu(admin)));
-        if (HasCommandAccess(admin, "money")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Money"], () => ShowMoneyMenu(admin)));
-        if (HasCommandAccess(admin, "armor")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Armor"], () => ShowArmorMenu(admin)));
         if (HasCommandAccess(admin, "team")) options.Add(new ChatMenuOptionData(Localizer["Menu.Fun.Cat.TeamOps"], () => ShowFunTeamOpsMenu(admin)));
 
         foreach (var menuOptionData in options)
@@ -824,7 +818,7 @@ public partial class AdminPlus
             return;
         }
 
-        var menu = CreateMenu("SERVER & MATCH CONTROL");
+        var menu = CreateMenu("SERVER");
         List<ChatMenuOptionData> options = [];
 
         if (HasCommandAccess(admin, "map")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.ChangeMap"], () => ShowMapSelectionMenu(admin)));
@@ -887,7 +881,7 @@ public partial class AdminPlus
                 var currentMap = Server.MapName;
                 if (currentMap == map)
                 {
-                    admin.Print($"{{green}}[AdminPlus]{{default}} You are already on {{yellow}}{map}{{default}} map!");
+                    admin.Print($"{{lightred}}ALREADY ON {{white}}{map}");
                     return;
                 }
 
@@ -1028,13 +1022,12 @@ public partial class AdminPlus
             return;
         }
 
-        var menu = CreateMenu($"Confirm ban: {target.PlayerName}");
+        var menu = CreateMenu("CONFIRM BAN");
         if (menu == null) return;
 
         var duration = minutes == 0 ? Localizer["Duration.Forever"] : $"{minutes} {Localizer["Duration.Minute"]}";
-        menu.AddMenuOption($"Target: {target.PlayerName}", (ply, opt) => { });
-        menu.AddMenuOption($"Duration: {duration}", (ply, opt) => { });
-        menu.AddMenuOption($"Reason: {reason}", (ply, opt) => { });
+        menu.AddTextOption(target.PlayerName);
+        menu.AddTextOption($"{duration} · {reason}");
         menu.AddMenuOption(Localizer["Menu.ConfirmYes"], (ply, opt) => ApplyMenuBan(admin, target, minutes, isIpBan, reason));
         menu.AddMenuOption(Localizer["Menu.ConfirmNo"], (ply, opt) => ShowReasonMenu(admin, target, minutes, isIpBan));
         menu.ExitButton = true;
@@ -1057,7 +1050,7 @@ public partial class AdminPlus
         {
             if (target.IpAddress == "-")
             {
-                admin.Print("IP snapshot is unavailable for this player.");
+                admin.Print("{lightred}NO IP FOR THIS PLAYER");
                 return;
             }
 

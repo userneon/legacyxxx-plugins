@@ -19,7 +19,7 @@ public partial class MatchZy
     private void ShowLegacyXWelcome(CCSPlayerController player)
     {
         if (!legacyXQuietOverlayEnabled.Value || !IsPlayerValid(player) || player.IsBot || player.IsHLTV) return;
-        player.PrintToCenter($"LEGACY-X\nFair 5v5 competitive\nMatch #{LegacyXDisplayMatchNumber()}");
+        player.PrintToCenter($"LEGACY-X\n5V5 · MATCH #{LegacyXDisplayMatchNumber()}");
     }
 
     private void StartLegacyXMatchOverlay()
@@ -39,7 +39,7 @@ public partial class MatchZy
             KillLegacyXMatchOverlay();
             return;
         }
-        var overlay = $"LEGACY-X  •  MATCH #{LegacyXDisplayMatchNumber()}\nLIVE  •  Fair play. Team integrity required to resume.";
+        var overlay = $"LEGACY-X · MATCH #{LegacyXDisplayMatchNumber()} · LIVE";
         foreach (var player in Utilities.GetPlayers().Where(player => IsPlayerValid(player) && !player.IsBot && !player.IsHLTV))
         {
             player.PrintToCenter(overlay);
@@ -61,10 +61,10 @@ public partial class MatchZy
         KillLegacyXMatchOverlay();
         var outcome = winnerTeam switch
         {
-            "team1" => $"{matchzyTeam1.teamName} won",
-            "team2" => $"{matchzyTeam2.teamName} won",
-            _ => "Match drawn",
+            "team1" => $"{matchzyTeam1.teamName} WON",
+            "team2" => $"{matchzyTeam2.teamName} WON",
+            _ => "DRAW",
         };
-        PrintToAllChat($"{ChatColors.Green}LEGACY-X final:{ChatColors.Default} {outcome}. Eligible original participants receive rank and XP once.");
+        PrintToAllChat($"FINAL · {ChatColors.White}{outcome}{ChatColors.Grey} · RANK AND EXP SAVED");
     }
 }

@@ -72,10 +72,10 @@ internal sealed class AdminPlusMenu
 
     public void AddBoolOption(string text, bool defaultValue = false, Action<CCSPlayerController, AdminPlusMenuOption>? onToggle = null)
     {
-        string state = defaultValue ? "✔" : "❌";
+        string state = defaultValue ? "ON" : "OFF";
         MenuOptions.Add(new AdminPlusMenuOption
         {
-            Text = $"{text}: [{state}]",
+            Text = $"{text} · {state}",
             Type = AdminPlusOptionType.Bool,
             Value = defaultValue,
             Callback = (player, _) =>
@@ -83,7 +83,7 @@ internal sealed class AdminPlusMenu
                 var opt = MenuOptions.Last();
                 bool next = !(opt.Value as bool? ?? false);
                 opt.Value = next;
-                opt.Text = $"{text}: [{(next ? "✔" : "❌")}]";
+                opt.Text = $"{text} · {(next ? "ON" : "OFF")}";
                 onToggle?.Invoke(player, opt);
             }
         });
@@ -103,7 +103,7 @@ internal sealed class AdminPlusMenu
                 state.InputMode = true;
                 state.InputOption = state.ActiveMenu?.MenuOptions.ElementAtOrDefault(state.SelectedIndex);
                 if (!string.IsNullOrWhiteSpace(inputPromptMessage))
-                    player.PrintToChat(inputPromptMessage);
+                    player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System(inputPromptMessage));
             }
         });
     }
@@ -479,6 +479,17 @@ public partial class AdminPlus
         return first >= 0 ? first : 0;
     }
 
+    // The website's look: "LEGACY" white and "-X" in the brand orange, grey text, the selected row white
+    // with the orange bar the website uses for the active page. Everything is upper case, and names are
+    // HTML-escaped because players choose them.
+    private const string MenuText = "#fafafa";
+    private const string MenuDim = "#a3a3a3";
+    private const string MenuFaint = "#737373";
+    private const string MenuOff = "#525252";
+    private const string MenuBrand = "#ff5a1f";
+
+    private static string MenuEscape(string? text) => System.Net.WebUtility.HtmlEncode((text ?? string.Empty).ToUpperInvariant());
+
     private static void RenderMenu(CCSPlayerController player, AdminPlusMenuState state)
     {
         var menu = state.ActiveMenu;
@@ -492,33 +503,32 @@ public partial class AdminPlus
         int end = Math.Min(total, start + visible);
 
         var sb = new StringBuilder();
-        sb.Append($"<b><font color='red' class='fontSize-m'>{menu.Title}</font></b> <font color='yellow' class='fontSize-sm'>{selected + 1}</font>/<font color='orange' class='fontSize-sm'>{total}</font><br>");
+        sb.Append($"<font class='fontSize-sm' color='{MenuText}'><b>LEGACY</b></font><font class='fontSize-sm' color='{MenuBrand}'><b>-X</b></font>");
+        sb.Append($"<font class='fontSize-sm' color='{MenuFaint}'>  ·  {MenuEscape(menu.Title)}");
+        if (total > visible) sb.Append($"  ·  {selected + 1}/{total}");
+        sb.Append("</font><br>");
 
         for (int i = start; i < end; i++)
         {
             var opt = menu.MenuOptions[i];
             string text = BuildOptionText(opt);
-            bool isSelected = i == selected;
-            string color = opt.Disabled ? "grey" : (isSelected ? "#9acd32" : "white");
-            if (isSelected && !opt.Disabled)
-                sb.Append($"<b><font color='yellow'>►[</font> <font color='{color}' class='fontSize-m'>{text}</font> <font color='yellow'>]◄</font></b><br>");
+            if (opt.Type == AdminPlusOptionType.Text || opt.Disabled)
+                sb.Append($"<font class='fontSize-m' color='{MenuOff}'>{text}</font><br>");
+            else if (i == selected)
+                sb.Append($"<font class='fontSize-m' color='{MenuBrand}'>▍</font><font class='fontSize-m' color='{MenuText}'><b>{text}</b></font><br>");
             else
-                sb.Append($"<font color='{color}' class='fontSize-m'>{text}</font><br>");
+                sb.Append($"<font class='fontSize-m' color='{MenuDim}'>{text}</font><br>");
         }
 
-        string move = menu.ControlInfoOverrides.TryGetValue("Move", out var m) ? m : _menuConfig.Move;
-        string select = menu.ControlInfoOverrides.TryGetValue("Select", out var s) ? s : _menuConfig.Select;
-        string exit = menu.ControlInfoOverrides.TryGetValue("Exit", out var e) ? e : _menuConfig.Exit;
-        bool canGoBack = state.History.Count > 0 || menu.CustomBackAction != null;
-        if (canGoBack)
-        {
-            string back = menu.ControlInfoOverrides.TryGetValue("Back", out var b) ? b : _menuConfig.Back;
-            sb.Append($"<font color='#ff3333' class='fontSize-sm'>Move: <font color='#f5a142'>{move}</font> | <font color='#ff3333'>Select: <font color='#f5a142'>{select}</font> | <font color='#ff3333'>Back: <font color='#f5a142'>{back}</font> | <font color='#ff3333'>Exit: <font color='#f5a142'>{exit}</font></font>");
-        }
-        else
-        {
-            sb.Append($"<font color='#ff3333' class='fontSize-sm'>Move: <font color='#f5a142'>{move}</font> | <font color='#ff3333'>Select: <font color='#f5a142'>{select}</font> | <font color='#ff3333'>Exit: <font color='#f5a142'>{exit}</font></font>");
-        }
+        static string Key(string label) => label.Replace("[", string.Empty).Replace("]", string.Empty).Replace(" ", string.Empty).ToUpperInvariant();
+        string move = Key(menu.ControlInfoOverrides.TryGetValue("Move", out var m) ? m : _menuConfig.Move);
+        string select = Key(menu.ControlInfoOverrides.TryGetValue("Select", out var s) ? s : _menuConfig.Select);
+        string exit = Key(menu.ControlInfoOverrides.TryGetValue("Exit", out var e) ? e : _menuConfig.Exit);
+        var footer = $"{move} MOVE  ·  {select} SELECT";
+        if (state.History.Count > 0 || menu.CustomBackAction != null)
+            footer += $"  ·  {Key(menu.ControlInfoOverrides.TryGetValue("Back", out var b) ? b : _menuConfig.Back)} BACK";
+        footer += $"  ·  {exit} EXIT";
+        sb.Append($"<font class='fontSize-s' color='{MenuFaint}'>{System.Net.WebUtility.HtmlEncode(footer)}</font>");
         player.PrintToCenterHtml(sb.ToString());
     }
 
@@ -534,14 +544,14 @@ public partial class AdminPlus
             var items = new List<string>();
             for (int i = start; i <= end; i++)
             {
-                string v = option.SliderValues[i]?.ToString() ?? "-";
-                items.Add(i == idx ? $"<font color='#9acd32'>{v}</font>" : $"<font color='silver'>{v}</font>");
+                string v = MenuEscape(option.SliderValues[i]?.ToString() ?? "-");
+                items.Add(i == idx ? $"<font color='{MenuText}'>{v}</font>" : $"<font color='{MenuFaint}'>{v}</font>");
             }
-            string left = idx > 0 ? "‹" : "<font color='#888888'>‹</font>";
-            string right = idx < option.SliderValues.Count - 1 ? "›" : "<font color='#888888'>›</font>";
-            return $"{option.Text}: {left} {string.Join(" ", items)} {right}";
+            string left = idx > 0 ? "‹" : $"<font color='{MenuOff}'>‹</font>";
+            string right = idx < option.SliderValues.Count - 1 ? "›" : $"<font color='{MenuOff}'>›</font>";
+            return $"{MenuEscape(option.Text)}  {left} {string.Join(" ", items)} {right}";
         }
-        return option.Text;
+        return MenuEscape(option.Text);
     }
 
     private static void SetFrozen(CCSPlayerController player, bool frozen)

@@ -67,8 +67,8 @@ namespace MatchZy
                     vetoStateTimer = null;
                     return;
                 }
-                Server.PrintToChatAll($"{chatPrefix} Captain for {ChatColors.Green}{matchzyTeam1.teamName}{ChatColors.Default}: {ChatColors.Green}{playerData[team1Captain].PlayerName}{ChatColors.Default}");
-                Server.PrintToChatAll($"{chatPrefix} Captain for {ChatColors.Green}{matchzyTeam2.teamName}{ChatColors.Default}: {ChatColors.Green}{playerData[team2Captain].PlayerName}{ChatColors.Default}");
+                PrintToAllChat($"CAPTAIN · {ChatColors.White}{matchzyTeam1.teamName}{ChatColors.Grey} · {ChatColors.White}{playerData[team1Captain].PlayerName}");
+                PrintToAllChat($"CAPTAIN · {ChatColors.White}{matchzyTeam2.teamName}{ChatColors.Grey} · {ChatColors.White}{playerData[team2Captain].PlayerName}");
 
                 HandleVetoStep();
                 vetoStateTimer?.Kill();
@@ -77,7 +77,7 @@ namespace MatchZy
             }
             warningsPrinted++;
             int secondsRemaining = vetoCountdownTime - warningsPrinted + 1;
-            Server.PrintToChatAll($"{chatPrefix} Map selection commencing in {secondsRemaining}");
+            PrintToAllChat($"MAP VETO IN {{white}}{secondsRemaining}");
         }
 
         public void HandleVetoStep()
@@ -127,24 +127,24 @@ namespace MatchZy
             switch (option) 
             {
                 case "team1_ban":
-                    action = $"{ChatColors.Green}{matchzyTeam1.teamName}{ChatColors.Default} must now {ChatColors.Red}BAN{ChatColors.Default} a map.";
+                    action = $"{ChatColors.White}{matchzyTeam1.teamName}{ChatColors.Grey} BANS A MAP";
                     client = vetoCaptains["team1"];
-                    stepMessage = $"Use .ban <map> to ban a map";
+                    stepMessage = "{white}.BAN <MAP>";
                     break;
                 case "team2_ban":
-                    action = $"{ChatColors.Green}{matchzyTeam2.teamName}{ChatColors.Default} must now {ChatColors.Red}BAN{ChatColors.Default} a map.";
+                    action = $"{ChatColors.White}{matchzyTeam2.teamName}{ChatColors.Grey} BANS A MAP";
                     client = vetoCaptains["team2"];
-                    stepMessage = $"Use .ban <map> to ban a map";
+                    stepMessage = "{white}.BAN <MAP>";
                     break;                                                       
                 case "team1_pick":
-                    action = $"{ChatColors.Green}{matchzyTeam1.teamName}{ChatColors.Default} must now {ChatColors.Green}PICK{ChatColors.Default} a map to play as map {matchConfig.Maplist.Count + 1}.";
+                    action = $"{ChatColors.White}{matchzyTeam1.teamName}{ChatColors.Grey} PICKS MAP {ChatColors.White}{matchConfig.Maplist.Count + 1}";
                     client = vetoCaptains["team1"];
-                    stepMessage = $"Use .pick <map> to pick a map.";
+                    stepMessage = "{white}.PICK <MAP>";
                     break;
                 case "team2_pick":
-                    action = $"{ChatColors.Green}{matchzyTeam2.teamName}{ChatColors.Default} must now {ChatColors.Green}PICK{ChatColors.Default} a map to play as map {matchConfig.Maplist.Count + 1}.";
+                    action = $"{ChatColors.White}{matchzyTeam2.teamName}{ChatColors.Grey} PICKS MAP {ChatColors.White}{matchConfig.Maplist.Count + 1}";
                     client = vetoCaptains["team2"];
-                    stepMessage = $"Use .pick <map> to pick a map.";
+                    stepMessage = "{white}.PICK <MAP>";
                     break;
             }
             if (!playerData.ContainsKey(client) || !playerData[client].IsValid)
@@ -152,12 +152,12 @@ namespace MatchZy
                 Log($"[PromptForMapSelectionInChat] Invalid captain found with ID: {client}");
                 return;
             }
-            Server.PrintToChatAll($"{chatPrefix} {action}");
+            PrintToAllChat(action);
 
             string mapListAsString = string.Join(", ", matchConfig.MapsLeftInVetoPool);
-            Server.PrintToChatAll($"{chatPrefix} Remaining Maps: {mapListAsString}");
+            PrintToAllChat($"MAPS LEFT · {{white}}{mapListAsString}");
 
-            playerData[client].PrintToChat($"{chatPrefix} {stepMessage}");
+            PrintToPlayerChat(playerData[client], stepMessage);
         }
 
         [ConsoleCommand("css_pick", "Picks map")]
@@ -199,7 +199,7 @@ namespace MatchZy
             if (player.UserId != vetoCaptains[currentTeamToBan]) return;
 
             if (!BanMap(map, playerTeam)) {
-                PrintToPlayerChat(player, $"{map} is not a valid map.");
+                PrintToPlayerChat(player, $"{{lightred}}UNKNOWN MAP{{grey}} · {{white}}{map}");
             } else {
                 HandleVetoStep();
             }
@@ -229,7 +229,7 @@ namespace MatchZy
             if (player.UserId != vetoCaptains[currentTeamToPick]) return;
 
             if (!PickMap(map, playerTeam)) {
-                PrintToPlayerChat(player, $"{map} is not a valid map.");
+                PrintToPlayerChat(player, $"{{lightred}}UNKNOWN MAP{{grey}} · {{white}}{map}");
             } else {
                 HandleVetoStep();
             }
@@ -245,7 +245,7 @@ namespace MatchZy
 
             if (team != 0) {
                 matchzyTeam = (team == 2) ? reverseTeamSides["TERRORIST"] : reverseTeamSides["CT"];
-                Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{matchzyTeam.teamName}{ChatColors.Default} picked {ChatColors.Green}{mapRemovedName}{ChatColors.Default} as map {matchConfig.Maplist.Count + 1}");
+                PrintToAllChat($"{ChatColors.White}{matchzyTeam.teamName}{ChatColors.Grey} PICKED {ChatColors.White}{mapRemovedName}{ChatColors.Grey} · MAP {matchConfig.Maplist.Count + 1}");
             }
 
             matchConfig.Maplist.Add(mapRemovedName);
@@ -277,7 +277,7 @@ namespace MatchZy
 
             if (team != 0) {
                 matchzyTeam = (team == 2) ? reverseTeamSides["TERRORIST"] : reverseTeamSides["CT"];
-                Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{matchzyTeam.teamName}{ChatColors.Default} banned {ChatColors.LightRed}{mapRemovedName}{ChatColors.Default}");
+                PrintToAllChat($"{ChatColors.White}{matchzyTeam.teamName}{ChatColors.Grey} BANNED {ChatColors.White}{mapRemovedName}");
             }
 
             var mapMapVetoedEvent = new MatchZyMapVetoedEvent
@@ -299,8 +299,8 @@ namespace MatchZy
         public void AbortVeto()
         {
             // Todo: Add AbortVeto() when captain is disconnecting in-between veto
-            Server.PrintToChatAll($"{chatPrefix} A team captain left during map selection. Map selection is paused.");
-            Server.PrintToChatAll($"{chatPrefix} Type .ready when you are ready to resume map selection.");
+            PrintToAllChat("CAPTAIN LEFT · VETO PAUSED");
+            PrintToAllChat("{white}.READY{grey} TO CONTINUE");
             isPreVeto = true;
             isVeto = false;
             if (isPaused)
@@ -321,7 +321,7 @@ namespace MatchZy
 
         public void FinishVeto() 
         {
-            Server.PrintToChatAll($"{chatPrefix} The maps have been decided:");
+            PrintToAllChat("MAPS");
             matchConfig.MapsLeftInVetoPool.Clear();
 
             if (isPaused) {
@@ -332,7 +332,7 @@ namespace MatchZy
             int mapNumber = matchConfig.CurrentMapNumber;
 
             for (int i = mapNumber; i < matchConfig.Maplist.Count; i++) {
-                Server.PrintToChatAll($"{chatPrefix} Map {i + 1 - mapNumber}: {matchConfig.Maplist[i]}.");
+                PrintToAllChat($"MAP {i + 1 - mapNumber} · {{white}}{matchConfig.Maplist[i]}");
             }
 
             string currentMapName = Server.MapName;
@@ -457,12 +457,12 @@ namespace MatchZy
             Team matchzyTeam = (team == CsTeam.CounterTerrorist) ? reverseTeamSides["CT"] : reverseTeamSides["TERRORIST"];
             string teamString = (matchzyTeam == matchzyTeam1) ? "team1" : "team2";
             
-            Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{matchzyTeam.teamName}{ChatColors.Default} must now pick a side to play on {ChatColors.Green}{mapName}{ChatColors.Default}");
+            PrintToAllChat($"{ChatColors.White}{matchzyTeam.teamName}{ChatColors.Grey} PICKS A SIDE · {ChatColors.White}{mapName}");
 
             int client = vetoCaptains[teamString];
             if (!playerData.ContainsKey(client) || !playerData[client].IsValid) return;
 
-            playerData[client].PrintToChat($"{chatPrefix} Use .ct or .t to pick a side");
+            PrintToPlayerChat(playerData[client], "{white}.CT{grey} OR {white}.T");
         }
 
         public bool ValidateMapBanLogic() 
@@ -529,7 +529,7 @@ namespace MatchZy
 
             Team matchzyTeam = (team == "team1") ? matchzyTeam1 : matchzyTeam2;
 
-            Server.PrintToChatAll($"{chatPrefix} {ChatColors.Green}{matchzyTeam.teamName}{ChatColors.Default} elected to start as {ChatColors.Green}{sideFormatted}{ChatColors.Default} on {ChatColors.Green}{mapName}{ChatColors.Default}.");
+            PrintToAllChat($"{ChatColors.White}{matchzyTeam.teamName}{ChatColors.Grey} STARTS {ChatColors.White}{sideFormatted}{ChatColors.Grey} · {ChatColors.White}{mapName}");
 
             var sidePickedEvent = new MatchZySidePickedEvent
             {

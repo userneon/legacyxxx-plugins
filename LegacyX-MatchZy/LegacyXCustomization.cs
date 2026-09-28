@@ -39,7 +39,7 @@ public partial class MatchZy
         string nextMap = PickLegacyXNextMap();
         float delay = Math.Max(0.5f, legacyXMapTransitionDelay.Value);
 
-        Server.PrintToChatAll($"{chatPrefix} PLEASE WAIT — match saved. Next map: {nextMap}");
+        PrintToAllChat($"MATCH SAVED · NEXT MAP {{white}}{nextMap}");
         Log($"[LEGACY-X] Post-match soft transition scheduled: {Server.MapName} -> {nextMap} in {delay:0.0}s");
 
         AddTimer(Math.Max(0, restartDelay), () =>

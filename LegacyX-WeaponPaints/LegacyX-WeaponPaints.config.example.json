@@ -2,7 +2,7 @@
   "ConfigVersion": 10,
   "SkinsLanguage": "en",
   "EnableInGameMenus": false,
-  "Website": "https://legacyx.cc/skinchanger",
+  "Website": "legacyx.cc/skinchanger",
   "CmdRefreshCooldownSeconds": 3,
   "Additional": {
     "KnifeEnabled": true,

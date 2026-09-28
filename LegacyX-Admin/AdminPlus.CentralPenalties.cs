@@ -131,22 +131,22 @@ public partial class AdminPlus
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<RevokeAllResult>();
-                    message = $"Website: {result?.BansLifted ?? 0} ban lifted on every server.";
+                    message = $"{{green}}BANS CLEARED{{grey}} · {{white}}{result?.BansLifted ?? 0}{{grey}} ON EVERY SERVER";
                 }
                 else
                 {
-                    message = (int)response.StatusCode == 403 ? "Website: only an owner can clear the website bans." : $"Website bans were not cleared (HTTP {(int)response.StatusCode}).";
+                    message = (int)response.StatusCode == 403 ? "{lightred}ONLY THE OWNER CAN CLEAR ALL BANS" : "{lightred}BANS NOT CLEARED · TRY AGAIN";
                 }
             }
             catch (Exception exception)
             {
-                message = $"Website bans were not cleared ({exception.GetType().Name}).";
+                message = "{lightred}BANS NOT CLEARED · TRY AGAIN";
             }
             Console.WriteLine($"[LEGACY-X Admin] !cleanbans: {message}");
             CounterStrikeSharp.API.Server.NextFrame(() =>
             {
                 var player = CounterStrikeSharp.API.Utilities.GetPlayerFromSlot(slot);
-                if (player != null && player.IsValid) player.PrintToChat($" {message}");
+                if (player != null && player.IsValid) player.PrintToChat(LegacyXChat.System(message));
             });
         });
     }

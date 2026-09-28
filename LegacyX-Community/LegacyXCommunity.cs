@@ -227,24 +227,24 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     {
         if (!Config.Enabled)
         {
-            Print(player, "Community profile is disabled on this server.");
+            Print(player, "{lightred}RANKS ARE OFF ON THIS SERVER");
             return;
         }
         if (string.IsNullOrWhiteSpace(Config.ApiBaseUrl) || string.IsNullOrWhiteSpace(Config.PluginSecret))
         {
-            Print(player, "Community profile is not configured yet.");
+            Print(player, "{lightred}RANKS ARE NOT READY YET");
             return;
         }
 
         var (status, found) = await FetchProfileAsync(player.SteamID.ToString());
         if (status == System.Net.HttpStatusCode.NotFound)
         {
-            Print(player, "No LEGACY-X rank yet. Sign in on the website and finish a ranked 5v5 match.");
+            Print(player, "NO RANK YET · PLAY A 5V5 · {white}LEGACYX.CC");
             return;
         }
         if (found is not { } profile)
         {
-            Print(player, "Community profile is temporarily unavailable.");
+            Print(player, "{lightred}RANK NOT AVAILABLE · TRY AGAIN SOON");
             return;
         }
         try
@@ -257,16 +257,16 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
             var nextExp = IntOrNull(profile, "next_rank_min_exp");
             var proLeague = profile.TryGetProperty("pro_league_unlocked", out var unlocked) && unlocked.ValueKind == JsonValueKind.True;
 
-            var parts = new List<string> { rankName, $"{exp:N0} EXP" };
-            if (position.HasValue) parts.Add($"#{position.Value:N0}");
-            parts.Add(nextName != null && nextExp.HasValue ? $"{Math.Max(0, nextExp.Value - exp):N0} EXP to {nextName}" : "Highest rank");
-            parts.Add(proLeague ? "Pro League unlocked" : "Pro League at Vanguard I");
+            var parts = new List<string> { $"{{white}}{rankName}{{grey}}", $"{{white}}{exp:N0}{{grey}} EXP" };
+            if (position.HasValue) parts.Add($"{{white}}#{position.Value:N0}{{grey}}");
+            parts.Add(nextName != null && nextExp.HasValue ? $"{{white}}{Math.Max(0, nextExp.Value - exp):N0}{{grey}} TO {nextName}" : "TOP RANK");
+            if (proLeague) parts.Add("PRO LEAGUE {green}OPEN{grey}");
             Print(player, string.Join(" · ", parts));
         }
         catch (Exception exception)
         {
             Console.WriteLine($"[{ModuleName}] Profile lookup failed: {exception.Message}");
-            Print(player, "Community profile is temporarily unavailable.");
+            Print(player, "{lightred}RANK NOT AVAILABLE · TRY AGAIN SOON");
         }
     }
 

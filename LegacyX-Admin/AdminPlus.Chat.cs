@@ -9,6 +9,7 @@ using CounterStrikeSharp.API.Modules.Utils;
 using System;
 using System.Globalization;
 using System.Linq;
+using LegacyX.Shared.Configuration;
 
 namespace AdminPlus;
 
@@ -66,7 +67,7 @@ public partial class AdminPlus
                 var msg = text.Length >= 2 && text[1] == ' ' ? text[2..] : text[1..];
                 if (!string.IsNullOrWhiteSpace(msg))
                 {
-                    var adminChatMessage = string.Format(CultureInfo.InvariantCulture, Localizer["css_adminchat"], caller.PlayerName ?? caller.SteamID.ToString(), msg);
+                    var adminChatMessage = string.Format(CultureInfo.InvariantCulture, LegacyXChat.Colorize(Localizer["css_adminchat"]), caller.PlayerName ?? caller.SteamID.ToString(), msg);
                     Server.PrintToChatAll(adminChatMessage);
                 }
                 return HookResult.Handled;
@@ -77,7 +78,7 @@ public partial class AdminPlus
                 var msg = text.Length >= 2 && text[1] == ' ' ? text[2..] : text[1..];
                 if (!string.IsNullOrWhiteSpace(msg))
                 {
-                    var adminMessage = string.Format(CultureInfo.InvariantCulture, Localizer["css_asay"], caller.PlayerName ?? caller.SteamID.ToString(), msg);
+                    var adminMessage = string.Format(CultureInfo.InvariantCulture, LegacyXChat.Colorize(Localizer["css_asay"]), caller.PlayerName ?? caller.SteamID.ToString(), msg);
                     Server.PrintToChatAll(adminMessage);
                 }
                 return HookResult.Handled;
@@ -127,13 +128,13 @@ public partial class AdminPlus
 
     private void SendSayAll(CCSPlayerController from, string message)
     {
-        var line = string.Format(CultureInfo.InvariantCulture, Localizer["css_say"], from.PlayerName ?? from.SteamID.ToString(), message);
+        var line = string.Format(CultureInfo.InvariantCulture, LegacyXChat.Colorize(Localizer["css_say"]), from.PlayerName ?? from.SteamID.ToString(), message);
         Server.PrintToChatAll(line);
     }
 
     private void SendASay(CCSPlayerController from, string message)
     {
-        var line = string.Format(CultureInfo.InvariantCulture, Localizer["css_asay"], from.PlayerName ?? from.SteamID.ToString(), message);
+        var line = string.Format(CultureInfo.InvariantCulture, LegacyXChat.Colorize(Localizer["css_asay"]), from.PlayerName ?? from.SteamID.ToString(), message);
         
         Server.NextFrame(() =>
         {
@@ -170,7 +171,7 @@ public partial class AdminPlus
 
     private void SendPSay(CCSPlayerController from, CCSPlayerController to, string message)
     {
-        var line = string.Format(CultureInfo.InvariantCulture, Localizer["css_psay"], from.PlayerName ?? from.SteamID.ToString(), to.PlayerName ?? to.SteamID.ToString(), message);
+        var line = string.Format(CultureInfo.InvariantCulture, LegacyXChat.Colorize(Localizer["css_psay"]), from.PlayerName ?? from.SteamID.ToString(), to.PlayerName ?? to.SteamID.ToString(), message);
         from.PrintToChat(line);
         if (to != from) to.PrintToChat(line);
     }
@@ -182,7 +183,7 @@ public partial class AdminPlus
         var msg = info.ArgString?.Trim() ?? "";
         if (caller == null)
         {
-            var line = string.Format(CultureInfo.InvariantCulture, Localizer["css_asay"], Localizer["Console"], msg).ReplaceColorTags();
+            var line = string.Format(CultureInfo.InvariantCulture, LegacyXChat.Colorize(Localizer["css_asay"]), Localizer["Console"], msg).ReplaceColorTags();
             foreach (var a in Utilities.GetPlayers()!.Where(p => p.IsValid && !p.IsBot && AdminManager.PlayerHasPermissions(p, ChatPerm)))
                 a.Print(line);
             return;
@@ -233,7 +234,7 @@ public partial class AdminPlus
         var msg = info.ArgString?.Trim() ?? "";
         if (caller == null)
         {
-            var line = string.Format(CultureInfo.InvariantCulture, Localizer["css_say"], Localizer["Console"], msg).ReplaceColorTags();
+            var line = string.Format(CultureInfo.InvariantCulture, LegacyXChat.Colorize(Localizer["css_say"]), Localizer["Console"], msg).ReplaceColorTags();
             PlayerExtensions.PrintToAll(line);
             return;
         }

@@ -50,7 +50,7 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
     public void OnRules(CCSPlayerController? player, CommandInfo? command)
     {
         if (player == null || !player.IsValid) return;
-        player.PrintToChat(LegacyXChat.System("Spectators can text-chat only with the spectator/dead channel. Do not relay live information."));
+        player.PrintToChat(LegacyXChat.System("SPECTATORS AND DEAD PLAYERS CHAT ONLY WITH EACH OTHER"));
     }
 
     private HookResult OnSay(CCSPlayerController? sender, CommandInfo command)
@@ -103,11 +103,11 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
     {
         var label = channel switch
         {
-            ChatChannel.Spectator => "{Grey}[SPEC]",
-            ChatChannel.Terrorist => "{Red}[T]",
-            _ => "{Blue}[CT]",
+            ChatChannel.Spectator => "[SPEC]",
+            ChatChannel.Terrorist => "[T]",
+            _ => "[CT]",
         };
-        return LegacyXChat.Colorize($"{label} {{Default}}") + $"{sender.PlayerName}: {message}";
+        return LegacyXChat.Colorize($"{{grey}}{label} {{white}}") + $"{sender.PlayerName}: {message}";
     }
 
     private static string Normalize(string raw)

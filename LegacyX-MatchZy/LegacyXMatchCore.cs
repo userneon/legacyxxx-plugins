@@ -169,7 +169,7 @@ public partial class MatchZy
         if (!isPaused) SetMatchPausedFlags();
         if (wasTemporaryFill)
         {
-            PrintToAllChat($"{ChatColors.Red}Match paused:{ChatColors.Default} the temporary fill {player.PlayerName} disconnected.");
+            PrintToAllChat($"{ChatColors.LightRed}PAUSED{ChatColors.Grey} · FILL PLAYER {ChatColors.White}{player.PlayerName}{ChatColors.Grey} LEFT");
             QueueMatchCoreEvent("fill_removed", expectedRevision => new
             {
                 event_id = NextMatchCoreEventId("fill_removed"),
@@ -181,7 +181,7 @@ public partial class MatchZy
             return;
         }
 
-        PrintToAllChat($"{ChatColors.Red}Match paused:{ChatColors.Default} waiting for {player.PlayerName} to reconnect.");
+        PrintToAllChat($"{ChatColors.LightRed}PAUSED{ChatColors.Grey} · WAITING FOR {ChatColors.White}{player.PlayerName}");
         QueueMatchCoreEvent("player_disconnected", expectedRevision => new
         {
             event_id = NextMatchCoreEventId("disconnect"),
@@ -197,7 +197,7 @@ public partial class MatchZy
         {
             if (matchCoreSlotsByOriginal.TryGetValue(steamId, out var current) && current.ActiveSteamId == null)
             {
-                PrintToAllChat($"{ChatColors.LightYellow}Reconnect window still open. Staff may assign a temporary fill with css_legacyx_fill.{ChatColors.Default}");
+                PrintToAllChat("STILL WAITING · STAFF CAN ADD A FILL PLAYER");
             }
         });
     }
@@ -217,7 +217,7 @@ public partial class MatchZy
             if (fill != null)
             {
                 fill.ChangeTeam(CsTeam.Spectator);
-                PrintToPlayerChat(fill, "The original participant returned; you have been moved to spectator. Thank you for filling in.");
+                PrintToPlayerChat(fill, "PLAYER IS BACK · YOU ARE NOW A SPECTATOR · THANKS");
             }
         }
         if (matchCoreFillTimers.TryGetValue(steamId, out var fillTimer)) fillTimer.Kill();
@@ -288,19 +288,19 @@ public partial class MatchZy
         }
         if (matchCoreSlotsByOriginal.Count != 10 || matchCoreSlotsByOriginal.Values.Any(slot => string.IsNullOrWhiteSpace(slot.ActiveSteamId)))
         {
-            reason = "All ten original slots must be occupied before resuming.";
+            reason = "ALL 10 PLAYERS MUST BE BACK TO RESUME";
             return false;
         }
         var (ctPlayers, _) = GetTeamPlayerCount((int)CsTeam.CounterTerrorist, false);
         var (tPlayers, _) = GetTeamPlayerCount((int)CsTeam.Terrorist, false);
         if (ctPlayers != 5 || tPlayers != 5)
         {
-            reason = "Resume requires exactly 5 CT and 5 T players.";
+            reason = "5 CT AND 5 T NEEDED TO RESUME";
             return false;
         }
         if (!matchCoreRemoteSlotsReady)
         {
-            reason = "Roster is syncing with Match Core; try again in a moment.";
+            reason = "ONE MOMENT · TRY AGAIN";
             return false;
         }
         reason = string.Empty;
@@ -324,19 +324,19 @@ public partial class MatchZy
         var teamKey = command.ArgByIndex(2).Trim().ToLowerInvariant();
         if (!int.TryParse(command.ArgByIndex(3), out var slotIndex) || !new[] { "team1", "team2" }.Contains(teamKey) || slotIndex is < 1 or > 5 || !ulong.TryParse(steamId, out _))
         {
-            ReplyToUserCommand(player, "Invalid temporary fill arguments.");
+            ReplyToUserCommand(player, "{lightred}CHECK THE FILL DETAILS");
             return;
         }
         if (matchCoreSlotsByOriginal.ContainsKey(steamId))
         {
-            ReplyToUserCommand(player, "An original participant cannot be assigned as a temporary fill.");
+            ReplyToUserCommand(player, "{lightred}THIS PLAYER IS ALREADY IN THE MATCH");
             return;
         }
         var slot = matchCoreSlotsByOriginal.Values.FirstOrDefault(candidate => candidate.TeamKey == teamKey && candidate.SlotIndex == slotIndex);
         var fill = Utilities.GetPlayers().FirstOrDefault(candidate => IsPlayerValid(candidate) && CoreSteamId(candidate) == steamId);
         if (slot == null || slot.ActiveSteamId != null || fill == null)
         {
-            ReplyToUserCommand(player, "The requested slot is unavailable or the fill player is not connected.");
+            ReplyToUserCommand(player, "{lightred}SLOT TAKEN OR PLAYER NOT HERE");
             return;
         }
 
@@ -355,7 +355,7 @@ public partial class MatchZy
             team_key = teamKey,
             slot_index = slotIndex,
         });
-        PrintToAllChat($"{ChatColors.LightYellow}{fill.PlayerName}{ChatColors.Default} is a temporary fill and is not eligible for LEGACY-X rewards.");
+        PrintToAllChat($"{ChatColors.White}{fill.PlayerName}{ChatColors.Grey} FILLS IN · NO RANK OR EXP");
     }
 
     private CoreSnapshot? CaptureMatchCoreSnapshot(CCSPlayerController player)

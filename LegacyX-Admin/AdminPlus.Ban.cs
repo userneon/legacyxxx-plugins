@@ -75,7 +75,7 @@ public partial class AdminPlus
             return;
         }
 
-        caller.Print("Use !admin → Ban. Select player, duration, reason, then confirm.");
+        caller.Print("{white}!ADMIN{grey} → BAN");
         ShowPlayerList(caller);
     }
 
@@ -745,8 +745,8 @@ public partial class AdminPlus
                 foreach (var admin in Utilities.GetPlayers()!
                          .Where(p => p.IsValid && !p.IsBot && AdminManager.PlayerHasPermissions(p, "@css/ban")))
                 {
-                    admin.PrintToChat(Localizer["AltAccount.Warning1", player.PlayerName, ip]);
-                    admin.PrintToChat(Localizer["AltAccount.Warning2", lastSteamId, nick, reason]);
+                    admin.Print(Localizer["AltAccount.Warning1", player.PlayerName, ip]);
+                    admin.Print(Localizer["AltAccount.Warning2", lastSteamId, nick, reason]);
                 }
             }
         });

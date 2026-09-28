@@ -676,7 +676,7 @@ public partial class AdminPlus : BasePlugin
         catch (Exception ex)
         {
             if (caller != null && caller.IsValid)
-                caller.PrintToChat(LegacyXChat.System($"Failed to get admin list: {ex.Message}"));
+                caller.PrintToChat(LegacyXChat.System("{lightred}COULD NOT LOAD STAFF"));
             else
                 LogError($"Admins command error: {ex.Message}");
         }
@@ -820,8 +820,7 @@ public partial class AdminPlus : BasePlugin
     private static string GetPrefixedMessage(string key, params object[] args)
     {
         var message = _instance?.Localizer[key, args] ?? key;
-        var prefix = LegacyXChat.Prefix;
-        return message.Replace("{Prefix}", prefix);
+        return message.Replace("{Prefix}", string.Empty);
     }
     
     private static void PrintPrefixedMessage(CCSPlayerController? player, string key, params object[] args)
@@ -829,7 +828,7 @@ public partial class AdminPlus : BasePlugin
         if (player?.IsValid == true)
         {
             var message = GetPrefixedMessage(key, args);
-            player.PrintToChat(LegacyXChat.Colorize(message));
+            player.PrintToChat(LegacyXChat.System(message));
         }
     }
     
@@ -885,18 +884,18 @@ public partial class AdminPlus : BasePlugin
         var recipients = Utilities.GetPlayers().Where(player => player != null && player.IsValid && !player.IsBot && player.SteamID != caller.SteamID && adminStamina.TryGetValue(player.SteamID, out var stamina) && stamina >= requiredStamina && adminStaffRoles.TryGetValue(player.SteamID, out var staffRole) && eligibleRoles.Contains(staffRole, StringComparer.OrdinalIgnoreCase)).ToList();
         if (recipients.Count == 0)
         {
-            caller.Print($"NO ONLINE {roleName} IS AVAILABLE");
+            caller.Print($"{{lightred}}NO {roleName} ONLINE");
             return;
         }
         var callerName = SanitizeName(caller.PlayerName);
-        foreach (var recipient in recipients) recipient.Print($"{roleName} ASSISTANCE REQUEST: {callerName} NEEDS HELP");
+        foreach (var recipient in recipients) recipient.Print($"{{white}}{callerName}{{grey}} NEEDS HELP · {roleName}");
         _lastReportTime[caller.SteamID] = DateTime.Now;
-        caller.Print($"{roleName} ASSISTANCE REQUEST SENT");
+        caller.Print("{green}REQUEST SENT");
     }
 
     private HookResult OnAdminRoundEnd(EventRoundEnd @event, GameEventInfo info)
     {
-        PlayerExtensions.PrintToAll("NEED STAFF ASSISTANCE? !CALLADMIN — CALL AN ADMIN | !CALLMANAGER — CALL A MANAGER");
+        PlayerExtensions.PrintToAll("NEED HELP? {white}!CALLADMIN{grey} · {white}!CALLMANAGER");
         return HookResult.Continue;
     }
 
@@ -910,7 +909,7 @@ public partial class AdminPlus : BasePlugin
         
         if (!CheckReportCooldown(playerId))
         {
-            caller.PrintToChat($"{Localizer["Prefix"]} {Localizer["Report.GlobalCooldown"]}");
+            caller.PrintToChat(LegacyXChat.System($"{Localizer["Report.GlobalCooldown"]}"));
             return;
         }
 
@@ -972,13 +971,13 @@ public partial class AdminPlus : BasePlugin
     {
         if (targetPlayer == null)
         {
-            controller.PrintToChat($"{Localizer["Prefix"]} {Localizer["Report.PlayerNotFound"]}");
+            controller.PrintToChat(LegacyXChat.System($"{Localizer["Report.PlayerNotFound"]}"));
             return;
         }
 
         if (!CheckPlayerToPlayerReportCooldown(controller, targetPlayer))
         {
-            controller.PrintToChat($"{Localizer["Prefix"]} {Localizer["Report.CooldownWarning"]}");
+            controller.PrintToChat(LegacyXChat.System($"{Localizer["Report.CooldownWarning"]}"));
             return;
         }
 
@@ -1013,7 +1012,7 @@ public partial class AdminPlus : BasePlugin
 
     private void HandleCustomReasonSimple(CCSPlayerController controller, CCSPlayerController targetPlayer)
     {
-        controller.PrintToChat($"{Localizer["Prefix"]} {Localizer["Report.CustomReasonPrompt"]}");
+        controller.PrintToChat(LegacyXChat.System($"{Localizer["Report.CustomReasonPrompt"]}"));
         
         _selectedReportTarget = targetPlayer;
         
@@ -1021,7 +1020,7 @@ public partial class AdminPlus : BasePlugin
         {
             if (_selectedReportTarget != null)
             {
-                controller.PrintToChat($"{Localizer["Prefix"]} {Localizer["Report.TimedOut"]}");
+                controller.PrintToChat(LegacyXChat.System($"{Localizer["Report.TimedOut"]}"));
                 _selectedReportTarget = null;
             }
         });
@@ -1035,7 +1034,7 @@ public partial class AdminPlus : BasePlugin
     {
         if (!CheckPlayerToPlayerReportCooldown(reporter, reported))
         {
-            reporter.PrintToChat($"{Localizer["Prefix"]} {Localizer["Report.CooldownWarning"]}");
+            reporter.PrintToChat(LegacyXChat.System($"{Localizer["Report.CooldownWarning"]}"));
             _selectedReportTarget = null;
             _activeReportMenu = null;
             return;
@@ -1061,11 +1060,11 @@ public partial class AdminPlus : BasePlugin
             _activeReportMenu = null;
             
             var message = Localizer["Report.SentSuccessfullyFor"].ToString().Replace("{player}", reported.PlayerName);
-            reporter.PrintToChat($"{Localizer["Prefix"]} {message}");
+            reporter.PrintToChat(LegacyXChat.System($"{message}"));
         }
         catch (Exception ex)
         {
-            reporter.PrintToChat($"{Localizer["Prefix"]} {Localizer["Report.FailedToSend"]}");
+            reporter.PrintToChat(LegacyXChat.System($"{Localizer["Report.FailedToSend"]}"));
             LogError($"Report error: {ex.Message}");
         }
     }
@@ -1077,14 +1076,14 @@ public partial class AdminPlus : BasePlugin
 
         if (!CheckPlayerToPlayerReportCooldown(player, _selectedReportTarget))
         {
-            player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Report.CooldownWarning"]}");
+            player.PrintToChat(LegacyXChat.System($"{Localizer["Report.CooldownWarning"]}"));
             _selectedReportTarget = null;
             return true;
         }
 
         if (message.ToLower().Contains("cancel"))
         {
-            player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Report.Cancelled"]}");
+            player.PrintToChat(LegacyXChat.System($"{Localizer["Report.Cancelled"]}"));
             _selectedReportTarget = null;
             return true;
         }

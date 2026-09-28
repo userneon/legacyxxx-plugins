@@ -5,6 +5,7 @@ using CounterStrikeSharp.API.Modules.Commands;
 using System;
 using System.Collections.Generic;
 
+using LegacyX.Shared.Configuration;
 namespace AdminPlus;
 
 public partial class AdminPlus
@@ -68,7 +69,7 @@ public partial class AdminPlus
         if (caller != null && caller.IsValid)
         {
             var msg = Localizer[_hideAdminsInList ? "HideAdmin.Hidden" : "HideAdmin.Visible"];
-            caller.PrintToChat($"{Localizer["Prefix"]} {msg}");
+            caller.PrintToChat(LegacyXChat.System($"{msg}"));
             return;
         }
 
