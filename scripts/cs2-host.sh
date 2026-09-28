@@ -5,8 +5,10 @@
 #   sudo ./scripts/cs2-host.sh install --env legacyx-srv-HOST.env [--package legacyx-cs2.zip]
 #       steamcmd, the CS2 dedicated server, Metamod:Source, CounterStrikeSharp, the LEGACY-X plugins
 #       and the .env from create-game-server.mjs (legacyxxx-backend). Safe to run again.
-#   sudo ./scripts/cs2-host.sh add <port> <GSLT> [competitive|wingman|casual|deathmatch] [map] [maxplayers]
-#       a server on <port>: config, firewall, systemd service, started now and at boot.
+#   sudo ./scripts/cs2-host.sh add <port> <GSLT> [competitive|wingman|casual|deathmatch] [map] [maxplayers] [site-mode] [name…]
+#       a server on <port>: config, firewall, systemd service, started now and at boot. site-mode picks the
+#       website Play page (competitive_5v5, fun, proleague, tournaments; default from the .env) and name
+#       the name shown there; both are written to the .env as LEGACYX_<port>_SERVER_MODE / _NAME.
 #       GSLT: a Steam game server login token, one per server (steamcommunity.com/dev/managegameservers, app 730).
 #   sudo ./scripts/cs2-host.sh update [--package legacyx-cs2.zip]
 #       stops the servers, updates CS2, Metamod, CounterStrikeSharp and the plugins, starts them again.
@@ -151,6 +153,19 @@ game_args() {
   esac
 }
 
+# Replaces (or adds) KEY=value in the shared .env; an empty value leaves the file as it is.
+set_env_value() {
+  local key="$1" value="$2" env="$CSGO_DIR/addons/counterstrikesharp/.env"
+  [[ -n "$value" ]] || return 0
+  [[ -f "$env" ]] || die "No $env yet: run install with --env first."
+  sed -i "/^${key}=/d" "$env"
+  printf '%s=%s\n' "$key" "$value" >> "$env"
+  # sed -i writes a new file owned by root; the servers run as $CS2_USER and must still read it.
+  chown "$CS2_USER:$CS2_USER" "$env"
+  chmod 600 "$env"
+  say "$key=$value"
+}
+
 open_port() {
   if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
     ufw allow "$1" >/dev/null && say "Firewall: port $1 open (TCP and UDP)"
@@ -182,12 +197,17 @@ cmd_install() {
 
 cmd_add() {
   need_root
-  local port="${1:-}" gslt="${2:-}" mode="${3:-competitive}" map="${4:-de_dust2}" maxplayers="${5:-10}"
-  [[ "$port" =~ ^[0-9]{4,5}$ && "$port" -le 65535 ]] || die "Usage: $0 add <port> <GSLT> [mode] [map] [maxplayers]"
+  local port="${1:-}" gslt="${2:-}" mode="${3:-competitive}" map="${4:-de_dust2}" maxplayers="${5:-10}" site_mode="${6:-}"
+  local name="${*:7}"
+  [[ "$port" =~ ^[0-9]{4,5}$ && "$port" -le 65535 ]] || die "Usage: $0 add <port> <GSLT> [mode] [map] [maxplayers] [site-mode] [name…]"
   [[ "$gslt" =~ ^[A-Fa-f0-9]{32}$ ]] || die "The GSLT is a 32-character code from steamcommunity.com/dev/managegameservers (app 730)."
   [[ "$map" =~ ^[a-z0-9_]{2,64}$ ]] || die "Map name like de_dust2."
   [[ "$maxplayers" =~ ^[0-9]{1,2}$ && "$maxplayers" -ge 2 && "$maxplayers" -le 64 ]] || die "maxplayers: 2-64."
+  [[ -z "$site_mode" || "$site_mode" =~ ^[a-z0-9_]{1,40}$ ]] || die "site-mode like competitive_5v5, fun, proleague or tournaments."
+  name="$(printf '%s' "$name" | tr -d '\r\n"=' | cut -c1-60)"
   [[ -f "$UNIT" ]] || die "Run install first."
+  set_env_value "LEGACYX_${port}_SERVER_MODE" "$site_mode"
+  set_env_value "LEGACYX_${port}_SERVER_NAME" "$name"
   local args
   args="$(game_args "$mode")"
   mkdir -p "$CONF_DIR"
@@ -202,7 +222,7 @@ EOF
   open_port "$port"
   systemctl enable --now "cs2@$port" >/dev/null
   say "cs2@$port started ($mode, $map, $maxplayers players). Console: $0 logs $port"
-  say "On the website it is srv-$port; its Play page comes from LEGACYX_${port}_SERVER_MODE in the .env."
+  say "On the website it is srv-$port (it appears within 30 s of starting)."
 }
 
 cmd_update() {
