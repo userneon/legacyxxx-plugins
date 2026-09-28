@@ -35,3 +35,16 @@ public class EnvironmentFileTests : IDisposable
         Assert.Equal(Path.Combine(Css, ".env"), LegacyXEnvironmentLoader.FindEnvironmentFile(new[] { Css }));
     }
 }
+
+/// <summary>The game's -port comes from /proc/self/cmdline, as the CS2 process was started.</summary>
+public class ProcessCommandLineTests
+{
+    [Fact]
+    public void PortFromTheGamesOwnCommandLine()
+    {
+        var raw = System.Text.Encoding.UTF8.GetBytes("/AMP/counter-strike2/730/game/bin/linuxsteamrt64/cs2\0-dedicated\0-usercon\0-port\027015\0-ip\00.0.0.0\0+map\0de_nuke\0");
+        var args = LegacyXEnvironmentLoader.ParseProcCmdline(raw);
+        Assert.Equal("-dedicated", args[1]);
+        Assert.Equal(27015, LegacyXEnvironment.DetectPort(args, null));
+    }
+}

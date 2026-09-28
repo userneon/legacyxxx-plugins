@@ -19,7 +19,7 @@ public static class LegacyXEnvironmentLoader
     {
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         // Servers sharing one install share this file; the port tells them apart.
-        var port = LegacyXEnvironment.DetectPort(Environment.GetCommandLineArgs(), Environment.GetEnvironmentVariable("LEGACYX_SERVER_PORT"));
+        var port = LegacyXEnvironment.DetectPort(ProcessCommandLine(), Environment.GetEnvironmentVariable("LEGACYX_SERVER_PORT"));
         var envPath = ResolveEnvironmentPath();
         if (envPath == null) return new LegacyXEnvironment(values, null, port);
 
@@ -38,6 +38,32 @@ public static class LegacyXEnvironmentLoader
 
         return new LegacyXEnvironment(values, envPath, port);
     }
+
+    /// <summary>
+    /// The CS2 process's own arguments (-port 27015 …). Inside CounterStrikeSharp,
+    /// Environment.GetCommandLineArgs() returns the .NET host's arguments, not the game's, so on
+    /// Linux read /proc/self/cmdline (NUL-separated) and fall back to .NET's view elsewhere.
+    /// </summary>
+    private static IReadOnlyList<string> ProcessCommandLine()
+    {
+        try
+        {
+            const string procCmdline = "/proc/self/cmdline";
+            if (File.Exists(procCmdline))
+            {
+                var args = ParseProcCmdline(File.ReadAllBytes(procCmdline));
+                if (args.Count > 0) return args;
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // fall through to .NET's arguments
+        }
+        return Environment.GetCommandLineArgs();
+    }
+
+    public static IReadOnlyList<string> ParseProcCmdline(byte[] raw) =>
+        System.Text.Encoding.UTF8.GetString(raw).Split('\0', StringSplitOptions.RemoveEmptyEntries);
 
     private static string? ResolveEnvironmentPath()
     {
