@@ -19,7 +19,7 @@ public sealed record RoleGrant(StaffRole Role, IReadOnlyList<string> Flags, uint
 /// <summary>
 /// The single role → permission mapping. Stamina gates individual AdminPlus commands
 /// (see CommandStaminaRequirements); the flags gate them in CounterStrikeSharp and in other plugins
-/// (MatchZy admin commands need @css/config).
+/// (MatchZy admin commands need @css/config; @legacyx/match lets admins force-start a match).
 /// </summary>
 public static class StaffPermissions
 {
@@ -29,13 +29,13 @@ public static class StaffPermissions
         new[] { "@css/generic", "@css/chat", "@css/vote" }, 250, 250, "STAFF");
 
     private static readonly RoleGrant AdminGrant = new(StaffRole.Admin,
-        new[] { "@css/generic", "@css/kick", "@css/ban", "@css/slay", "@css/changemap", "@css/chat", "@css/vote" }, 500, 500, "ADMIN");
+        new[] { "@css/generic", "@css/kick", "@css/ban", "@css/slay", "@css/changemap", "@css/chat", "@css/vote", "@legacyx/match" }, 500, 500, "ADMIN");
 
     private static readonly RoleGrant ManagerGrant = new(StaffRole.Manager,
-        new[] { "@css/generic", "@css/kick", "@css/ban", "@css/unban", "@css/slay", "@css/changemap", "@css/chat", "@css/vote", "@css/config" }, 750, 750, "MANAGER");
+        new[] { "@css/generic", "@css/kick", "@css/ban", "@css/unban", "@css/slay", "@css/changemap", "@css/chat", "@css/vote", "@css/config", "@legacyx/match" }, 750, 750, "MANAGER");
 
     private static readonly RoleGrant OwnerGrant = new(StaffRole.Owner,
-        new[] { "@css/root", "@css/generic", "@css/kick", "@css/ban", "@css/unban", "@css/slay", "@css/changemap", "@css/chat", "@css/vote", "@css/config", "@css/cvar", "@css/rcon", "@css/cheats" }, 1000, 1000, "OWNER");
+        new[] { "@css/root", "@css/generic", "@css/kick", "@css/ban", "@css/unban", "@css/slay", "@css/changemap", "@css/chat", "@css/vote", "@css/config", "@css/cvar", "@css/rcon", "@css/cheats", "@legacyx/match" }, 1000, 1000, "OWNER");
 
     public static RoleGrant For(StaffRole role) => role switch
     {

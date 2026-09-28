@@ -496,8 +496,8 @@ namespace MatchZy
             }
         }
 
+        // !rr is LegacyX-Admin's round restart; resetting the whole match stays on !restart.
         [ConsoleCommand("css_restart", "Restarts the match")]
-        [ConsoleCommand("css_rr", "Restarts the match")]
         public void OnRestartMatchCommand(CCSPlayerController? player, CommandInfo? command)
         {
             if (IsPlayerAdmin(player, "css_restart", "@css/config"))
@@ -557,7 +557,7 @@ namespace MatchZy
         [ConsoleCommand("css_forcestart", "Force starts the match")]
         public void OnStartCommand(CCSPlayerController? player, CommandInfo? command)
         {
-            if (IsPlayerAdmin(player, "css_start", "@css/config"))
+            if (IsPlayerAdmin(player, "css_start", "@css/config", "@legacyx/match"))
             {
                 if (isPractice)
                 {

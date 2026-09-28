@@ -70,6 +70,8 @@ public class StaffPermissionsTests
     [InlineData(StaffRole.Admin, "@css/ban", true)]
     [InlineData(StaffRole.Admin, "@css/unban", false)]
     [InlineData(StaffRole.Admin, "@css/config", false)]
+    [InlineData(StaffRole.Staff, "@legacyx/match", false)]
+    [InlineData(StaffRole.Admin, "@legacyx/match", true)]
     [InlineData(StaffRole.Manager, "@css/unban", true)]
     [InlineData(StaffRole.Manager, "@css/config", true)]
     public void Maps_role_to_flags(StaffRole role, string flag, bool expected)

@@ -95,16 +95,17 @@ Defined once in `LegacyX-Admin/Authorization/StaffPermissions.cs`.
 
 | Role | CounterStrikeSharp flags | Immunity | Stamina |
 |---|---|---:|---:|
-| owner | `@css/root` + generic, kick, ban, unban, slay, changemap, chat, vote, config, cvar, rcon, cheats | 1000 | 1000 |
-| manager | generic, kick, ban, unban, slay, changemap, chat, vote, config | 750 | 750 |
-| admin | generic, kick, ban, slay, changemap, chat, vote | 500 | 500 |
+| owner | `@css/root` + generic, kick, ban, unban, slay, changemap, chat, vote, config, cvar, rcon, cheats, `@legacyx/match` | 1000 | 1000 |
+| manager | generic, kick, ban, unban, slay, changemap, chat, vote, config, `@legacyx/match` | 750 | 750 |
+| admin | generic, kick, ban, slay, changemap, chat, vote, `@legacyx/match` | 500 | 500 |
 | staff | generic, chat, vote | 250 | 250 |
 | player | — | 0 | 0 |
 
 Stamina is AdminPlus' per-command threshold (`AdminPlus.Stamina.cs`): 250 communication/info, 500
-standard moderation, 750 high-impact (unban, map, slay), 1000 root and gameplay-altering commands.
-A command needs both its stamina and its `@css/*` flag. MatchZy admin commands need `@css/config`
-(manager and owner). `!calladmin` reaches online ADMIN/MANAGER/OWNER, `!callmanager` MANAGER/OWNER.
+standard moderation and `!rr`, 750 high-impact (unban, map, slay), 1000 root and gameplay-altering
+commands. A command needs both its stamina and its `@css/*` flag. MatchZy admin commands need
+`@css/config` (manager and owner), except `!start`, which `@legacyx/match` also opens (admin and up).
+`!rr` restarts the round (LegacyX-Admin); resetting the whole match is MatchZy's `!restart`. `!calladmin` reaches online ADMIN/MANAGER/OWNER, `!callmanager` MANAGER/OWNER.
 
 `addadmin` / `removeadmin` only answer that staff are managed on legacyx.cc. `adminlist` prints the
 authorized staff online; `adminreload` re-checks everyone with the API now. The in-game

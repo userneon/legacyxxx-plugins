@@ -15,7 +15,7 @@ public partial class AdminPlus
     {
         ["ban"] = 500, ["ipban"] = 750, ["unban"] = 750, ["lastban"] = 500, ["baninfo"] = 250,
         ["kick"] = 500, ["mute"] = 250, ["gag"] = 250, ["unmute"] = 250, ["ungag"] = 250, ["silence"] = 250, ["unsilence"] = 250, ["mutelist"] = 250, ["gaglist"] = 250,
-        ["slap"] = 500, ["slay"] = 750, ["money"] = 1000, ["armor"] = 1000, ["rr"] = 750, ["map"] = 750, ["wsmap"] = 750, ["workshop"] = 750, ["who"] = 250, ["players"] = 0, ["rename"] = 750, ["team"] = 750, ["swap"] = 750,
+        ["slap"] = 500, ["slay"] = 750, ["money"] = 1000, ["armor"] = 1000, ["rr"] = 500, ["map"] = 750, ["wsmap"] = 750, ["workshop"] = 750, ["who"] = 250, ["players"] = 0, ["rename"] = 750, ["team"] = 750, ["swap"] = 750,
         ["asay"] = 250, ["csay"] = 500, ["hsay"] = 500, ["psay"] = 250, ["admins"] = 0, ["hideadmin"] = 500, ["report"] = 0, ["calladmin"] = 0,
         ["vote"] = 250, ["votemap"] = 250, ["rvote"] = 500, ["cancelvote"] = 500, ["votekick"] = 250, ["voteban"] = 500, ["votegag"] = 250, ["votemute"] = 250, ["votesilence"] = 500,
         ["freeze"] = 1000, ["unfreeze"] = 1000, ["gravity"] = 1000, ["bury"] = 1000, ["unbury"] = 1000, ["beacon"] = 1000, ["shake"] = 1000, ["unshake"] = 1000, ["blind"] = 1000, ["unblind"] = 1000, ["clean"] = 1000, ["goto"] = 1000, ["bring"] = 1000, ["hrespawn"] = 1000, ["1up"] = 1000, ["drug"] = 1000, ["undrug"] = 1000, ["glow"] = 1000, ["color"] = 1000,
