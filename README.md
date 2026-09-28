@@ -69,6 +69,11 @@ kept when `--env` is left out) and touches nothing else. Restart the servers aft
 later is the same command without `--env`. On a game panel (no terminal), upload the unzipped
 `addons` and `cfg` folders into `game/csgo` and create `addons/counterstrikesharp/.env` there instead.
 
+Website skins (WeaponPaints) and Tab rank icons (Community) write item and rank fields that
+CounterStrikeSharp blocks while `FollowCS2ServerGuidelines` is `true`, its default. `deploy.sh` sets it
+to `false` in `addons/counterstrikesharp/configs/core.json`; on a game panel, edit that line by hand.
+Valve's server guidelines disallow changing items, so this is a deliberate choice for the server's GSLT.
+
 ## One central environment
 
 The shared `LegacyX.Shared.Configuration` library is referenced by every project. It resolves future host process environment first, then `CounterStrikeSharp/.env`. Plugin-local JSON/cfg is allowed only for secret-free gameplay defaults or an upstream module's non-secret state.

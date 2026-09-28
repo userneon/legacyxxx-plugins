@@ -74,6 +74,16 @@ for dir in "${targets[@]}"; do
   else
     echo "    !! no .env yet: pass --env <file from create-game-server.mjs>"
   fi
+  # Website skins and Tab rank icons write item/rank fields that CounterStrikeSharp blocks while
+  # FollowCS2ServerGuidelines is on (the default). Turn it off in core.json, creating it if needed.
+  core="$dir/addons/counterstrikesharp/configs/core.json"
+  if [[ ! -f "$core" && -f "$dir/addons/counterstrikesharp/configs/core.example.json" ]]; then
+    cp "$dir/addons/counterstrikesharp/configs/core.example.json" "$core"
+  fi
+  if [[ -f "$core" ]] && grep -q '"FollowCS2ServerGuidelines"[[:space:]]*:[[:space:]]*true' "$core"; then
+    sed -i 's/"FollowCS2ServerGuidelines"[[:space:]]*:[[:space:]]*true/"FollowCS2ServerGuidelines": false/' "$core"
+    echo "    FollowCS2ServerGuidelines set to false (needed for website skins and rank icons)"
+  fi
   ls "$dir/addons/counterstrikesharp/plugins" | grep '^LegacyX-' | sed 's/^/    /'
 done
 

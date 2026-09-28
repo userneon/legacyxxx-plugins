@@ -28,6 +28,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     private readonly Dictionary<ulong, (int RankId, int Matches)> scoreboardRanks = new();
     // Slots holding Tab last tick: the client only draws rank icons after a reveal sent while Tab is open.
     private readonly HashSet<int> scoreboardOpen = new();
+    private bool scoreboardBlocked;
 
     public override string ModuleAuthor => "LEGACY-X Community";
     public override string ModuleName => "LEGACY-X Community";
@@ -119,14 +120,23 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
 
     private void ApplyScoreboardRank(CCSPlayerController player)
     {
-        if (!player.IsValid || player.IsBot || !scoreboardRanks.TryGetValue(player.SteamID, out var rank)) return;
-        player.CompetitiveRankType = 12; // competitive skill groups: 18 icons, one per LEGACY-X rank
-        player.CompetitiveRanking = rank.RankId;
-        // The client hides a skill group below 10 wins; the rank itself is already earned on the site.
-        player.CompetitiveWins = Math.Max(10, rank.Matches);
-        Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRankType");
-        Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRanking");
-        Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveWins");
+        if (scoreboardBlocked || !player.IsValid || player.IsBot || !scoreboardRanks.TryGetValue(player.SteamID, out var rank)) return;
+        try
+        {
+            player.CompetitiveRankType = 12; // competitive skill groups: 18 icons, one per LEGACY-X rank
+            player.CompetitiveRanking = rank.RankId;
+            // The client hides a skill group below 10 wins; the rank itself is already earned on the site.
+            player.CompetitiveWins = Math.Max(10, rank.Matches);
+            Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRankType");
+            Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRanking");
+            Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveWins");
+        }
+        catch (Exception exception)
+        {
+            // CounterStrikeSharp's FollowCS2ServerGuidelines (configs/core.json) blocks these fields; say it once, then stop trying.
+            scoreboardBlocked = true;
+            Console.WriteLine($"[{ModuleName}] Tab rank icons are off: {exception.Message} Set \"FollowCS2ServerGuidelines\": false in addons/counterstrikesharp/configs/core.json to allow them.");
+        }
     }
 
     /// <summary>Asks clients (one, or everyone) to show every player's rank in the Tab scoreboard.</summary>
