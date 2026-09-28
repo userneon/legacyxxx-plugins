@@ -25,7 +25,10 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     public required LegacyXCommunityConfig Config { get; set; }
     // SteamID64 -> LEGACY-X rank (1-18) and ranked matches, from the API; re-applied every round
     // because the game resets the scoreboard fields.
-    private readonly Dictionary<ulong, (int RankId, int Matches)> scoreboardRanks = new();
+    private readonly Dictionary<ulong, (int RankId, int Matches, int Exp)> scoreboardRanks = new();
+    // 12 = competitive skill-group icons (rank 1-18); 11 = Premier rating number (EXP). Switchable live with lx_scoreboard_type.
+    private int scoreboardRankType = 12;
+    private readonly HashSet<ulong> scoreboardLogged = new();
     // Slots holding Tab last tick: the client only draws rank icons after a reveal sent while Tab is open.
     private readonly HashSet<int> scoreboardOpen = new();
     private bool scoreboardBlocked;
@@ -42,6 +45,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         config.PluginId = environment.GetModule("COMMUNITY", "PLUGIN_ID", config.PluginId);
         config.PluginSecret = environment.GetModule("COMMUNITY", "PLUGIN_TOKEN", config.PluginSecret);
         config.ScoreboardRanks = environment.GetModuleBoolean("COMMUNITY", "SCOREBOARD_RANKS", config.ScoreboardRanks);
+        scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 12, 0, 12);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
     }
@@ -109,9 +113,10 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         if (profile is not { } found) return;
         var rankId = IntOrNull(found, "rank_id") ?? 0;
         var matches = IntOrNull(found, "matches_completed") ?? 0;
+        var exp = IntOrNull(found, "current_exp") ?? 0;
         Server.NextFrame(() =>
         {
-            if (rankId is >= 1 and <= 18) scoreboardRanks[steamId] = (rankId, matches);
+            if (rankId is >= 1 and <= 18) scoreboardRanks[steamId] = (rankId, matches, exp);
             else scoreboardRanks.Remove(steamId);
             if (player.IsValid) ApplyScoreboardRank(player);
             RevealScoreboardRanks();
@@ -123,13 +128,15 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         if (scoreboardBlocked || !player.IsValid || player.IsBot || !scoreboardRanks.TryGetValue(player.SteamID, out var rank)) return;
         try
         {
-            player.CompetitiveRankType = 12; // competitive skill groups: 18 icons, one per LEGACY-X rank
-            player.CompetitiveRanking = rank.RankId;
+            player.CompetitiveRankType = (sbyte)scoreboardRankType;
+            player.CompetitiveRanking = scoreboardRankType == 11 ? rank.Exp : rank.RankId;
             // The client hides a skill group below 10 wins; the rank itself is already earned on the site.
             player.CompetitiveWins = Math.Max(10, rank.Matches);
             Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRankType");
             Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRanking");
             Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveWins");
+            if (scoreboardLogged.Add(player.SteamID))
+                Console.WriteLine($"[{ModuleName}] Tab rank for {player.SteamID}: type {scoreboardRankType}, value {player.CompetitiveRanking}.");
         }
         catch (Exception exception)
         {
@@ -153,6 +160,23 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         {
             Console.WriteLine($"[{ModuleName}] Scoreboard rank reveal unavailable: {exception.Message}");
         }
+    }
+
+    /// <summary>Server console: lx_scoreboard_type 12 (skill-group icons) or 11 (Premier number), applied to everyone at once.</summary>
+    [ConsoleCommand("lx_scoreboard_type", "Tab rank display: 12 = skill-group icons, 11 = Premier rating (EXP)")]
+    public void OnScoreboardType(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player != null) return; // server console / RCON only
+        if (!int.TryParse(command.GetArg(1), out var type) || type is < 0 or > 12)
+        {
+            command.ReplyToCommand($"[{ModuleName}] lx_scoreboard_type is {scoreboardRankType}. Use 12 (skill-group icons) or 11 (Premier rating).");
+            return;
+        }
+        scoreboardRankType = type;
+        scoreboardLogged.Clear();
+        foreach (var online in Utilities.GetPlayers()) ApplyScoreboardRank(online);
+        RevealScoreboardRanks();
+        command.ReplyToCommand($"[{ModuleName}] Tab rank type set to {type} for {scoreboardRanks.Count} ranked player(s). Open Tab to check.");
     }
 
     [ConsoleCommand("css_rank", "Shows your LEGACY-X rank, EXP and leaderboard position")]
