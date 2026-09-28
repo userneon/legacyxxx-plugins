@@ -6,6 +6,10 @@
 |---|---|
 | `css_rank`, `css_xp`, `css_level`, `css_progress` | Rank, EXP, leaderboard байр, дараагийн rank хүртэлх EXP болон Pro League төлөв харуулна. |
 
+## Tab scoreboard rank
+
+Тоглогч серверт ороход plugin API-аас түүний `rank_id` (1–18)-г уншаад Tab-ын rank баганад CS2-ийн 18 шаттай skill-group icon болгож тавина (`m_iCompetitiveRankType = 12`). Раунд бүрт дахин тавьж, match дуусахад бүх тоглогчийн цолыг дахин уншина. Сайтад бүртгэлгүй тоглогчид icon тавихгүй. Icon нь Valve-ийн skill-group зураг тул манай цолны нэрээр биш, зөвхөн шатаараа (1–18) таарна. `LEGACYX_COMMUNITY_SCOREBOARD_RANKS=false` унтраана.
+
 ## Security
 
 Plugin нь `/api/v1/plugin/community/players/:steamId` endpoint рүү л явна. API URL, plugin identity болон scoped `x-plugin-secret` нь бүх LEGACY-X plugin-тэй адил future CS2 host-ийн **нэг** `CounterStrikeSharp/.env`-ээс уншигдана. `LegacyXCommunity.json.example` нь одоо зөвхөн secret-free chat presentation default агуулна. Staff/API secret, Supabase key, database credential-ийг plugin JSON/cfg болон Git-д хэзээ ч байрлуулахгүй.

@@ -4,6 +4,7 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.UserMessages;
 using LegacyX.Shared.Configuration;
 
 namespace LegacyXCommunity;
@@ -15,12 +16,16 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public string PluginId { get; set; } = "legacyx-community";
     public string PluginSecret { get; set; } = "";
     public string ChatPrefix { get; set; } = LegacyXChat.Prefix;
+    public bool ScoreboardRanks { get; set; } = true;
 }
 
 public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(4) };
     public required LegacyXCommunityConfig Config { get; set; }
+    // SteamID64 -> LEGACY-X rank (1-18) and ranked matches, from the API; re-applied every round
+    // because the game resets the scoreboard fields.
+    private readonly Dictionary<ulong, (int RankId, int Matches)> scoreboardRanks = new();
 
     public override string ModuleAuthor => "LEGACY-X Community";
     public override string ModuleName => "LEGACY-X Community";
@@ -33,6 +38,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         config.ApiBaseUrl = environment.Get("LEGACYX_API_BASE_URL", config.ApiBaseUrl);
         config.PluginId = environment.GetModule("COMMUNITY", "PLUGIN_ID", config.PluginId);
         config.PluginSecret = environment.GetModule("COMMUNITY", "PLUGIN_TOKEN", config.PluginSecret);
+        config.ScoreboardRanks = environment.GetModuleBoolean("COMMUNITY", "SCOREBOARD_RANKS", config.ScoreboardRanks);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
     }
@@ -40,6 +46,86 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     public override void Load(bool hotReload)
     {
         Console.WriteLine($"[{ModuleName}] Loaded — rank and EXP command ready.");
+        if (!Config.Enabled || !Config.ScoreboardRanks) return;
+        RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
+        {
+            var player = @event.Userid;
+            if (player != null && player.IsValid && !player.IsBot) _ = LoadScoreboardRankAsync(player);
+            return HookResult.Continue;
+        });
+        RegisterEventHandler<EventPlayerSpawn>((@event, info) =>
+        {
+            var player = @event.Userid;
+            if (player != null && player.IsValid) ApplyScoreboardRank(player);
+            return HookResult.Continue;
+        });
+        RegisterEventHandler<EventRoundStart>((_, _) =>
+        {
+            foreach (var player in Utilities.GetPlayers()) ApplyScoreboardRank(player);
+            RevealScoreboardRanks();
+            return HookResult.Continue;
+        });
+        // A finished match can move ranks: read them again for everyone still on the server.
+        RegisterEventHandler<EventCsWinPanelMatch>((_, _) =>
+        {
+            foreach (var player in Utilities.GetPlayers().Where(player => !player.IsBot)) _ = LoadScoreboardRankAsync(player);
+            return HookResult.Continue;
+        });
+        RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
+        {
+            if (@event.Userid is { } player) scoreboardRanks.Remove(player.SteamID);
+            return HookResult.Continue;
+        });
+    }
+
+    /// <summary>Tab scoreboard: the player's LEGACY-X rank (1-18) in the rank column, as the 18-step skill-group icon.</summary>
+    private async Task LoadScoreboardRankAsync(CCSPlayerController player)
+    {
+        var steamId = player.SteamID;
+        if (string.IsNullOrWhiteSpace(Config.ApiBaseUrl) || string.IsNullOrWhiteSpace(Config.PluginSecret)) return;
+        var (status, profile) = await FetchProfileAsync(steamId.ToString());
+        if (status == System.Net.HttpStatusCode.NotFound)
+        {
+            Server.NextFrame(() => scoreboardRanks.Remove(steamId));
+            return;
+        }
+        if (profile is not { } found) return;
+        var rankId = IntOrNull(found, "rank_id") ?? 0;
+        var matches = IntOrNull(found, "matches_completed") ?? 0;
+        Server.NextFrame(() =>
+        {
+            if (rankId is >= 1 and <= 18) scoreboardRanks[steamId] = (rankId, matches);
+            else scoreboardRanks.Remove(steamId);
+            if (player.IsValid) ApplyScoreboardRank(player);
+            RevealScoreboardRanks();
+        });
+    }
+
+    private void ApplyScoreboardRank(CCSPlayerController player)
+    {
+        if (!player.IsValid || player.IsBot || !scoreboardRanks.TryGetValue(player.SteamID, out var rank)) return;
+        player.CompetitiveRankType = 12; // competitive skill groups: 18 icons, one per LEGACY-X rank
+        player.CompetitiveRanking = rank.RankId;
+        // The client hides a skill group below 10 wins; the rank itself is already earned on the site.
+        player.CompetitiveWins = Math.Max(10, rank.Matches);
+        Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRankType");
+        Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRanking");
+        Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveWins");
+    }
+
+    /// <summary>Asks clients to show everyone's rank in the Tab scoreboard.</summary>
+    private void RevealScoreboardRanks()
+    {
+        try
+        {
+            var message = UserMessage.FromPartialName("ServerRankRevealAll");
+            message.Recipients.AddAllPlayers();
+            message.Send();
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"[{ModuleName}] Scoreboard rank reveal unavailable: {exception.Message}");
+        }
     }
 
     [ConsoleCommand("css_rank", "Shows your LEGACY-X rank, EXP and leaderboard position")]
@@ -65,28 +151,20 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
             return;
         }
 
-        var steamId = player.SteamID.ToString();
+        var (status, found) = await FetchProfileAsync(player.SteamID.ToString());
+        if (status == System.Net.HttpStatusCode.NotFound)
+        {
+            Print(player, "No LEGACY-X rank yet. Sign in on the website and finish a ranked 5v5 match.");
+            return;
+        }
+        if (found is not { } profile)
+        {
+            Print(player, "Community profile is temporarily unavailable.");
+            return;
+        }
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"{Config.ApiBaseUrl}/api/v1/plugin/community/players/{steamId}");
-            request.Headers.Add("x-plugin-id", Config.PluginId);
-            request.Headers.Add("x-plugin-secret", Config.PluginSecret);
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            using var response = await Http.SendAsync(request);
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                Print(player, "No LEGACY-X rank yet. Sign in on the website and finish a ranked 5v5 match.");
-                return;
-            }
-            if (!response.IsSuccessStatusCode)
-            {
-                Print(player, "Community profile is temporarily unavailable.");
-                return;
-            }
-
             // Rank and EXP come from the API (competitive_leaderboard); the plugin never calculates them.
-            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            var profile = document.RootElement.GetProperty("profile");
             var rankName = StringOrNull(profile, "rank_name") ?? "Unranked";
             var exp = IntOrNull(profile, "current_exp") ?? 0;
             var position = IntOrNull(profile, "position");
@@ -104,6 +182,27 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         {
             Console.WriteLine($"[{ModuleName}] Profile lookup failed: {exception.Message}");
             Print(player, "Community profile is temporarily unavailable.");
+        }
+    }
+
+    /// <summary>GET /plugin/community/players/:steamId. Profile is null when the API has none or can't be reached.</summary>
+    private async Task<(System.Net.HttpStatusCode? Status, JsonElement? Profile)> FetchProfileAsync(string steamId)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{Config.ApiBaseUrl}/api/v1/plugin/community/players/{steamId}");
+            request.Headers.Add("x-plugin-id", Config.PluginId);
+            request.Headers.Add("x-plugin-secret", Config.PluginSecret);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            using var response = await Http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return (response.StatusCode, null);
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+            return (response.StatusCode, document.RootElement.GetProperty("profile").Clone());
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"[{ModuleName}] Profile lookup failed: {exception.Message}");
+            return (null, null);
         }
     }
 
