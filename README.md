@@ -41,6 +41,19 @@ Every CS2 server on a machine can share one install and that one `.env`: each pr
 by the port it was started with (`-port 27016`), so its id is `srv-27016`, its address
 `<host>:27016`, and `LEGACYX_27016_…` lines apply to it alone (see `.env.example`).
 
+## Run CS2 servers on a Linux VPS
+
+`scripts/cs2-host.sh` sets up a fresh Ubuntu VPS: steamcmd, the CS2 dedicated server, Metamod,
+CounterStrikeSharp, these plugins and the `.env`, then one systemd service per server (`cs2@<port>`),
+all from one shared install:
+
+```bash
+sudo ./scripts/cs2-host.sh install --env legacyx-srv-HOST.env     # once
+sudo ./scripts/cs2-host.sh add 27015 <GSLT> competitive de_dust2  # per server
+sudo ./scripts/cs2-host.sh update                                 # CS2 or plugin update
+./scripts/cs2-host.sh status | logs 27015
+```
+
 ## Deploy on a Linux host (terminal)
 
 On the game VPS, in a checkout of this repository (Metamod and CounterStrikeSharp already on the servers):
