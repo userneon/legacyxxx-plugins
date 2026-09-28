@@ -72,7 +72,7 @@ internal sealed class AdminPlusMenu
 
     public void AddBoolOption(string text, bool defaultValue = false, Action<CCSPlayerController, AdminPlusMenuOption>? onToggle = null)
     {
-        string state = defaultValue ? "ON" : "OFF";
+        string state = defaultValue ? "On" : "Off";
         MenuOptions.Add(new AdminPlusMenuOption
         {
             Text = $"{text} · {state}",
@@ -83,7 +83,7 @@ internal sealed class AdminPlusMenu
                 var opt = MenuOptions.Last();
                 bool next = !(opt.Value as bool? ?? false);
                 opt.Value = next;
-                opt.Text = $"{text} · {(next ? "ON" : "OFF")}";
+                opt.Text = $"{text} · {(next ? "On" : "Off")}";
                 onToggle?.Invoke(player, opt);
             }
         });
@@ -479,16 +479,15 @@ public partial class AdminPlus
         return first >= 0 ? first : 0;
     }
 
-    // The website's look: "LEGACY" white and "-X" in the brand orange, grey text, the selected row white
-    // with the orange bar the website uses for the active page. Everything is upper case, and names are
-    // HTML-escaped because players choose them.
+    // The website's look: "LEGACY-" white and "X" crimson, dim grey rows, the selected row white with the
+    // crimson bar the website uses for the active page. Names are HTML-escaped because players choose them.
     private const string MenuText = "#fafafa";
     private const string MenuDim = "#a3a3a3";
     private const string MenuFaint = "#737373";
     private const string MenuOff = "#525252";
-    private const string MenuBrand = "#ff5a1f";
+    private const string MenuBrand = "#e11d48";
 
-    private static string MenuEscape(string? text) => System.Net.WebUtility.HtmlEncode((text ?? string.Empty).ToUpperInvariant());
+    private static string MenuEscape(string? text) => System.Net.WebUtility.HtmlEncode(text ?? string.Empty);
 
     private static void RenderMenu(CCSPlayerController player, AdminPlusMenuState state)
     {
@@ -503,7 +502,7 @@ public partial class AdminPlus
         int end = Math.Min(total, start + visible);
 
         var sb = new StringBuilder();
-        sb.Append($"<font class='fontSize-sm' color='{MenuText}'><b>LEGACY</b></font><font class='fontSize-sm' color='{MenuBrand}'><b>-X</b></font>");
+        sb.Append($"<font class='fontSize-sm' color='{MenuText}'><b>LEGACY-</b></font><font class='fontSize-sm' color='{MenuBrand}'><b>X</b></font>");
         sb.Append($"<font class='fontSize-sm' color='{MenuFaint}'>  ·  {MenuEscape(menu.Title)}");
         if (total > visible) sb.Append($"  ·  {selected + 1}/{total}");
         sb.Append("</font><br>");
@@ -520,14 +519,14 @@ public partial class AdminPlus
                 sb.Append($"<font class='fontSize-m' color='{MenuDim}'>{text}</font><br>");
         }
 
-        static string Key(string label) => label.Replace("[", string.Empty).Replace("]", string.Empty).Replace(" ", string.Empty).ToUpperInvariant();
+        static string Key(string label) => label.Replace("[", string.Empty).Replace("]", string.Empty).Replace(" ", string.Empty);
         string move = Key(menu.ControlInfoOverrides.TryGetValue("Move", out var m) ? m : _menuConfig.Move);
         string select = Key(menu.ControlInfoOverrides.TryGetValue("Select", out var s) ? s : _menuConfig.Select);
         string exit = Key(menu.ControlInfoOverrides.TryGetValue("Exit", out var e) ? e : _menuConfig.Exit);
-        var footer = $"{move} MOVE  ·  {select} SELECT";
+        var footer = $"{move} move  ·  {select} select";
         if (state.History.Count > 0 || menu.CustomBackAction != null)
-            footer += $"  ·  {Key(menu.ControlInfoOverrides.TryGetValue("Back", out var b) ? b : _menuConfig.Back)} BACK";
-        footer += $"  ·  {exit} EXIT";
+            footer += $"  ·  {Key(menu.ControlInfoOverrides.TryGetValue("Back", out var b) ? b : _menuConfig.Back)} back";
+        footer += $"  ·  {exit} exit";
         sb.Append($"<font class='fontSize-s' color='{MenuFaint}'>{System.Net.WebUtility.HtmlEncode(footer)}</font>");
         player.PrintToCenterHtml(sb.ToString());
     }

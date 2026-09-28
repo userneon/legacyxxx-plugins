@@ -29,7 +29,7 @@ public partial class MatchZy
                     if (team == CsTeam.None)
                     {
                         Log($"[EventPlayerConnectFull] KICKING PLAYER STEAMID: {steamId}, Name: {player.PlayerName} (NOT ALLOWED!)");
-                        PrintToAllChat($"{ChatColors.White}{player.PlayerName}{ChatColors.Grey} KICKED · NOT IN THIS MATCH");
+                        PrintToAllChat($"{ChatColors.White}{player.PlayerName}{ChatColors.Grey} was kicked: not in this match.");
                         KickPlayer(player);
                         return HookResult.Continue;
                     }

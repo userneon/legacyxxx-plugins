@@ -416,7 +416,7 @@ namespace MatchZy
                     {
                         if (messageCommandArg != "")
                         {
-                            PrintToAllChat($"{{white}}ADMIN{{grey}} · {messageCommandArg}");
+                            PrintToAllChat($"{{white}}Admin{{grey}}: {messageCommandArg}");
                         }
                         else
                         {
@@ -478,7 +478,7 @@ namespace MatchZy
                     if (IsPlayerAdmin(player, "css_rcon", "@css/rcon"))
                     {
                         Server.ExecuteCommand(messageCommandArg);
-                        ReplyToUserCommand(player, "{green}DONE");
+                        ReplyToUserCommand(player, "{green}Done.");
                     }
                     else
                     {

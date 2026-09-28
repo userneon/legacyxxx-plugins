@@ -1,14 +1,14 @@
 {
   "ChatPrefix": "",
-  "ChatKickMessage": "{white}{playerName}{grey} KICKED · AFK",
-  "ChatBombTransfer": "BOMB → {white}{targetPlayerName}{grey} · {white}{playerName}{grey} IS AFK",
-  "ChatMoveMessage": "{white}{playerName}{grey} MOVED TO SPECTATORS · AFK",
-  "ChatKillMessage": "{white}{playerName}{grey} KILLED · AFK",
-  "ChatWarningKickMessage": "{lightred}YOU ARE AFK{grey} · MOVE OR BE KICKED IN {white}{timeAmount}S",
-  "ChatWarningMoveMessage": "{lightred}YOU ARE AFK{grey} · MOVE OR GO TO SPECTATORS IN {white}{timeAmount}S",
-  "ChatWarningKillMessage": "{lightred}YOU ARE AFK{grey} · MOVE OR DIE IN {white}{timeAmount}S",
-  "AntiCampSlayMessage": "{white}{playerName}{grey} KILLED FOR CAMPING · {white}{zoneName}",
-  "AntiCampSlapMessage": "{white}{playerName}{grey} LOST {white}{slapAmount} HP{grey} FOR CAMPING · {white}{zoneName}",
-  "AntiCampSlayWarningMessage": "{lightred}STOP CAMPING{grey} · {white}{zoneName}{grey} · DEATH IN {white}{timeAmount}S",
-  "AntiCampSlapWarningMessage": "{lightred}STOP CAMPING{grey} · {white}{zoneName}{grey} · {white}{slapAmount} HP{grey} IN {white}{timeAmount}S"
+  "ChatKickMessage": "{white}{playerName}{grey} was kicked for being AFK.",
+  "ChatBombTransfer": "Bomb passed to {white}{targetPlayerName}{grey} because {white}{playerName}{grey} is AFK.",
+  "ChatMoveMessage": "{white}{playerName}{grey} was moved to spectators for being AFK.",
+  "ChatKillMessage": "{white}{playerName}{grey} was killed for being AFK.",
+  "ChatWarningKickMessage": "You're AFK. Move or you'll be kicked in {white}{timeAmount}{grey} seconds.",
+  "ChatWarningMoveMessage": "You're AFK. Move or you'll be moved to spectators in {white}{timeAmount}{grey} seconds.",
+  "ChatWarningKillMessage": "You're AFK. Move or you'll be killed in {white}{timeAmount}{grey} seconds.",
+  "AntiCampSlayMessage": "{white}{playerName}{grey} was killed for camping at {white}{zoneName}{grey}.",
+  "AntiCampSlapMessage": "{white}{playerName}{grey} lost {white}{slapAmount} HP{grey} for camping at {white}{zoneName}{grey}.",
+  "AntiCampSlayWarningMessage": "Stop camping at {white}{zoneName}{grey} or you'll be killed in {white}{timeAmount}{grey} seconds.",
+  "AntiCampSlapWarningMessage": "Stop camping at {white}{zoneName}{grey} or you'll lose {white}{slapAmount} HP{grey} in {white}{timeAmount}{grey} seconds."
 }

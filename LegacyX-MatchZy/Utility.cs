@@ -196,7 +196,7 @@ namespace MatchZy
                 Server.ExecuteCommand("mp_ct_default_secondary \"\";mp_free_armor 1;mp_freezetime 10;mp_give_player_c4 0;mp_maxmoney 0;mp_respawn_immunitytime 0;mp_respawn_on_death_ct 0;mp_respawn_on_death_t 0;mp_roundtime 1.92;mp_roundtime_defuse 1.92;mp_roundtime_hostage 1.92;mp_t_default_secondary \"\";mp_round_restart_delay 3;mp_team_intro_time 0;mp_restartgame 1;mp_warmup_end;");
             }
 
-            PrintToAllChat("{white}KNIFE ROUND");
+            PrintToAllChat("{white}Knife round.");
         }
 
         private void SendSideSelectionMessage()
@@ -255,7 +255,7 @@ namespace MatchZy
             // This is to reload the map once it is over so that all flags are reset accordingly
             Server.ExecuteCommand("mp_match_end_restart true");
 
-            PrintToAllChat($"{ChatColors.Green}LIVE{ChatColors.Grey} · MATCH {ChatColors.White}#{LegacyXDisplayMatchNumber()}");
+            PrintToAllChat($"{ChatColors.Green}Live.{ChatColors.Grey} Match {ChatColors.White}#{LegacyXDisplayMatchNumber()}{ChatColors.Grey}. Good luck.");
 
             var goingLiveEvent = new GoingLiveEvent
             {
@@ -574,7 +574,7 @@ namespace MatchZy
             }
             else
             {
-                ReplyToUserCommand(player, "{lightred}UNKNOWN MAP");
+                ReplyToUserCommand(player, "Unknown map.");
             }
         }
 
@@ -718,7 +718,7 @@ namespace MatchZy
             }
             if (showCreditsOnMatchStart.Value)
             {
-                PrintToAllChat($"MATCHZY BY {ChatColors.White}WD-");
+                PrintToAllChat($"MatchZy by {ChatColors.White}WD-{ChatColors.Grey}.");
             }
             if (matchStartMessage.Value.Trim() != "" && matchStartMessage.Value.Trim() != "\"\"")
             {
@@ -856,17 +856,17 @@ namespace MatchZy
             }
             if (matchzyTeam1.seriesScore > matchzyTeam2.seriesScore)
             {
-                PrintToAllChat($"SERIES · {ChatColors.White}{matchzyTeam1.teamName} {matchzyTeam1.seriesScore}-{matchzyTeam2.seriesScore}");
+                PrintToAllChat($"{ChatColors.White}{matchzyTeam1.teamName}{ChatColors.Grey} leads the series {ChatColors.White}{matchzyTeam1.seriesScore}-{matchzyTeam2.seriesScore}{ChatColors.Grey}.");
 
             }
             else if (matchzyTeam2.seriesScore > matchzyTeam1.seriesScore)
             {
-                PrintToAllChat($"SERIES · {ChatColors.White}{matchzyTeam2.teamName} {matchzyTeam2.seriesScore}-{matchzyTeam1.seriesScore}");
+                PrintToAllChat($"{ChatColors.White}{matchzyTeam2.teamName}{ChatColors.Grey} leads the series {ChatColors.White}{matchzyTeam2.seriesScore}-{matchzyTeam1.seriesScore}{ChatColors.Grey}.");
 
             }
             else
             {
-                PrintToAllChat($"SERIES TIED · {ChatColors.White}{matchzyTeam1.seriesScore}-{matchzyTeam2.seriesScore}");
+                PrintToAllChat($"The series is tied {ChatColors.White}{matchzyTeam1.seriesScore}-{matchzyTeam2.seriesScore}{ChatColors.Grey}.");
             }
             matchConfig.CurrentMapNumber += 1;
             string nextMap = matchConfig.Maplist[matchConfig.CurrentMapNumber];
@@ -1020,11 +1020,11 @@ namespace MatchZy
                     // One of the team did not use .stop command hence display the proper message after the round has ended.
                     if (stopData["ct"] && !stopData["t"])
                     {
-                        PrintToAllChat($"RESTORE CANCELLED · ROUND ENDED");
+                        PrintToAllChat("Round replay cancelled: the round ended.");
                     }
                     else if (!stopData["ct"] && stopData["t"])
                     {
-                        PrintToAllChat($"RESTORE CANCELLED · ROUND ENDED");
+                        PrintToAllChat("Round replay cancelled: the round ended.");
                     }
 
                     // Invalidate .stop requests after a round is completed.
@@ -1242,7 +1242,7 @@ namespace MatchZy
             ExecUnpracCommands();
             ResetMatch();
             RemoveSpawnBeams();
-            PrintToAllChat("{green}MATCH MODE");
+            PrintToAllChat("{green}Match mode on.");
         }
 
         private void ExecLiveCFG()
@@ -1312,33 +1312,33 @@ namespace MatchZy
         {
             if (!IsPlayerValid(player)) return;
 
-            ReplyToUserCommand(player, "COMMANDS");
+            ReplyToUserCommand(player, "Commands:");
 
             if (isPractice)
             {
-                PrintToPlayerChat(player!, $"{ChatColors.White}SPAWNS{ChatColors.Grey} · .spawn, .ctspawn, .tspawn, .bestspawn, .worstspawn");
-                PrintToPlayerChat(player, $"{ChatColors.White}BOTS{ChatColors.Grey} · .bot, .nobots, .crouchbot, .boost, .crouchboost");
-                PrintToPlayerChat(player, $"{ChatColors.White}NADES{ChatColors.Grey} · .loadnade, .savenade, .importnade, .listnades");
-                PrintToPlayerChat(player, $"{ChatColors.White}THROW{ChatColors.Grey} · .rethrow, .throwindex <index>, .lastindex, .delay <number>");
-                PrintToPlayerChat(player, $"{ChatColors.White}TOOLS{ChatColors.Grey} · .clear, .fastforward, .last, .back, .solid, .impacts, .traj");
-                PrintToPlayerChat(player, $"{ChatColors.White}TOOLS{ChatColors.Grey} · .savepos, .loadpos");
-                PrintToPlayerChat(player, $"{ChatColors.White}SIDES{ChatColors.Grey} · .ct, .t, .spec, .fas, .god, .dryrun, .break, .exitprac");
+                PrintToPlayerChat(player!, $"{ChatColors.White}Spawns{ChatColors.Grey}: .spawn, .ctspawn, .tspawn, .bestspawn, .worstspawn");
+                PrintToPlayerChat(player, $"{ChatColors.White}Bots{ChatColors.Grey}: .bot, .nobots, .crouchbot, .boost, .crouchboost");
+                PrintToPlayerChat(player, $"{ChatColors.White}Nades{ChatColors.Grey}: .loadnade, .savenade, .importnade, .listnades");
+                PrintToPlayerChat(player, $"{ChatColors.White}Throw{ChatColors.Grey}: .rethrow, .throwindex <index>, .lastindex, .delay <number>");
+                PrintToPlayerChat(player, $"{ChatColors.White}Tools{ChatColors.Grey}: .clear, .fastforward, .last, .back, .solid, .impacts, .traj");
+                PrintToPlayerChat(player, $"{ChatColors.White}Tools{ChatColors.Grey}: .savepos, .loadpos");
+                PrintToPlayerChat(player, $"{ChatColors.White}Sides{ChatColors.Grey}: .ct, .t, .spec, .fas, .god, .dryrun, .break, .exitprac");
                 return;
             }
             if (readyAvailable)
             {
-                PrintToPlayerChat(player!, $"{ChatColors.White}READY{ChatColors.Grey} · .ready, .unready");
+                PrintToPlayerChat(player!, $"{ChatColors.White}Ready{ChatColors.Grey}: .ready, .unready");
                 return;
             }
             if (isSideSelectionPhase)
             {
-                PrintToPlayerChat(player!, $"{ChatColors.White}SIDE{ChatColors.Grey} · .stay, .switch, .ct, .t");
+                PrintToPlayerChat(player!, $"{ChatColors.White}Side{ChatColors.Grey}: .stay, .switch, .ct, .t");
                 return;
             }
             if (matchStarted)
             {
                 string stopCommandMessage = isStopCommandAvailable ? ", .stop" : "";
-                PrintToPlayerChat(player!, $"{ChatColors.White}PAUSE{ChatColors.Grey} · .pause, .unpause, .tac, .tech{stopCommandMessage}");
+                PrintToPlayerChat(player!, $"{ChatColors.White}Pause{ChatColors.Grey}: .pause, .unpause, .tac, .tech{stopCommandMessage}");
                 return;
             }
         }
@@ -1876,7 +1876,7 @@ namespace MatchZy
                 if (!whiteList.Contains(steamId.ToString()))
                 {
                     Log($"[EventPlayerConnectFull] KICKING PLAYER STEAMID: {steamId}, Name: {player.PlayerName} (Not whitelisted!)");
-                    PrintToAllChat($"{ChatColors.White}{player.PlayerName}{ChatColors.Grey} KICKED · NOT ON THE LIST");
+                    PrintToAllChat($"{ChatColors.White}{player.PlayerName}{ChatColors.Grey} was kicked: not on the player list.");
                     KickPlayer(player);
                     return true;
                 }

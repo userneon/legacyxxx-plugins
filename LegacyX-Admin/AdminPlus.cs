@@ -676,7 +676,7 @@ public partial class AdminPlus : BasePlugin
         catch (Exception ex)
         {
             if (caller != null && caller.IsValid)
-                caller.PrintToChat(LegacyXChat.System("{lightred}COULD NOT LOAD STAFF"));
+                caller.PrintToChat(LegacyXChat.System("Staff list is unavailable right now."));
             else
                 LogError($"Admins command error: {ex.Message}");
         }
@@ -884,18 +884,18 @@ public partial class AdminPlus : BasePlugin
         var recipients = Utilities.GetPlayers().Where(player => player != null && player.IsValid && !player.IsBot && player.SteamID != caller.SteamID && adminStamina.TryGetValue(player.SteamID, out var stamina) && stamina >= requiredStamina && adminStaffRoles.TryGetValue(player.SteamID, out var staffRole) && eligibleRoles.Contains(staffRole, StringComparer.OrdinalIgnoreCase)).ToList();
         if (recipients.Count == 0)
         {
-            caller.Print($"{{lightred}}NO {roleName} ONLINE");
+            caller.Print($"No {roleName.ToLowerInvariant()} is online.");
             return;
         }
         var callerName = SanitizeName(caller.PlayerName);
-        foreach (var recipient in recipients) recipient.Print($"{{white}}{callerName}{{grey}} NEEDS HELP · {roleName}");
+        foreach (var recipient in recipients) recipient.Print($"{{white}}{callerName}{{grey}} needs a {roleName.ToLowerInvariant()}.");
         _lastReportTime[caller.SteamID] = DateTime.Now;
-        caller.Print("{green}REQUEST SENT");
+        caller.Print("{green}Request sent.");
     }
 
     private HookResult OnAdminRoundEnd(EventRoundEnd @event, GameEventInfo info)
     {
-        PlayerExtensions.PrintToAll("NEED HELP? {white}!CALLADMIN{grey} · {white}!CALLMANAGER");
+        PlayerExtensions.PrintToAll("Need help? Type {white}!calladmin{grey} or {white}!callmanager{grey}.");
         return HookResult.Continue;
     }
 

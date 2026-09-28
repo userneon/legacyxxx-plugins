@@ -24,12 +24,12 @@ public partial class MatchZy
         if (!IsPlayerValid(player)) return;
         if (isPractice)
         {
-            ReplyToUserCommand(player, "{lightred}COACH ONLY WORKS IN A MATCH");
+            ReplyToUserCommand(player, "Coaching only works in a match.");
             return;
         }
         if (IsWingmanMode())
         {
-            ReplyToUserCommand(player, "{lightred}NO COACH IN WINGMAN");
+            ReplyToUserCommand(player, "No coaching in wingman.");
             return;
         }
 
@@ -37,13 +37,13 @@ public partial class MatchZy
 
         if (side != "t" && side != "ct")
         {
-            ReplyToUserCommand(player, "{white}.COACH T{grey} OR {white}.COACH CT");
+            ReplyToUserCommand(player, "Use {white}.coach t{grey} or {white}.coach ct{grey}.");
             return;
         }
 
         if (matchzyTeam1.coach.Contains(player!) || matchzyTeam2.coach.Contains(player!))
         {
-            ReplyToUserCommand(player, "{lightred}YOU ALREADY COACH A TEAM");
+            ReplyToUserCommand(player, "You already coach a team.");
             return;
         }
 
@@ -70,8 +70,8 @@ public partial class MatchZy
         matchZyCoachTeam.coach.Add(player!);
         player!.Clan = $"[{matchZyCoachTeam.teamName} COACH]";
         if (player.InGameMoneyServices != null) player.InGameMoneyServices.Account = 0;
-        ReplyToUserCommand(player, $"COACHING {{white}}{matchZyCoachTeam.teamName}{{grey}} · {{white}}.UNCOACH{{grey}} TO STOP");
-        PrintToAllChat($"{ChatColors.White}{player.PlayerName}{ChatColors.Grey} COACHES {ChatColors.White}{matchZyCoachTeam.teamName}");
+        ReplyToUserCommand(player, $"You now coach {{white}}{matchZyCoachTeam.teamName}{{grey}}. Type {{white}}.uncoach{{grey}} to stop.");
+        PrintToAllChat($"{ChatColors.White}{player.PlayerName}{ChatColors.Grey} now coaches {ChatColors.White}{matchZyCoachTeam.teamName}{ChatColors.Grey}.");
     }
 
     public void HandleCoaches()

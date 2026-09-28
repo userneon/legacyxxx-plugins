@@ -174,15 +174,15 @@ namespace MatchZy
                 Server.ExecuteCommand("""mp_t_default_grenades "weapon_molotov weapon_hegrenade weapon_smokegrenade weapon_flashbang weapon_decoy"; mp_t_default_primary "weapon_ak47"; mp_warmup_online_enabled "true"; mp_warmup_pausetimer "1"; mp_warmup_start; bot_quota_mode fill; mp_solid_teammates 2; mp_autoteambalance false; mp_teammates_are_enemies false; buddha 1; buddha_ignore_bots 1; buddha_reset_hp 100;""");
             }
             GetSpawns();
-            PrintToAllChat("{green}PRACTICE MODE");
-            PrintToAllChat($"{ChatColors.White}SPAWNS{ChatColors.Grey} · .spawn, .ctspawn, .tspawn, .bestspawn, .worstspawn");
-            PrintToAllChat($"{ChatColors.White}BOTS{ChatColors.Grey} · .bot, .nobots, .crouchbot, .boost, .crouchboost");
-            PrintToAllChat($"{ChatColors.White}NADES{ChatColors.Grey} · .loadnade, .savenade, .importnade, .listnades");
-            PrintToAllChat($"{ChatColors.White}THROW{ChatColors.Grey} · .rethrow, .throwindex <index>, .lastindex, .delay <number>");
-            PrintToAllChat($"{ChatColors.White}TOOLS{ChatColors.Grey} · .clear, .fastforward, .last, .back, .solid, .impacts, .traj");
+            PrintToAllChat("{green}Practice mode on.");
+            PrintToAllChat($"{ChatColors.White}Spawns{ChatColors.Grey}: .spawn, .ctspawn, .tspawn, .bestspawn, .worstspawn");
+            PrintToAllChat($"{ChatColors.White}Bots{ChatColors.Grey}: .bot, .nobots, .crouchbot, .boost, .crouchboost");
+            PrintToAllChat($"{ChatColors.White}Nades{ChatColors.Grey}: .loadnade, .savenade, .importnade, .listnades");
+            PrintToAllChat($"{ChatColors.White}Throw{ChatColors.Grey}: .rethrow, .throwindex <index>, .lastindex, .delay <number>");
+            PrintToAllChat($"{ChatColors.White}Tools{ChatColors.Grey}: .clear, .fastforward, .last, .back, .solid, .impacts, .traj");
             // On new line to prevent text cutting off
-            PrintToAllChat($"{ChatColors.White}TOOLS{ChatColors.Grey} · .savepos, .loadpos");
-            PrintToAllChat($"{ChatColors.White}SIDES{ChatColors.Grey} · .ct, .t, .spec, .fas, .god, .dryrun, .break, .exitprac");
+            PrintToAllChat($"{ChatColors.White}Tools{ChatColors.Grey}: .savepos, .loadpos");
+            PrintToAllChat($"{ChatColors.White}Sides{ChatColors.Grey}: .ct, .t, .spec, .fas, .god, .dryrun, .break, .exitprac");
         }
 
         public void GetSpawns()
@@ -550,7 +550,7 @@ namespace MatchZy
                 var savedNadesDict = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, Dictionary<string, string>>>>(existingJson)
                                     ?? new Dictionary<string, Dictionary<string, Dictionary<string, string>>>();
 
-                ReplyToUserCommand(player, $"LINEUPS · {{white}}{Server.MapName}");
+                ReplyToUserCommand(player, $"Lineups on {{white}}{Server.MapName}{{grey}}:");
 
                 // List lineups for the specified player
                 ListLineups(player, "default", Server.MapName, savedNadesDict, nadeFilter);
@@ -561,7 +561,7 @@ namespace MatchZy
             catch (JsonException ex)
             {
                 Log($"Error handling JSON: {ex.Message}");
-                ReplyToUserCommand(player, "{lightred}COULD NOT LOAD LINEUPS");
+                ReplyToUserCommand(player, "Lineups couldn't be loaded.");
             }
         }
 
@@ -576,7 +576,7 @@ namespace MatchZy
                         && kvp.Value.ContainsKey("Map") && kvp.Value["Map"] == mapName)
                     {
                         // Format and reply with the lineup name
-                        ReplyToUserCommand(player, $"{{white}}{kvp.Value["Type"]}{{grey}} · .LOADNADE {{white}}{kvp.Key}");
+                        ReplyToUserCommand(player, $"{{white}}{kvp.Value["Type"]}{{grey}}: .loadnade {{white}}{kvp.Key}");
                     }
                 }
             }
@@ -759,14 +759,14 @@ namespace MatchZy
 			{
 				player.PlayerPawn.Value.Health = 100;
 				// ReplyToUserCommand(player, $"God mode disabled!");
-                		ReplyToUserCommand(player, "GOD MODE · " + Localizer["matchzy.cc.disabled"]);
+                		ReplyToUserCommand(player, "God mode is " + Localizer["matchzy.cc.disabled"] + ".");
 				return;
 			}
 			else
 			{
 				player.PlayerPawn.Value.Health = 2147483647; // max 32bit int
 				// ReplyToUserCommand(player, $"God mode enabled!");
-                		ReplyToUserCommand(player, "GOD MODE · " + Localizer["matchzy.cc.enabled"]);
+                		ReplyToUserCommand(player, "God mode is " + Localizer["matchzy.cc.enabled"] + ".");
 				return;
 			}
         }
@@ -1154,7 +1154,7 @@ namespace MatchZy
                 playerData[key].PlayerPawn.Value!.MoveType = MoveType_t.MOVETYPE_NONE;
             }
 
-            PrintToAllChat("SKIPPING 20 SECONDS");
+            PrintToAllChat("Skipping 20 seconds.");
             Server.ExecuteCommand("host_timescale 10");
             AddTimer(20.0f, () => {
                 ResetFastForward(preFastForwardMoveTypes);
@@ -1208,10 +1208,10 @@ namespace MatchZy
             if (noFlashList.Contains(userId))
             {
                 noFlashList.Remove(userId);
-                ReplyToUserCommand(player, "NO FLASH · OFF");
+                ReplyToUserCommand(player, "No-flash is off.");
             } else {
                 noFlashList.Add(userId);
-                ReplyToUserCommand(player, "{green}NO FLASH · ON");
+                ReplyToUserCommand(player, "{green}No-flash is on.");
                 Server.NextFrame(() => KillFlashEffect(player));
             }
 
@@ -1610,7 +1610,7 @@ namespace MatchZy
                 playerTimers[userId].KillTimer();
                 double timerResult = playerTimers[userId].GetTimerResult();
                 player.PrintToCenter($"Timer: {timerResult}s");
-                PrintToPlayerChat(player, $"TIMER · {{white}}{timerResult}S");
+                PrintToPlayerChat(player, $"Timer: {{white}}{timerResult}{{grey}} s.");
                 playerTimers.Remove(userId);
             }
             else
@@ -1620,7 +1620,7 @@ namespace MatchZy
                     StartTime = DateTime.Now,
                     Timer = AddTimer(0.1f, () => DisplayPracticeTimerCenter(userId), TimerFlags.REPEAT)
                 };
-                PrintToPlayerChat(player, "{green}TIMER STARTED{grey} · {white}!TIMER{grey} TO STOP");
+                PrintToPlayerChat(player, "{green}Timer started.{grey} Type {white}!timer{grey} to stop.");
             }
         }
 
@@ -1681,7 +1681,7 @@ namespace MatchZy
 
             ConVar.Find("mp_solid_teammates")!.SetValue(newSolidValue);
 
-            PrintToAllChat($"SOLID TEAMMATES · {{white}}{newSolidValue}");
+            PrintToAllChat($"Solid teammates: {{white}}{newSolidValue}{{grey}}.");
         }
 
         [ConsoleCommand("css_impacts", "Toggles sv_showimpacts in practice mode")]
@@ -1695,7 +1695,7 @@ namespace MatchZy
 
             Server.ExecuteCommand($"sv_showimpacts {newImpactValue}");
 
-            PrintToAllChat($"BULLET IMPACTS · {{white}}{newImpactValue}");
+            PrintToAllChat($"Bullet impacts: {{white}}{newImpactValue}{{grey}}.");
         }
 
         [ConsoleCommand("css_traj", "Toggles sv_grenade_trajectory_prac_pipreview in practice mode")]
@@ -1708,7 +1708,7 @@ namespace MatchZy
 
             Server.ExecuteCommand($"sv_grenade_trajectory_prac_pipreview {!trajValue}");
 
-            PrintToAllChat($"GRENADE PATHS · {{white}}{!trajValue}");
+            PrintToAllChat($"Grenade paths: {{white}}{!trajValue}{{grey}}.");
         }
 
         [ConsoleCommand("css_bestspawn", "Teleports you to your team's closest spawn from your current position")]

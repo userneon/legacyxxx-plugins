@@ -131,16 +131,16 @@ public partial class AdminPlus
                 if (response.IsSuccessStatusCode)
                 {
                     var result = await response.Content.ReadFromJsonAsync<RevokeAllResult>();
-                    message = $"{{green}}BANS CLEARED{{grey}} · {{white}}{result?.BansLifted ?? 0}{{grey}} ON EVERY SERVER";
+                    message = $"{{green}}Bans cleared{{grey}}: {{white}}{result?.BansLifted ?? 0}{{grey}} on every server.";
                 }
                 else
                 {
-                    message = (int)response.StatusCode == 403 ? "{lightred}ONLY THE OWNER CAN CLEAR ALL BANS" : "{lightred}BANS NOT CLEARED · TRY AGAIN";
+                    message = (int)response.StatusCode == 403 ? "Only the owner can clear all bans." : "Bans were not cleared. Try again.";
                 }
             }
             catch (Exception exception)
             {
-                message = "{lightred}BANS NOT CLEARED · TRY AGAIN";
+                message = "Bans were not cleared. Try again.";
             }
             Console.WriteLine($"[LEGACY-X Admin] !cleanbans: {message}");
             CounterStrikeSharp.API.Server.NextFrame(() =>

@@ -270,7 +270,7 @@ namespace MatchZy
                 {
                     if (!CanLegacyXMatchCoreResume(out var coreReason))
                     {
-                        PrintToAllChat($"{{lightred}}{coreReason}");
+                        PrintToAllChat(coreReason);
                         return;
                     }
                     PrintToAllChat(Localizer["matchzy.pause.teamsunpausedthematch"]);
@@ -284,7 +284,7 @@ namespace MatchZy
                 {
                     if (!CanLegacyXMatchCoreResume(out var coreReason))
                     {
-                        PrintToAllChat($"{{lightred}}{coreReason}");
+                        PrintToAllChat(coreReason);
                         return;
                     }
                     PrintToAllChat(Localizer["matchzy.pause.adminunpausedthematch"]);
@@ -589,7 +589,7 @@ namespace MatchZy
             if (command == null) return;
             if (player == null)
             {
-                PrintToAllChat($"{{white}}ADMIN{{grey}} · {command.ArgString}");
+                PrintToAllChat($"{{white}}Admin{{grey}}: {command.ArgString}");
                 return;
             }
             if (!IsPlayerAdmin(player, "css_asay", "@css/chat"))
@@ -602,7 +602,7 @@ namespace MatchZy
             {
                 message += command.ArgByIndex(i) + " ";
             }
-            PrintToAllChat($"{{white}}ADMIN{{grey}} · {message}");
+            PrintToAllChat($"{{white}}Admin{{grey}}: {message}");
         }
 
         [ConsoleCommand("css_match", "Starts match mode")]

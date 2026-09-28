@@ -75,7 +75,7 @@ public partial class AdminPlus
             return;
         }
 
-        caller.Print("{white}!ADMIN{grey} → BAN");
+        caller.Print("Use {white}!admin{grey} → Ban.");
         ShowPlayerList(caller);
     }
 

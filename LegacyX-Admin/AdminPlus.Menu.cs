@@ -66,16 +66,16 @@ public partial class AdminPlus
             return;
         }
 
-        var menu = CreateMenu("ADMIN");
+        var menu = CreateMenu("Admin");
         List<ChatMenuOptionData> options = [];
 
         if (HasCommandAccess(caller, "addadmin"))
-            options.Add(new ChatMenuOptionData("STAFF", () => ShowAdminManageMenu(caller)));
+            options.Add(new ChatMenuOptionData("Staff", () => ShowAdminManageMenu(caller)));
         if (new[] { "ban", "kick", "mute", "gag", "slay", "respawn", "team" }.Any(command => HasCommandAccess(caller, command)))
-            options.Add(new ChatMenuOptionData("PLAYERS", () => ShowPlayerCommands(caller)));
+            options.Add(new ChatMenuOptionData("Players", () => ShowPlayerCommands(caller)));
         if (new[] { "map", "rr", "clean" }.Any(command => HasCommandAccess(caller, command)))
-            options.Add(new ChatMenuOptionData("SERVER", () => ShowServerCommands(caller)));
-        if (HasCommandAccess(caller, "banlist")) options.Add(new ChatMenuOptionData("BANS", () => BanListMenu(caller, info)));
+            options.Add(new ChatMenuOptionData("Server", () => ShowServerCommands(caller)));
+        if (HasCommandAccess(caller, "banlist")) options.Add(new ChatMenuOptionData("Bans", () => BanListMenu(caller, info)));
 
         if (options.Count == 0)
         {
@@ -104,7 +104,7 @@ public partial class AdminPlus
             return;
         }
 
-        var m = CreateMenu("FUN");
+        var m = CreateMenu("Fun");
         if (m == null) return;
         
         if (HasCommandAccess(admin, "goto")) m.AddMenuOption(Localizer["Menu.Fun.Cat.Teleport"], (p, o) => ShowFunTeleportMenu(admin));
@@ -135,7 +135,7 @@ public partial class AdminPlus
 
         foreach (var pl in players)
         {
-            var label = pl.IsBot ? $"{SanitizeName(pl.PlayerName)} · BOT" : SanitizeName(pl.PlayerName);
+            var label = pl.IsBot ? $"{SanitizeName(pl.PlayerName)} · bot" : SanitizeName(pl.PlayerName);
             var token = $"#{pl.UserId}";
             m?.AddMenuOption(label, (p, o) => onPicked(token));
         }
@@ -459,7 +459,7 @@ public partial class AdminPlus
                 
                 tm.AddMenuOption("T", (pp, oo) => RunServerCmd(admin, $"css_team {target} t"));
                 tm.AddMenuOption("CT", (pp, oo) => RunServerCmd(admin, $"css_team {target} ct"));
-                tm.AddMenuOption("SPECTATORS", (pp, oo) => RunServerCmd(admin, $"css_team {target} spec"));
+                tm.AddMenuOption("Spectators", (pp, oo) => RunServerCmd(admin, $"css_team {target} spec"));
                 tm.ExitButton = true;
                 OpenMenu(admin, tm);
             }, onlyAlive: true);
@@ -505,7 +505,7 @@ public partial class AdminPlus
                 Utilities.SetStateChanged(pawn, "CBaseModelEntity", "m_clrRender");
             }
         }
-        admin.Print($"{{green}}EFFECT CLEARED{{grey}} · {{white}}{targets.Count()}");
+        admin.Print($"{{green}}Effect cleared{{grey}} for {{white}}{targets.Count()}{{grey}} players.");
     }
 
     private IEnumerable<CCSPlayerController> ResolveMenuTargets(string token)
@@ -538,20 +538,20 @@ public partial class AdminPlus
             return;
         }
 
-        var menu = CreateMenu("STAFF ONLINE");
+        var menu = CreateMenu("Staff online");
         if (menu == null) return;
 
         var staff = OnlineStaff();
-        if (staff.Count == 0) menu.AddTextOption("NO STAFF ONLINE");
+        if (staff.Count == 0) menu.AddTextOption("No staff online");
         foreach (var grant in staff)
         {
             var name = FindOnlineHuman(grant.SteamId) is { } player ? SanitizeName(player.PlayerName) : grant.SteamId.ToString();
             menu.AddMenuOption($"{name} · {LegacyX.Admin.Authorization.StaffPermissions.For(grant.Role).Name}", (ply, opt) => { });
         }
-        menu.AddMenuOption("REFRESH", (ply, opt) =>
+        menu.AddMenuOption("Refresh", (ply, opt) =>
         {
             _ = RefreshOnlineStaffAsync();
-            admin.Print("{green}STAFF LIST UPDATED");
+            admin.Print("{green}Staff list updated.");
         });
 
         menu.ExitButton = true;
@@ -560,7 +560,7 @@ public partial class AdminPlus
 
     private void ShowPlayerCommands(CCSPlayerController admin)
     {
-        var menu = CreateMenu("PLAYERS");
+        var menu = CreateMenu("Players");
         List<ChatMenuOptionData> options = [];
 
         if (HasCommandAccess(admin, "ban")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.Ban"], () => ShowPlayerList(admin)));
@@ -818,7 +818,7 @@ public partial class AdminPlus
             return;
         }
 
-        var menu = CreateMenu("SERVER");
+        var menu = CreateMenu("Server");
         List<ChatMenuOptionData> options = [];
 
         if (HasCommandAccess(admin, "map")) options.Add(new ChatMenuOptionData(Localizer["Menu.Option.ChangeMap"], () => ShowMapSelectionMenu(admin)));
@@ -881,7 +881,7 @@ public partial class AdminPlus
                 var currentMap = Server.MapName;
                 if (currentMap == map)
                 {
-                    admin.Print($"{{lightred}}ALREADY ON {{white}}{map}");
+                    admin.Print($"Already on {{white}}{map}{{grey}}.");
                     return;
                 }
 
@@ -1022,7 +1022,7 @@ public partial class AdminPlus
             return;
         }
 
-        var menu = CreateMenu("CONFIRM BAN");
+        var menu = CreateMenu("Confirm ban");
         if (menu == null) return;
 
         var duration = minutes == 0 ? Localizer["Duration.Forever"] : $"{minutes} {Localizer["Duration.Minute"]}";
@@ -1050,7 +1050,7 @@ public partial class AdminPlus
         {
             if (target.IpAddress == "-")
             {
-                admin.Print("{lightred}NO IP FOR THIS PLAYER");
+                admin.Print("No IP for this player.");
                 return;
             }
 

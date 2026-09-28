@@ -45,7 +45,7 @@ namespace MatchZy
         {
             if (player == null || !player.PlayerPawn.IsValid) return;
             if (isPractice) {
-                ReplyToUserCommand(player, "{lightred}ONLY IN A MATCH");
+                ReplyToUserCommand(player, "Only in a match.");
                 return;
             }
 
@@ -60,13 +60,13 @@ namespace MatchZy
                 SetPlayerVisible(player);
             }
             else {
-                ReplyToUserCommand(player, "{lightred}YOU ARE NOT COACHING");
+                ReplyToUserCommand(player, "You're not coaching.");
                 return;
             }
 
             if (player.InGameMoneyServices != null) player.InGameMoneyServices.Account = 0;
 
-            ReplyToUserCommand(player, "{green}COACHING STOPPED");
+            ReplyToUserCommand(player, "{green}You stopped coaching.");
         }
 
         [ConsoleCommand("matchzy_addplayer", "Adds player to the provided team")]
@@ -146,7 +146,7 @@ namespace MatchZy
                 if (IsPlayerValid(removedPlayer))
                 {
                     Log($"Kicking player {removedPlayer!.PlayerName} - Not a player in this game (removed).");
-                    PrintToAllChat($"{{white}}{removedPlayer!.PlayerName}{{grey}} KICKED · NOT IN THIS MATCH");
+                    PrintToAllChat($"{{white}}{removedPlayer!.PlayerName}{{grey}} was kicked: not in this match.");
                     KickPlayer(removedPlayer);
                 }
             }

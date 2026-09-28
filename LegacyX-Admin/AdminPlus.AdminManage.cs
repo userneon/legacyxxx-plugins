@@ -63,7 +63,7 @@ public partial class AdminPlus
         }
 
         _ = RefreshOnlineStaffAsync();
-        if (caller != null && caller.IsValid) caller.Print("{green}STAFF LIST UPDATED");
+        if (caller != null && caller.IsValid) caller.Print("{green}Staff list updated.");
         else AuthLog("Staff permissions re-check requested.");
     }
 

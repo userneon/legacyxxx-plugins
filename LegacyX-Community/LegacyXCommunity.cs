@@ -227,24 +227,24 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     {
         if (!Config.Enabled)
         {
-            Print(player, "{lightred}RANKS ARE OFF ON THIS SERVER");
+            Print(player, "Ranks are off on this server.");
             return;
         }
         if (string.IsNullOrWhiteSpace(Config.ApiBaseUrl) || string.IsNullOrWhiteSpace(Config.PluginSecret))
         {
-            Print(player, "{lightred}RANKS ARE NOT READY YET");
+            Print(player, "Ranks aren't ready yet.");
             return;
         }
 
         var (status, found) = await FetchProfileAsync(player.SteamID.ToString());
         if (status == System.Net.HttpStatusCode.NotFound)
         {
-            Print(player, "NO RANK YET · PLAY A 5V5 · {white}LEGACYX.CC");
+            Print(player, "No rank yet. Play a 5v5 match to get one at {white}legacyx.cc{grey}.");
             return;
         }
         if (found is not { } profile)
         {
-            Print(player, "{lightred}RANK NOT AVAILABLE · TRY AGAIN SOON");
+            Print(player, "Your rank is unavailable right now. Try again soon.");
             return;
         }
         try
@@ -259,14 +259,14 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
 
             var parts = new List<string> { $"{{white}}{rankName}{{grey}}", $"{{white}}{exp:N0}{{grey}} EXP" };
             if (position.HasValue) parts.Add($"{{white}}#{position.Value:N0}{{grey}}");
-            parts.Add(nextName != null && nextExp.HasValue ? $"{{white}}{Math.Max(0, nextExp.Value - exp):N0}{{grey}} TO {nextName}" : "TOP RANK");
-            if (proLeague) parts.Add("PRO LEAGUE {green}OPEN{grey}");
+            parts.Add(nextName != null && nextExp.HasValue ? $"{{white}}{Math.Max(0, nextExp.Value - exp):N0}{{grey}} to {nextName}" : "top rank");
+            if (proLeague) parts.Add("Pro League {green}open{grey}");
             Print(player, string.Join(" · ", parts));
         }
         catch (Exception exception)
         {
             Console.WriteLine($"[{ModuleName}] Profile lookup failed: {exception.Message}");
-            Print(player, "{lightred}RANK NOT AVAILABLE · TRY AGAIN SOON");
+            Print(player, "Your rank is unavailable right now. Try again soon.");
         }
     }
 

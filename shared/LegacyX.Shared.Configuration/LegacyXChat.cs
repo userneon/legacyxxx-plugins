@@ -5,14 +5,13 @@ namespace LegacyX.Shared.Configuration;
 
 /// <summary>
 /// Canonical presentation for system-generated LEGACY-X chat messages, the same look as legacyx.cc:
-/// "LEGACY" white, "-X" in the brand orange, then grey text with names and numbers in white.
-/// Green only for something that worked or is on, light red only for a refusal or error. Every other
-/// chat color becomes white here, so no module can bring its own palette back. Text is upper case.
-/// Player-authored chat must not be sent through this formatter.
+/// "LEGACY-" white and "X" crimson, then dim grey sentences with names and numbers in white. Green
+/// only for something that worked or is on. Every other chat color becomes white here, so no module
+/// can bring its own palette back. Player-authored chat must not be sent through this formatter.
 /// </summary>
 public static class LegacyXChat
 {
-    public const string Prefix = "{white}LEGACY{brand}-X {grey}• ";
+    public const string Prefix = "{white}LEGACY-{brand}X {grey}• ";
 
     // CS2 chat color codes (the same values as CounterStrikeSharp's ChatColors), so this library
     // needs no CounterStrikeSharp reference.
@@ -20,15 +19,15 @@ public static class LegacyXChat
     private const char Green = '\x04';
     private const char Grey = '\x08';
     private const char Silver = '\x0A';
-    private const char LightRed = '\x0F';
-    private const char Brand = '\x10';
+    // Chat has no exact #e11d48; red is the nearest crimson.
+    private const char Brand = '\x07';
 
-    // The tags a message may use, and what every other color tag becomes. {default} means "back to
-    // the body color", which is grey. {brand} is for the prefix only.
+    // The tags a message may use ({white}, {grey}, {green}), and what every other color tag becomes.
+    // {default} means "back to the body color", which is grey. {brand} is for the prefix only.
     private static readonly (string Tag, char Code)[] Tags =
     {
         ("{white}", White), ("{default}", Grey), ("{grey}", Grey), ("{gray}", Grey), ("{silver}", Grey),
-        ("{bluegrey}", Grey), ("{green}", Green), ("{lightred}", LightRed), ("{brand}", Brand),
+        ("{bluegrey}", Grey), ("{green}", Green), ("{brand}", Brand), ("{lightred}", White),
         ("{darkred}", White), ("{red}", White), ("{lightpurple}", White), ("{purple}", White),
         ("{magenta}", White), ("{olive}", White), ("{lime}", White), ("{lightyellow}", White),
         ("{yellow}", White), ("{gold}", White), ("{orange}", White), ("{lightblue}", White),
@@ -37,11 +36,11 @@ public static class LegacyXChat
 
     public static string System(string message)
     {
-        var body = string.IsNullOrWhiteSpace(message) ? string.Empty : Palette(message.Trim().ToUpperInvariant());
+        var body = string.IsNullOrWhiteSpace(message) ? string.Empty : Palette(message.Trim());
         return (Colorize(Prefix) + body).TrimEnd();
     }
 
-    public static string MatchConnect(string address) => System($"CONNECT {{white}}{address}");
+    public static string MatchConnect(string address) => System($"Connect with {{white}}connect {address}");
 
     /// <summary>
     /// Turns {tags} (any case) into chat color codes; PrintToChat sends text as-is, so an unconverted
@@ -63,7 +62,7 @@ public static class LegacyXChat
         var result = new StringBuilder(body.Length);
         foreach (var c in body)
         {
-            if (c >= ' ' || c is White or Green or Grey or LightRed) result.Append(c);
+            if (c >= ' ' || c is White or Green or Grey) result.Append(c);
             else if (c == Silver) result.Append(Grey);
             else if (c == '\r') result.Append(' ');
             else result.Append(White);

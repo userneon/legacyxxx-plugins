@@ -169,7 +169,7 @@ public partial class MatchZy
         if (!isPaused) SetMatchPausedFlags();
         if (wasTemporaryFill)
         {
-            PrintToAllChat($"{ChatColors.LightRed}PAUSED{ChatColors.Grey} · FILL PLAYER {ChatColors.White}{player.PlayerName}{ChatColors.Grey} LEFT");
+            PrintToAllChat($"Paused: fill player {ChatColors.White}{player.PlayerName}{ChatColors.Grey} left.");
             QueueMatchCoreEvent("fill_removed", expectedRevision => new
             {
                 event_id = NextMatchCoreEventId("fill_removed"),
@@ -181,7 +181,7 @@ public partial class MatchZy
             return;
         }
 
-        PrintToAllChat($"{ChatColors.LightRed}PAUSED{ChatColors.Grey} · WAITING FOR {ChatColors.White}{player.PlayerName}");
+        PrintToAllChat($"Paused: waiting for {ChatColors.White}{player.PlayerName}{ChatColors.Grey} to reconnect.");
         QueueMatchCoreEvent("player_disconnected", expectedRevision => new
         {
             event_id = NextMatchCoreEventId("disconnect"),
@@ -197,7 +197,7 @@ public partial class MatchZy
         {
             if (matchCoreSlotsByOriginal.TryGetValue(steamId, out var current) && current.ActiveSteamId == null)
             {
-                PrintToAllChat("STILL WAITING · STAFF CAN ADD A FILL PLAYER");
+                PrintToAllChat("Still waiting. Staff can add a fill player.");
             }
         });
     }
@@ -217,7 +217,7 @@ public partial class MatchZy
             if (fill != null)
             {
                 fill.ChangeTeam(CsTeam.Spectator);
-                PrintToPlayerChat(fill, "PLAYER IS BACK · YOU ARE NOW A SPECTATOR · THANKS");
+                PrintToPlayerChat(fill, "The player is back, so you're now a spectator. Thanks for filling in.");
             }
         }
         if (matchCoreFillTimers.TryGetValue(steamId, out var fillTimer)) fillTimer.Kill();
@@ -288,19 +288,19 @@ public partial class MatchZy
         }
         if (matchCoreSlotsByOriginal.Count != 10 || matchCoreSlotsByOriginal.Values.Any(slot => string.IsNullOrWhiteSpace(slot.ActiveSteamId)))
         {
-            reason = "ALL 10 PLAYERS MUST BE BACK TO RESUME";
+            reason = "All 10 players must be back to resume.";
             return false;
         }
         var (ctPlayers, _) = GetTeamPlayerCount((int)CsTeam.CounterTerrorist, false);
         var (tPlayers, _) = GetTeamPlayerCount((int)CsTeam.Terrorist, false);
         if (ctPlayers != 5 || tPlayers != 5)
         {
-            reason = "5 CT AND 5 T NEEDED TO RESUME";
+            reason = "Resuming needs 5 CT and 5 T.";
             return false;
         }
         if (!matchCoreRemoteSlotsReady)
         {
-            reason = "ONE MOMENT · TRY AGAIN";
+            reason = "One moment, then try again.";
             return false;
         }
         reason = string.Empty;
@@ -324,19 +324,19 @@ public partial class MatchZy
         var teamKey = command.ArgByIndex(2).Trim().ToLowerInvariant();
         if (!int.TryParse(command.ArgByIndex(3), out var slotIndex) || !new[] { "team1", "team2" }.Contains(teamKey) || slotIndex is < 1 or > 5 || !ulong.TryParse(steamId, out _))
         {
-            ReplyToUserCommand(player, "{lightred}CHECK THE FILL DETAILS");
+            ReplyToUserCommand(player, "Check the fill details.");
             return;
         }
         if (matchCoreSlotsByOriginal.ContainsKey(steamId))
         {
-            ReplyToUserCommand(player, "{lightred}THIS PLAYER IS ALREADY IN THE MATCH");
+            ReplyToUserCommand(player, "That player is already in the match.");
             return;
         }
         var slot = matchCoreSlotsByOriginal.Values.FirstOrDefault(candidate => candidate.TeamKey == teamKey && candidate.SlotIndex == slotIndex);
         var fill = Utilities.GetPlayers().FirstOrDefault(candidate => IsPlayerValid(candidate) && CoreSteamId(candidate) == steamId);
         if (slot == null || slot.ActiveSteamId != null || fill == null)
         {
-            ReplyToUserCommand(player, "{lightred}SLOT TAKEN OR PLAYER NOT HERE");
+            ReplyToUserCommand(player, "That slot is taken or the player isn't here.");
             return;
         }
 
@@ -355,7 +355,7 @@ public partial class MatchZy
             team_key = teamKey,
             slot_index = slotIndex,
         });
-        PrintToAllChat($"{ChatColors.White}{fill.PlayerName}{ChatColors.Grey} FILLS IN · NO RANK OR EXP");
+        PrintToAllChat($"{ChatColors.White}{fill.PlayerName}{ChatColors.Grey} is filling in and won't get rank or EXP.");
     }
 
     private CoreSnapshot? CaptureMatchCoreSnapshot(CCSPlayerController player)

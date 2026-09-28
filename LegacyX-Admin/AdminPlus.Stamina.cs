@@ -52,7 +52,7 @@ public partial class AdminPlus
         if (!CommandStaminaRequirements.TryGetValue(normalized, out var required)) return true;
         adminStamina.TryGetValue(caller.SteamID, out var available);
         if (available >= required) return true;
-        caller.PrintToChat(LegacyXChat.System("{lightred}YOUR ROLE CANNOT USE THIS"));
+        caller.PrintToChat(LegacyXChat.System("Your role can't use this."));
         return false;
     }
 

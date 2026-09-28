@@ -589,11 +589,11 @@ namespace MatchZy
             (int team1Score, int team2Score) = (matchzyTeam1.seriesScore, matchzyTeam2.seriesScore);
             if (winnerName == null)
             {
-                PrintToAllChat($"DRAW · {ChatColors.White}{matchzyTeam1.teamName}{ChatColors.Grey} · {ChatColors.White}{matchzyTeam2.teamName}");
+                PrintToAllChat($"{ChatColors.White}{matchzyTeam1.teamName}{ChatColors.Grey} and {ChatColors.White}{matchzyTeam2.teamName}{ChatColors.Grey} drew the match.");
             }
             else
             {
-                PrintToAllChat($"{ChatColors.White}{winnerName}{ChatColors.Grey} WON THE MATCH");
+                PrintToAllChat($"{ChatColors.White}{winnerName}{ChatColors.Grey} won the match.");
             }
 
             string winnerTeam = (winnerName == null) ? "none" : matchzyTeam1.seriesScore > matchzyTeam2.seriesScore ? "team1" : "team2";

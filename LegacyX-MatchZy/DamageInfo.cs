@@ -103,8 +103,8 @@ namespace MatchZy
                             int targetHP = targetController.PlayerPawn.Value.Health < 0 ? 0 : targetController.PlayerPawn.Value.Health;
                             string targetName = targetController.PlayerName;
 
-                            PrintToPlayerChat(attackerController, $"DMG {ChatColors.White}{damageGiven}{ChatColors.Grey} IN {hitsGiven} · TAKEN {ChatColors.White}{damageTaken}{ChatColors.Grey} IN {hitsTaken} · {ChatColors.White}{targetName}{ChatColors.Grey} {targetHP} HP");
-                            PrintToPlayerChat(targetController, $"DMG {ChatColors.White}{damageTaken}{ChatColors.Grey} IN {hitsTaken} · TAKEN {ChatColors.White}{damageGiven}{ChatColors.Grey} IN {hitsGiven} · {ChatColors.White}{attackerName}{ChatColors.Grey} {attackerHP} HP");
+                            PrintToPlayerChat(attackerController, $"To {ChatColors.White}{targetName}{ChatColors.Grey}: {ChatColors.White}{damageGiven}{ChatColors.Grey} in {hitsGiven}. From: {ChatColors.White}{damageTaken}{ChatColors.Grey} in {hitsTaken}. {targetHP} HP left.");
+                            PrintToPlayerChat(targetController, $"To {ChatColors.White}{attackerName}{ChatColors.Grey}: {ChatColors.White}{damageTaken}{ChatColors.Grey} in {hitsTaken}. From: {ChatColors.White}{damageGiven}{ChatColors.Grey} in {hitsGiven}. {attackerHP} HP left.");
                         }
 
                         // Mark this pair as processed to avoid duplicates.
