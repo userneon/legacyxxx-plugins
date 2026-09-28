@@ -919,6 +919,13 @@ public partial class AdminPlus
             Console.WriteLine(Localizer["CleanBans.Console", steamBanCount, ipBanCount]);
             
         LogAction($"All bans cleared by {GetExecutorName(caller)}. SteamID: {steamBanCount}, IP: {ipBanCount}");
+
+        // An owner's !cleanbans also clears every ban on the website and the other servers. The
+        // console has no website identity, so from there only this server's files are cleared.
+        if (caller != null && caller.IsValid)
+            ReportAllBansCleared(caller);
+        else
+            Console.WriteLine("[LEGACY-X Admin] Website bans are unchanged: run !cleanbans in-game as an owner to clear them everywhere.");
     }
 
     private void CmdCleanIpBans(CCSPlayerController? caller, CommandInfo info)

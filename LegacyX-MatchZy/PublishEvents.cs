@@ -10,9 +10,14 @@ namespace MatchZy
         {
             try
             {
-                if (string.IsNullOrEmpty(matchConfig.RemoteLogURL)) return;
+                // A match config's own remote log wins; otherwise the LEGACY-X rank endpoint from .env.
+                var fromMatch = !string.IsNullOrEmpty(matchConfig.RemoteLogURL);
+                var url = fromMatch ? matchConfig.RemoteLogURL : legacyXRankEventsUrl;
+                var headerKey = fromMatch ? matchConfig.RemoteLogHeaderKey : "x-plugin-secret";
+                var headerValue = fromMatch ? matchConfig.RemoteLogHeaderValue : legacyXRankToken;
+                if (string.IsNullOrEmpty(url)) return;
 
-                Log($"[SendEventAsync] Sending Event: {@event.EventName} for matchId: {liveMatchId} mapNumber: {matchConfig.CurrentMapNumber} on {matchConfig.RemoteLogURL}");
+                Log($"[SendEventAsync] Sending Event: {@event.EventName} for matchId: {liveMatchId} mapNumber: {matchConfig.CurrentMapNumber} on {url}");
 
                 using var httpClient = new HttpClient();
                 using var jsonContent = new StringContent(JsonSerializer.Serialize(@event, @event.GetType()), Encoding.UTF8, "application/json");
@@ -21,12 +26,12 @@ namespace MatchZy
 
                 Log($"[SendEventAsync] SENDING DATA: {jsonString}");
 
-                if (!string.IsNullOrEmpty(matchConfig.RemoteLogHeaderKey) && !string.IsNullOrEmpty(matchConfig.RemoteLogHeaderValue))
+                if (!string.IsNullOrEmpty(headerKey) && !string.IsNullOrEmpty(headerValue))
                 {
-                    httpClient.DefaultRequestHeaders.Add(matchConfig.RemoteLogHeaderKey, matchConfig.RemoteLogHeaderValue);
+                    httpClient.DefaultRequestHeaders.Add(headerKey, headerValue);
                 }
 
-                var httpResponseMessage = await httpClient.PostAsync(matchConfig.RemoteLogURL, jsonContent);
+                var httpResponseMessage = await httpClient.PostAsync(url, jsonContent);
 
                 if (httpResponseMessage.IsSuccessStatusCode)
                 {

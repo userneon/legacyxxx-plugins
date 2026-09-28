@@ -42,7 +42,7 @@ public partial class AdminPlus
         var environment = LegacyXEnvironmentLoader.Load();
         var apiBaseUrl = environment.GetModule("ADMIN", "API_BASE_URL").Trim();
         var pluginId = environment.GetModule("ADMIN", "PLUGIN_ID", "legacyx-admin").Trim();
-        var pluginToken = environment.GetModule("ADMIN", "PLUGIN_SECRET").Trim();
+        var pluginToken = environment.GetModule("ADMIN", "PLUGIN_SECRET", environment.Get("LEGACYX_PLUGIN_TOKEN")).Trim();
         var serverId = LegacyXServerRuntime.Load(environment).ServerId;
         var refreshSeconds = environment.GetModuleInt("ADMIN", "AUTH_REFRESH_SECONDS", 60, 15, 600);
         var cacheSeconds = environment.GetModuleInt("ADMIN", "AUTH_CACHE_SECONDS", 180, 30, 3600);

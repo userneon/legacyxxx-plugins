@@ -1,5 +1,6 @@
 // Copy to legacyx-rank.private.cfg on the CS2 server. Do not commit the copied file.
-// This config enables MatchZy -> LEGACY-X API rank event delivery. config.cfg runs it automatically.
+// Not needed: rank events already use LEGACYX_API_BASE_URL and LEGACYX_PLUGIN_TOKEN from
+// CounterStrikeSharp/.env. Only copy this to legacyx-rank.private.cfg to send them elsewhere.
 // The token needs the stats:write scope (scripts/create-api-token.mjs in legacyxxx-backend).
 legacyx_rank_season "season-1"
 matchzy_remote_log_url "https://api.legacyx.cc/api/v1/plugin/matchzy/events"

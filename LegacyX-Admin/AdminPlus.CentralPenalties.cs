@@ -31,7 +31,7 @@ public partial class AdminPlus
         _centralPenaltiesEnabled = environment.GetModuleBoolean("ADMIN", "CENTRAL_PENALTIES_ENABLED", true);
         _penaltyApiBaseUrl = environment.GetModule("ADMIN", "API_BASE_URL").Trim().TrimEnd('/');
         _penaltyPluginId = environment.GetModule("ADMIN", "PLUGIN_ID", "legacyx-admin").Trim();
-        _penaltyPluginSecret = environment.GetModule("ADMIN", "PLUGIN_SECRET").Trim();
+        _penaltyPluginSecret = environment.GetModule("ADMIN", "PLUGIN_SECRET", environment.Get("LEGACYX_PLUGIN_TOKEN")).Trim();
         if (!_centralPenaltiesEnabled)
         {
             Console.WriteLine("[LEGACY-X Admin] Penalty records are off: in-game bans, mutes and gags stay on this server only.");
@@ -106,6 +106,52 @@ public partial class AdminPlus
         if (!_centralPenaltiesEnabled || apiType == null || !SteamId64Pattern.IsMatch(id)) return;
         Send("/api/v1/plugin/penalties/revoke", new { steamId = id, type = apiType, issuerName = PenaltyIssuerName(caller) }, $"un{apiType} {id}");
     }
+
+    /// <summary>
+    /// !cleanbans by an owner: every ban on the website and every server is lifted. The API checks
+    /// the SteamID is a website OWNER itself; the owner is told how many were lifted.
+    /// </summary>
+    internal void ReportAllBansCleared(CCSPlayerController owner)
+    {
+        if (!_centralPenaltiesEnabled || !owner.IsValid || !SteamId64Pattern.IsMatch(owner.SteamID.ToString())) return;
+        var url = _penaltyApiBaseUrl + "/api/v1/plugin/bans/revoke-all";
+        var pluginId = _penaltyPluginId;
+        var secret = _penaltyPluginSecret;
+        var body = new { issuerSteamId = owner.SteamID.ToString(), issuerName = PenaltyIssuerName(owner) };
+        var slot = owner.Slot;
+        _ = Task.Run(async () =>
+        {
+            string message;
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(body) };
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secret);
+                request.Headers.Add("x-plugin-id", pluginId);
+                using var response = await PenaltyHttp.SendAsync(request);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<RevokeAllResult>();
+                    message = $"Website: {result?.BansLifted ?? 0} ban lifted on every server.";
+                }
+                else
+                {
+                    message = (int)response.StatusCode == 403 ? "Website: only an owner can clear the website bans." : $"Website bans were not cleared (HTTP {(int)response.StatusCode}).";
+                }
+            }
+            catch (Exception exception)
+            {
+                message = $"Website bans were not cleared ({exception.GetType().Name}).";
+            }
+            Console.WriteLine($"[LEGACY-X Admin] !cleanbans: {message}");
+            CounterStrikeSharp.API.Server.NextFrame(() =>
+            {
+                var player = CounterStrikeSharp.API.Utilities.GetPlayerFromSlot(slot);
+                if (player != null && player.IsValid) player.PrintToChat($" {message}");
+            });
+        });
+    }
+
+    private sealed record RevokeAllResult(int BansLifted, int PenaltiesLifted);
 
     internal static string? CommunicationApiType(string type) => type switch
     {

@@ -8,6 +8,7 @@ This repository contains **source only** for LEGACY-X CS2 server plugins. It has
 |---|---|---|---|
 | LegacyX-Admin | `LegacyX-Admin/LegacyX-Admin.csproj` | `LegacyX-Admin.dll` | Full admin menus, bans, mute/gag, reports, votes, reservations; bans, unbans, mutes and gags are also recorded through the Root API; optional player `!admin` Call channel alert only |
 | LegacyX-AFKManager | `LegacyX-AFKManager/LegacyX-AFKManager.csproj` | `LegacyX-AFKManager.dll` | MatchZy-aware AFK, C4 and spectator policy |
+| LegacyX-Killfeed | `LegacyX-Killfeed/LegacyX-Killfeed.csproj` | `LegacyX-Killfeed.dll` | Every kill to the Root API for the website's live kill feed |
 | LegacyX-Community | `LegacyX-Community/LegacyX-Community.csproj` | `LegacyX-Community.dll` | Player progress, rank and clan lookup through Root API |
 | LegacyX-MatchZy | `LegacyX-MatchZy/LegacyX-MatchZy.csproj` | `LegacyX-MatchZy.dll` | Competitive match lifecycle and Match Core bridge |
 | LegacyX-Spectator | `LegacyX-Spectator/LegacyX-Spectator.csproj` | `LegacyX-Spectator.dll` | Competitive spectator/alive communication isolation |
@@ -23,12 +24,18 @@ connection. What each module sends or reads, and the token scope it needs:
 
 | Module | Root API routes | Token scopes |
 |---|---|---|
-| LegacyX-Admin | `/plugin/admin/authorizations`, `/plugin/bans/check`, `/plugin/bans`, `/plugin/bans/revoke`, `/plugin/penalties`, `/plugin/penalties/revoke` | `admin:read bans:read bans:write` |
+| LegacyX-Admin | `/plugin/admin/authorizations`, `/plugin/bans/check`, `/plugin/bans`, `/plugin/bans/revoke`, `/plugin/bans/revoke-all` (owner `!cleanbans`), `/plugin/penalties`, `/plugin/penalties/revoke` | `admin:read bans:read bans:write` |
 | LegacyX-Community | `/plugin/community/players/:steamId` | `stats:write` |
 | LegacyX-MatchZy | `/plugin/matchzy/events` (rank), `/plugin/match-core/events` | `stats:write`, `matches:write` |
 | LegacyX-Status | `/plugin/servers/heartbeat`, `/plugin/live-match/snapshots` | `servers:write` |
+| LegacyX-Killfeed | `/plugin/killfeed/events` | `servers:write` |
 | LegacyX-WeaponPaints | `/plugin/skinchanger/loadout` | `skinchanger:read` |
 | LegacyX-AFKManager, LegacyX-Spectator | none | none |
+
+One server token carries all of these scopes. Setting up a server is one command on the VPS
+(`legacyxxx-backend`): `node --env-file=.env scripts/create-game-server.mjs <server-id> <host:port> [mode] [name]`
+creates the token and writes the complete `.env`; unzip the package into `game/csgo/`, upload that
+file as `addons/counterstrikesharp/.env`, restart. Nothing else to fill in.
 
 ## One central environment
 
@@ -52,6 +59,7 @@ addons/counterstrikesharp/
   plugins/LegacyX-Admin/            LegacyX-Admin.dll, .deps.json, lang/
   plugins/LegacyX-AFKManager/       LegacyX-AFKManager.dll, .deps.json
   plugins/LegacyX-Community/        LegacyX-Community.dll, .deps.json
+  plugins/LegacyX-Killfeed/         LegacyX-Killfeed.dll, .deps.json
   plugins/LegacyX-MatchZy/          LegacyX-MatchZy.dll, .deps.json, CsvHelper, Dapper, Microsoft.Data.Sqlite,
                                     MySqlConnector, Newtonsoft.Json, SQLitePCLRaw.*, runtimes/{linux,win}-x64 SQLite, lang/, spawns/
   plugins/LegacyX-Spectator/        LegacyX-Spectator.dll, .deps.json

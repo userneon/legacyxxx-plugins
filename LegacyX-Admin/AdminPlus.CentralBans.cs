@@ -28,14 +28,14 @@ public partial class AdminPlus
     private void InitializeCentralBans()
     {
         var environment = LegacyXEnvironmentLoader.Load();
-        if (!environment.GetModuleBoolean("ADMIN", "CENTRAL_BANS_ENABLED", false))
+        if (!environment.GetModuleBoolean("ADMIN", "CENTRAL_BANS_ENABLED", true))
         {
             Console.WriteLine("[LEGACY-X Admin] Central bans are disabled; only local banned_user.cfg bans apply.");
             return;
         }
 
         var apiBaseUrl = environment.GetModule("ADMIN", "API_BASE_URL").TrimEnd('/');
-        var pluginSecret = environment.GetModule("ADMIN", "PLUGIN_SECRET");
+        var pluginSecret = environment.GetModule("ADMIN", "PLUGIN_SECRET", environment.Get("LEGACYX_PLUGIN_TOKEN"));
         var pluginId = environment.GetModule("ADMIN", "PLUGIN_ID", "legacyx-admin");
         if (string.IsNullOrWhiteSpace(apiBaseUrl) || string.IsNullOrWhiteSpace(pluginSecret))
         {

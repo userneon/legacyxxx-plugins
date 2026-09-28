@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX.PackageLoadTest", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-Status", "LegacyX-Status\LegacyX-Status.csproj", "{BDB7B232-0A18-474E-AC83-25B8C778AB86}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyX-Killfeed", "LegacyX-Killfeed\LegacyX-Killfeed.csproj", "{95E5C10D-E165-479E-9B66-BA828ACCBD23}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,10 @@ Global
 		{BDB7B232-0A18-474E-AC83-25B8C778AB86}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BDB7B232-0A18-474E-AC83-25B8C778AB86}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BDB7B232-0A18-474E-AC83-25B8C778AB86}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95E5C10D-E165-479E-9B66-BA828ACCBD23}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95E5C10D-E165-479E-9B66-BA828ACCBD23}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95E5C10D-E165-479E-9B66-BA828ACCBD23}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95E5C10D-E165-479E-9B66-BA828ACCBD23}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{863F8B96-51A9-4CAE-A181-A5631FD1E039} = {5798C091-80D8-4A55-9EA0-A20A01DC86F7}
