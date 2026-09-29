@@ -28,7 +28,7 @@ CS2 сервер (plugin-ууд) ──HTTPS──► api.legacyx.cc (legacyxxx-
 - Plugin-ууд DB-тэй шууд холбогддоггүй. Бүгд API-аар дамжина.
 - Нэг Game VPS дээр олон CS2 сервер нэг суулгацыг хуваалцана. Сервер бүр **port**-оороо
   ялгагдана: `27015` сервер вэб дээр `srv-27015` болж харагдана.
-- Бүх сервер нэг `.env` файл ашиглана.
+- Нэг VPS дээрх бүх CS2 сервер **нэг** plugin `.env` файл ашиглана (доорх №3).
 - Сервер бүрт тусдаа **GSLT** (Steam token) хэрэгтэй.
 
 ### Юу хэрэгтэй вэ
@@ -43,7 +43,22 @@ CS2 сервер (plugin-ууд) ──HTTPS──► api.legacyx.cc (legacyxxx-
 
 ---
 
-## 1. `.env` файл үүсгэх (нэг удаа, машин бүрт)
+## 1. `.env` файл үүсгэх (CS2 plugin-ийн, VPS-д нэг удаа)
+
+VPS дээр **гурван өөр `.env`** байдаг. Тус бүр өөр программд, өөр агуулгатай. Нэг файл болгож
+**болохгүй**: API-ийн `.env`-д DB-г бүхэлд нь удирдах Supabase service-role key бий, CS2 сервер,
+bot үүнийг хэзээ ч мэдэх ёсгүй.
+
+| `.env` | Хаана | Дотор нь | Хэн уншдаг |
+|---|---|---|---|
+| **1. API** | `/root/legacyxxx-backend/.env` | Supabase service-role key, JWT, Steam login | Зөвхөн API |
+| **2. Discord bot** | `/root/legacyxxx-discord-bot/.env` | `DISCORD_TOKEN`, API хаяг, bot-ын token | Зөвхөн bot |
+| **3. CS2 plugins** | `/home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env` | API хаяг, plugin token, IP, порт бүрийн нэр/mode | **Бүх CS2 сервер хамтдаа** |
+| Вэб | байхгүй | API хаяг build-д `ops/deploy.sh`-ээр орно | — |
+
+Энэ алхам №3-ыг үүсгэнэ. Нэг VPS-т **нэг л удаа**: дараа нь сервер нэмэхэд (`cs2-host.sh add`) шинэ
+`.env` хэрэггүй, `add` өөрөө порт бүрийн мөрийг энэ файлд нэмнэ. Зөвхөн **хоёр дахь VPS** нэмбэл
+тэр VPS-т өөрийн №3 хэрэгтэй.
 
 **[Backend VPS]**, backend-ийн фолдерт (`/root/legacyxxx-backend`, pm2 ажиллаж байгаа газар):
 
