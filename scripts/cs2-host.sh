@@ -19,6 +19,7 @@
 #       that follows it, are applied at once; other updates (plugins from git, CounterStrikeSharp alone)
 #       wait for AUTOUPDATE_HOUR (default 5, local time). Log: journalctl -u legacyx-cs2-autoupdate
 #   sudo ./scripts/cs2-host.sh remove <port>        stops and deletes that server's service and config
+#   sudo ./scripts/announce.sh setup                 post what each update changed to a Discord channel
 #   ./scripts/cs2-host.sh status | logs <port>      what is running / that server's console
 #
 # Each server knows itself by -port (LegacyX: id srv-<port>, address LEGACYX_SERVER_HOST:<port>), so
@@ -262,7 +263,9 @@ cmd_update() {
   need_root
   local package=""
   [[ "${1:-}" == "--package" ]] && package="${2:-}"
-  local running=()
+  local running=() build_before css_before
+  build_before="$(installed_cs2_build)"
+  css_before="$(cat "$STATE_DIR/css-version" 2>/dev/null || true)"
   for port in $(ports); do
     if systemctl is-active --quiet "cs2@$port"; then running+=("$port"); fi
   done
@@ -278,12 +281,27 @@ cmd_update() {
   fix_gamedata || true
   for port in "${running[@]}"; do systemctl start "cs2@$port"; done
   say "Updated. Restarted: ${running[*]:-none}"
+  announce_update "$build_before" "$css_before" "${running[*]:-none}"
+}
+
+# Discord (scripts/announce.sh): what this update changed, from facts only: the CS2 build and
+# CounterStrikeSharp version before and after, and the plugin commits pulled since ANNOUNCE_FROM.
+ANNOUNCE_FROM=""
+announce_update() {
+  local build_after css_after lines=()
+  build_after="$(installed_cs2_build)"
+  css_after="$(cat "$STATE_DIR/css-version" 2>/dev/null || true)"
+  if [[ -n "$1" && -n "$build_after" && "$1" != "$build_after" ]]; then lines+=(--line "CS2 build $1 → $build_after"); fi
+  if [[ -n "$css_after" && "$2" != "$css_after" ]]; then lines+=(--line "CounterStrikeSharp ${2:-?} → $css_after"); fi
+  bash "$REPO/scripts/announce.sh" --title "Game servers updated" "${lines[@]}" \
+    --commits "$REPO" "$ANNOUNCE_FROM" "$(git_repo rev-parse HEAD 2>/dev/null)" --footer "Restarted: $3" || true
 }
 
 # By hand, now: pull this repository (new plugin commits) and run a full update.
 cmd_deploy() {
   need_root
   say "Pulling $(git_repo rev-parse --abbrev-ref HEAD)"
+  ANNOUNCE_FROM="$(git_repo rev-parse HEAD)"
   git_repo pull --ff-only
   say "Plugins at $(git_repo log -1 --format='%h %s')"
   cmd_update "$@"
@@ -354,11 +372,15 @@ cmd_autoupdate_check() {
   say "Updating: ${reasons[*]}"
   rm -f "$STATE_DIR/gamedata-restart"
   if [[ "$restart_only" == yes ]]; then
+    local restarted=()
     for port in $(ports); do
-      if systemctl is-active --quiet "cs2@$port"; then systemctl restart "cs2@$port"; fi
+      if systemctl is-active --quiet "cs2@$port"; then systemctl restart "cs2@$port"; restarted+=("$port"); fi
     done
+    bash "$REPO/scripts/announce.sh" --title "Game servers restarted" --line "WeaponPaints signature fixed" \
+      --footer "Restarted: ${restarted[*]:-none}" || true
     return 0
   fi
+  ANNOUNCE_FROM="$(git_repo rev-parse HEAD)"
   if [[ "$pull" == yes ]]; then git_repo pull -q --ff-only || say "git pull failed; plugins stay at $(git_repo rev-parse --short HEAD)."; fi
   cmd_update
   # A CounterStrikeSharp release newer than the one current at the CS2 update is now installed.

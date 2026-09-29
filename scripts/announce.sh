@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# Posts what an update changed to a Discord channel, from facts only: the subjects of the commits it
+# brought, exactly as written, and lines the caller passes (a CS2 build, a CounterStrikeSharp version).
+# Nothing is generated or translated. Commits that only touch docs/ or *.md, and commits whose message
+# contains [skip announce], are left out; when nothing is left, nothing is posted.
+#
+#   sudo ./scripts/announce.sh setup      save the channel's webhook (typed, not shown), then post a test
+#   sudo ./scripts/announce.sh test       post a test message
+#   ./scripts/announce.sh --title "Website updated" [--commits <repo-dir> <from> <to>] [--line "text"]…
+#                         [--footer "text"] [--dry-run]
+#
+# The webhook lives in /etc/legacyx/announce.env (root only). Without it, or when Discord cannot be
+# reached, nothing is posted and the update that called this is not affected: this always exits 0.
+# The ops/deploy.sh of legacyxxx-backend, -discord-bot and -frontend, and cs2-host.sh, call it.
+set -uo pipefail
+
+CONF="${LEGACYX_ANNOUNCE_CONF:-/etc/legacyx/announce.env}"
+WEBHOOK_PATTERN='^https://(canary\.|ptb\.)?discord(app)?\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+$'
+
+say() { printf '==> Discord: %s\n' "$*"; }
+
+webhook() {
+  local url=""
+  [[ -r "$CONF" ]] && url="$(sed -n 's/^DISCORD_ANNOUNCE_WEBHOOK=//p' "$CONF" | tail -n1 | tr -d '\r\n ')"
+  [[ "$url" =~ $WEBHOOK_PATTERN ]] && printf '%s' "$url"
+}
+
+# Subjects of the commits from..to that change more than documentation, oldest first.
+commit_subjects() {
+  local dir="$1" from="$2" to="$3"
+  [[ -n "$from" && -n "$to" && "$from" != "$to" ]] || return 0
+  git -c safe.directory="$dir" -C "$dir" log --no-merges --reverse -i --invert-grep --grep='\[skip announce\]' \
+    --format='%s' "$from..$to" -- . ':(exclude)docs' ':(exclude)*.md' 2>/dev/null
+}
+
+# One embed: the title, a bullet per line (Discord markdown escaped, no mentions), a footer and the time.
+payload() {
+  python3 - "$1" "$2" "$3" <<'PY'
+import datetime, json, re, sys
+title, footer, body = sys.argv[1], sys.argv[2], sys.argv[3]
+lines = [line.strip() for line in body.split("\n") if line.strip()]
+escape = lambda text: re.sub(r"([\\*_~`|>])", r"\\\1", text)
+shown = lines[:15]
+description = "\n".join("• " + escape(line[:200]) for line in shown)
+if len(lines) > len(shown):
+    description += f"\nand {len(lines) - len(shown)} more."
+embed = {"title": title[:256], "description": description[:4000], "color": 0xE11D48,
+         "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+if footer:
+    embed["footer"] = {"text": footer[:200]}
+print(json.dumps({"username": "LEGACY-X", "allowed_mentions": {"parse": []}, "embeds": [embed]}))
+PY
+}
+
+post() {
+  local title="$1" footer="$2" body="$3" dry="$4" url json
+  command -v python3 >/dev/null || { say "python3 is missing; not posted."; return 0; }
+  json="$(payload "$title" "$footer" "$body")" || { say "could not build the message; not posted."; return 0; }
+  if [[ "$dry" == yes ]]; then printf '%s\n' "$json"; return 0; fi
+  url="$(webhook)"
+  if [[ -z "$url" ]]; then
+    if [[ -e "$CONF" && ! -r "$CONF" ]]; then say "cannot read $CONF (run this as root); not posted."
+    else say "no webhook set (sudo $0 setup); not posted."; fi
+    return 0
+  fi
+  # The URL goes to curl on stdin, so it never shows in the process list or in an error message.
+  if printf 'url = "%s"\n' "$url" | curl -fsS -m 10 -o /dev/null -H 'content-type: application/json' \
+      --data-binary "$json" -K - 2>/dev/null; then
+    say "posted \"$title\"."
+  else
+    say "Discord did not accept the message; the update itself is done."
+  fi
+}
+
+case "${1:-}" in
+  setup)
+    [[ $EUID -eq 0 ]] || { echo "!! Run with sudo." >&2; exit 1; }
+    echo "Discord: channel settings > Integrations > Webhooks > New Webhook > Copy Webhook URL."
+    read -rsp "Webhook URL: " url; echo
+    [[ "$url" =~ $WEBHOOK_PATTERN ]] || { echo "!! That is not a Discord webhook URL." >&2; exit 1; }
+    mkdir -p "$(dirname "$CONF")"
+    (umask 077; printf 'DISCORD_ANNOUNCE_WEBHOOK=%s\n' "$url" > "$CONF")
+    chmod 600 "$CONF"
+    say "saved to $CONF."
+    post "Update announcements are on" "" "Website, API, Discord bot and game server updates are posted here." no
+    exit 0
+    ;;
+  test)
+    post "Update announcements are on" "" "Website, API, Discord bot and game server updates are posted here." no
+    exit 0
+    ;;
+esac
+
+title="" footer="" dry=no lines=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --title) title="${2:-}"; shift 2 ;;
+    --footer) footer="${2:-}"; shift 2 ;;
+    --line) [[ -n "${2:-}" ]] && lines+=("$2"); shift 2 ;;
+    --commits)
+      while IFS= read -r subject; do [[ -n "$subject" ]] && lines+=("$subject"); done \
+        < <(commit_subjects "${2:-}" "${3:-}" "${4:-}")
+      shift 4 ;;
+    --dry-run) dry=yes; shift ;;
+    *) sed -n '2,15p' "$0" >&2; exit 0 ;;
+  esac
+done
+[[ -n "$title" ]] || { sed -n '2,15p' "$0" >&2; exit 0; }
+if [[ ${#lines[@]} -eq 0 ]]; then
+  say "nothing to announce (no code changes)."
+  exit 0
+fi
+post "$title" "$footer" "$(printf '%s\n' "${lines[@]}")" "$dry"
+exit 0

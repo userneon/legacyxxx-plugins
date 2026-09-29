@@ -523,6 +523,35 @@ sudo /opt/legacyxxx-plugins/scripts/cs2-host.sh deploy
 > **Эхний удаа:** `ops/deploy.sh` нь сүүлд нэмэгдсэн тул хуучин clone дээр байхгүй байж болно. Тэгвэл
 > нэг удаа `git pull && bash ops/deploy.sh`. Дараагаас нь зөвхөн `bash ops/deploy.sh`.
 
+### Discord-д update-ийн зарлал (автомат)
+
+Deploy болон CS2-ийн update амжилттай дуусах бүрт Discord-ын нэг channel-д юу өөрчлөгдсөнийг илгээнэ.
+Текстийг AI бичдэггүй, орчуулдаггүй: зөвхөн баримт.
+
+| Юу | Зарлалын гарчиг | Шалтгаан (мөр бүр) |
+|---|---|---|
+| `ops/deploy.sh` (backend / bot / frontend) | `API updated` / `Discord bot updated` / `Website updated` | Энэ deploy-оор орж ирсэн commit бүрийн гарчиг, яг бичигдсэнээрээ |
+| `cs2-host.sh deploy`, `update`, автомат update | `Game servers updated` | `CS2 build 41234 → 41250`, `CounterStrikeSharp v320 → v321`, plugin-ийн commit-ийн гарчиг. Доор нь restart хийгдсэн серверүүд |
+| Skin-ий signature засагдаж restart | `Game servers restarted` | `WeaponPaints signature fixed` |
+
+- Зөвхөн `docs/` эсвэл `*.md` өөрчилсөн commit, мөн тайлбартаа `[skip announce]` гэж бичсэн commit орохгүй.
+  Шинэ зүйл байхгүй бол (дахин deploy хийсэн) юу ч илгээхгүй.
+- Deploy амжилтгүй бол илгээхгүй. Discord унасан, webhook байхгүй бол deploy-д нөлөөлөхгүй.
+
+**Нэг удаа тохируулах**, VPS бүр дээр (Hostinger, Game VPS):
+
+1. **[Discord]** Зарлал гарах channel → **Edit Channel → Integrations → Webhooks → New Webhook** →
+   нэр `LEGACY-X` → **Copy Webhook URL**. Энэ URL-ийг хэнд ч, чатад ч бүү явуул.
+2. **[VPS]**
+   ```bash
+   git -C /opt/legacyxxx-plugins pull --ff-only
+   sudo /opt/legacyxxx-plugins/scripts/announce.sh setup   # URL-ийг paste хийнэ (дэлгэцэнд харагдахгүй)
+   ```
+   Channel-д `Update announcements are on` гарвал бэлэн. URL `/etc/legacyx/announce.env`-д (зөвхөн root)
+   хадгалагдана, `env-backup.sh` үүнийг хамт нөөцөлнө.
+
+Урьдчилж харах (илгээхгүй): `/opt/legacyxxx-plugins/scripts/announce.sh --title Test --commits /root/legacyxxx-frontend HEAD~3 HEAD --dry-run`
+
 ---
 
 ## 15. VPS-ийн төлөв шалгах

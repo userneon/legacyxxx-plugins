@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Keeps copies of the LEGACY-X .env files (API, Discord bot, CS2 plugins) so a deleted or broken file,
-# or a reinstalled VPS, never loses them. Copies go to /root/legacyx-env-backups/<date-time>/, readable
-# by root only; the newest 30 are kept.
+# Keeps copies of the LEGACY-X .env files (API, Discord bot, CS2 plugins) and the Discord update webhook
+# (announce.sh) so a deleted or broken file, or a reinstalled VPS, never loses them. Copies go to
+# /root/legacyx-env-backups/<date-time>/, readable by root only; the newest 30 are kept.
 #
 #   sudo ./scripts/env-backup.sh run          back up now
 #   sudo ./scripts/env-backup.sh on | off     daily backup at 04:30 (systemd timer)
@@ -14,7 +14,7 @@ set -euo pipefail
 
 DEST="/root/legacyx-env-backups"
 KEEP=30
-ENV_FILES="${ENV_FILES:-/root/legacyxxx-backend/.env /root/legacyxxx-discord-bot/.env /home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env}"
+ENV_FILES="${ENV_FILES:-/root/legacyxxx-backend/.env /root/legacyxxx-discord-bot/.env /home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env /etc/legacyx/announce.env}"
 UNIT="/etc/systemd/system/legacyx-env-backup"
 SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
 
