@@ -64,7 +64,18 @@ for dir in "${targets[@]}"; do
   # Plugin files only; the package never carries a real .env.
   cp -a "$src/addons/." "$dir/addons/"
   mkdir -p "$dir/cfg"
+  # The server writes these itself (practice lineups players saved, the whitelist, the database
+  # choice): the package only provides them when missing. The rest of cfg/MatchZy follows the repo.
+  kept="$work/kept-cfg"
+  rm -rf "$kept"
+  for own in MatchZy/savednades.json MatchZy/whitelist.cfg MatchZy/database.json; do
+    if [[ -f "$dir/cfg/$own" ]]; then
+      mkdir -p "$kept/$(dirname "$own")"
+      cp -a "$dir/cfg/$own" "$kept/$own"
+    fi
+  done
   cp -a "$src/cfg/." "$dir/cfg/"
+  if [[ -d "$kept" ]]; then cp -a "$kept/." "$dir/cfg/"; fi
   env_target="$dir/addons/counterstrikesharp/.env"
   if [[ -n "$env_file" ]]; then
     install -m 600 "$env_file" "$env_target"

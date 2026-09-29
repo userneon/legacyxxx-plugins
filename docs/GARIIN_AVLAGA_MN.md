@@ -355,6 +355,14 @@ sudo AUTOUPDATE_HOUR=4 ./scripts/cs2-host.sh autoupdate on
 | GSLT, map, тоглогчийн тоо, mode | `/etc/legacyx/cs2/27015.conf` | `sudo systemctl restart cs2@27015` |
 | Plugin тохиргоо (цолны төрөл, skin, AFK…) | `/home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env` | `sudo systemctl restart 'cs2@*'` |
 | Вэб дээрх нэр/mode | `.env` дотор `LEGACYX_27015_SERVER_NAME=…`, `LEGACYX_27015_SERVER_MODE=…` | `sudo systemctl restart cs2@27015` |
+| CounterStrikeSharp (`ServerLanguage`, `!`/`/` trigger) | `/home/cs2/cs2/game/csgo/addons/counterstrikesharp/configs/core.json` | `sudo systemctl restart 'cs2@*'` |
+
+Update ямар файлд хүрдэг, хүрдэггүй вэ:
+- **Хэзээ ч дарагдахгүй:** `.env`, `configs/` (`core.json`, plugin JSON), `/etc/legacyx/cs2/*.conf`, `banned_*.cfg`,
+  MatchZy-н `savednades.json`, `whitelist.cfg`, `database.json`. `FollowCS2ServerGuidelines`-ийг л `false` болгоно.
+- **Repo-оос дахин тавигдана:** plugin DLL, lang, `cfg/MatchZy/`-ийн бусад файл (`config.cfg`, `live.cfg`…). Эдгээрийг
+  сервер дээр гараар засвал дараагийн update-ээр буцна: өөрчлөлтийг repo-д оруулна.
+- `gameinfo.gi`: CS2 update бүр дарж бичдэг. Metamod-ийн мөрийг скрипт өөрөө дахин нэмнэ.
 
 Засах:
 
