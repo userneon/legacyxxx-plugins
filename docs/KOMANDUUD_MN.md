@@ -153,6 +153,22 @@ sudo /opt/legacyxxx-plugins/scripts/cs2-host.sh deploy
 | `git -C <зам> status` | VPS дээр гараар зассан файл байгаа эсэх |
 | `git -C <зам> checkout -- <файл>` | Гараар зассан файлыг буцаах |
 
+### `env-backup.sh`: `.env` нөөцлөх
+
+| Команд | Юу | Хэзээ |
+|---|---|---|
+| `sudo /opt/legacyxxx-plugins/scripts/env-backup.sh run` | Гурван `.env`-ийг одоо нөөцлөх | `.env` засахын өмнө, дараа |
+| `… env-backup.sh on` / `off` | Өдөр бүр 04:30-д автоматаар | Нэг удаа асаана |
+| `… env-backup.sh list` | Байгаа нөөцүүд | — |
+| `… env-backup.sh restore <огноо-цаг>` | Сэргээх (одоогийнхоо эхлээд нөөцөлнө) | Файл устсан, эвдэрсэн |
+| `… env-backup.sh bundle` | Хамгийн сүүлийн нөөцийг нэг `.tar.gz` болгох | VPS-ээс гадна хуулахын өмнө |
+
+| Алдаа | Шалтгаан | Засах |
+|---|---|---|
+| `!! Run with sudo.` | root биш | `sudo` |
+| `!! No .env file found to back up.` | Гурван зам бүгд буруу | `ENV_FILES="/зам/.env …" sudo -E …/env-backup.sh run` |
+| `!! No backup … (see: list)` | Нөөцийн нэр буруу | `list`-ээс хуулах |
+
 **Бүх repo-гийн төлөв нэг дор:** [GARIIN_AVLAGA_MN.md](GARIIN_AVLAGA_MN.md) 15-р хэсэг.
 
 ### `create-game-server.mjs` [VPS, backend фолдерт]

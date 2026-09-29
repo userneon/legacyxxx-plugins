@@ -564,6 +564,59 @@ Ticket-ийн эхний мессежийн доорх товчнууд, **бү�
 
 ---
 
+## 17. `.env`-ийг хамгаалах: устгахгүй, алдахгүй
+
+`.env` нь git-д **ордоггүй** (зориуд). Тиймээс GitHub-аас сэргээж болохгүй: VPS дээрээ, мөн VPS-ээс
+гадна нөөцтэй байх ёстой. Deploy, update (`ops/deploy.sh`, `cs2-host.sh update/deploy`) `.env`-д хүрдэггүй.
+
+**1. Эрхийг хаах** (зөвхөн эзэмшигч уншина):
+
+```bash
+chmod 600 /root/legacyxxx-backend/.env /root/legacyxxx-discord-bot/.env
+sudo chmod 600 /home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env
+```
+
+**2. Өдөр бүр автоматаар нөөцлөх** (нэг удаа асаана):
+
+```bash
+sudo /opt/legacyxxx-plugins/scripts/env-backup.sh run    # одоо нөөцлөх
+sudo /opt/legacyxxx-plugins/scripts/env-backup.sh on     # өдөр бүр 04:30-д
+sudo /opt/legacyxxx-plugins/scripts/env-backup.sh list   # байгаа нөөцүүд
+```
+
+Нөөц нь `/root/legacyx-env-backups/<огноо-цаг>/`-д хадгалагдана (зөвхөн root). Сүүлийн 30-ыг үлдээнэ.
+Гурван `.env`-ийг бүгдийг (API, bot, CS2) авна. Аль нэг нь энэ VPS-д байхгүй бол алгасна.
+
+**3. VPS-ээс гадна хадгалах** (сард нэг, эсвэл `.env` өөрчилсний дараа). VPS эвдэрвэл энэ л үлдэнэ:
+
+```bash
+# [VPS]
+sudo /opt/legacyxxx-plugins/scripts/env-backup.sh bundle
+# [Таны компьютер] (VPS-ийн IP-гаа бичнэ, файлын нэрийг bundle-ийн гаралтаас)
+scp root@<VPS-IP>:/root/legacyx-env-backups/legacyx-env-<огноо>.tar.gz .
+```
+
+Энэ файлд нууц мэдээлэл бий: password manager (Bitwarden, 1Password), эсвэл шифрлэсэн flash-д
+хадгална. Discord, email, Google Drive-ийн нээлттэй folder-т **бүү** хий.
+
+**4. Сэргээх** (файл устсан, буруу засагдсан):
+
+```bash
+sudo /opt/legacyxxx-plugins/scripts/env-backup.sh list
+sudo /opt/legacyxxx-plugins/scripts/env-backup.sh restore 20261001-043000
+pm2 restart all && sudo systemctl restart 'cs2@*'
+```
+
+Сэргээхээсээ өмнө одоогийн файлуудыг өөрөө нөөцөлнө, тиймээс алдаж болохгүй.
+
+**Хэзээ ч бүү ажиллуул:**
+- `git clean -x` / `git clean -fdx`: git-д ордоггүй файлыг (`.env`-ийг) **устгана**.
+- repo-гийн фолдерыг `rm -rf` хийж дахин clone хийх: `.env` хамт устана. Хэрэгтэй бол эхлээд `env-backup.sh run`.
+
+**Нэмэлт:** Hostinger VPS panel → **Snapshots / Backups**-ийг асаавал бүх VPS долоо хоног бүр нөөцлөгдөнө.
+
+---
+
 ## Товч: шинэ VPS-ийг 0-ээс ажиллуулах
 
 ```bash
