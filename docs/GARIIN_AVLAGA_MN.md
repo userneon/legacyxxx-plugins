@@ -617,6 +617,108 @@ pm2 restart all && sudo systemctl restart 'cs2@*'
 
 ---
 
+## 18. Game серверийг өөр VPS руу шилжүүлэх (жишээ нь Монгол VPS)
+
+Вэб, API, Discord bot **Hostinger дээрээ үлдэнэ**. Зөвхөн CS2 серверүүд шинэ VPS руу нүүнэ. Хоёр terminal:
+
+| Тэмдэглэгээ | Terminal |
+|---|---|
+| **[Hostinger]** | Одоогийн VPS: вэб, API, Discord bot, хуучин CS2 серверүүд |
+| **[Шинэ VPS]** | Монгол VPS: CS2 серверүүд энд шилжинэ |
+
+**Юу нүүх вэ:** plugin `.env`, `/etc/legacyx/cs2/*.conf` (GSLT, map), `banned_user.cfg`/`banned_ip.cfg`
+(локал ban), `communication_data.json` (mute/gag), `cfg/MatchZy` (stats, spawn), `configs/` (`core.json`,
+plugin тохиргоо). Өөрчлөгдөх зүйл ганц мөр: `.env` дахь `LEGACYX_SERVER_HOST=<ШИНЭ-IP>`. Backend, bot,
+вэб, nginx, SSL, Supabase-д хүрэхгүй. Тоглогч, ban, match бүгд Supabase-д байгаа тул алдагдахгүй.
+
+**Дүрэм:**
+- Port-уудаа (27015, 27016…) болон `LEGACYX_SERVER_ID_PREFIX`-ийг **өөрчлөхгүй**. Тэгвэл `srv-27015` хэвээр
+  үлдэж, вэб дээрх сервер бүрийн staff эрх шууд ажиллана.
+- `LEGACYX_API_BASE_URL` нь `https://api.legacyx.cc` байх ёстой. `127.0.0.1`/`localhost` бол өөр VPS-ээс хүрэхгүй.
+- Хоёр VPS дээр CS2-ийг **зэрэг бүү ажиллуул**: ижил GSLT, ижил server ID хоорондоо мөргөлдөнө.
+
+### Шинэ VPS-ийг сонгохдоо (Монгол provider-оос асуух)
+
+| Шаардлага | Яагаад |
+|---|---|
+| Ubuntu 24.04/22.04, x86_64, RAM сервер бүрт 2–3 GB (+2), disk 60 GB+ | `cs2-host.sh`-ийн шаардлага |
+| **Өөрийн public IPv4** (NAT биш) | Тоглогчид шууд `connect IP:27015` хийнэ |
+| **UDP** port нээж болдог | CS2 UDP-ээр ажиллана |
+| **Гадаад traffic** хязгааргүй эсвэл хангалттай | Эхний таталт ~35 GB, CS2 update бүр хэдэн GB |
+| DDoS хамгаалалт | Game серверт хамгийн түгээмэл халдлага |
+
+### 1-р шат: бэлтгэл (серверүүд ажилласаар)
+
+```bash
+# [Шинэ VPS] API-тай холбогдож байгааг шалгах: {"ok":true,...} гэж гарах ёстой
+curl -sS https://api.legacyx.cc/health
+
+# [Hostinger] одоогийн plugin .env-ийг шинэ VPS руу илгээх
+scp /home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env root@<ШИНЭ-IP>:/root/legacyx-game.env
+
+# [Шинэ VPS] GitHub token хадгалах (3-р алхам), зөвхөн plugins repo-г татах
+git clone https://github.com/userneon/legacyxxx-plugins.git /opt/legacyxxx-plugins
+
+# [Шинэ VPS] IP солиод шалгах, дараа нь суулгах (удаан: ~35 GB)
+sudo sed -i 's/^LEGACYX_SERVER_HOST=.*/LEGACYX_SERVER_HOST=<ШИНЭ-IP>/' /root/legacyx-game.env
+grep -E '^LEGACYX_(API_BASE_URL|SERVER_HOST|SERVER_ID_PREFIX)=' /root/legacyx-game.env
+sudo /opt/legacyxxx-plugins/scripts/cs2-host.sh install --env /root/legacyx-game.env
+```
+
+### 2-р шат: шилжүүлэх (серверүүд ~5–10 минут унтарна)
+
+```bash
+# [Hostinger] автомат update-ийг зогсоож, CS2 серверүүдийг унтраах
+sudo /opt/legacyxxx-plugins/scripts/cs2-host.sh autoupdate off
+for c in /etc/legacyx/cs2/*.conf; do sudo systemctl disable --now "cs2@$(basename "$c" .conf)"; done
+
+# [Hostinger] хамгийн сүүлийн ban, mute, stats, тохиргоог нэг файл болгоод илгээх
+sudo bash -c '
+CS=/home/cs2/cs2/game/csgo
+OUT=/root/legacyx-game-$(date +%Y%m%d-%H%M).tar.gz
+LIST=$(for p in /etc/legacyx $CS/cfg/banned_user.cfg $CS/cfg/banned_ip.cfg $CS/cfg/MatchZy \
+  $CS/addons/counterstrikesharp/.env $CS/addons/counterstrikesharp/configs \
+  $(find $CS/addons/counterstrikesharp/plugins -name communication_data.json 2>/dev/null); do
+  [ -e "$p" ] && echo "${p#/}"; done)
+umask 077; tar -czf "$OUT" -C / $LIST && ls -lh "$OUT"
+'
+scp /root/legacyx-game-*.tar.gz root@<ШИНЭ-IP>:/root/
+
+# [Шинэ VPS] задлах, IP-г дахин тохируулах (архивт хуучин IP байгаа), серверүүдийг асаах
+sudo tar -xzf /root/legacyx-game-*.tar.gz -C /
+ENVF=/home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env
+sudo sed -i 's/^LEGACYX_SERVER_HOST=.*/LEGACYX_SERVER_HOST=<ШИНЭ-IP>/' $ENVF
+sudo chown -R cs2:cs2 /home/cs2/cs2/game/csgo/cfg /home/cs2/cs2/game/csgo/addons
+for c in /etc/legacyx/cs2/*.conf; do p=$(basename "$c" .conf); sudo ufw allow "$p"; sudo systemctl enable --now "cs2@$p"; done
+sudo /opt/legacyxxx-plugins/scripts/cs2-host.sh status
+
+# [Шинэ VPS] .env-ийн өдөр тутмын нөөц, түр файл устгах
+sudo env ENV_FILES=$ENVF /opt/legacyxxx-plugins/scripts/env-backup.sh on
+sudo rm /root/legacyx-game.env
+```
+
+Provider-ийн panel дээр ч CS2 port-уудыг (TCP+UDP) нээнэ. 80/443 шинэ VPS-д хэрэггүй.
+
+### Шалгах
+
+- legacyx.cc → Play: сервер **шинэ IP**-тэйгээ 30 секундын дотор гарна. Connect хийж орно.
+- **[CS2]** `!admin`, welcome мессеж, `!rs` ажиллаж байна. Discord дээр `/status` ажиллаж байна.
+- Log-д `Too many requests` гарвал **[Hostinger]** backend `.env` дахь `API_RATE_LIMIT_MAX`-ийг нэмээд
+  `bash ops/deploy.sh` ажиллуулна.
+- Гадаад холболт тасарвал staff эрх fail closed байдлаар хаагдаж, вэбийн ban шалгагдахгүй. Локал ban
+  хэвээр ажиллана. Холболт тогтворгүй бол `LEGACYX_ADMIN_AUTH_CACHE_SECONDS`-ийг (30–3600) өсгөнө.
+
+### Дараа нь
+
+- **Буцаах:** **[Шинэ VPS]** `for c in /etc/legacyx/cs2/*.conf; do sudo systemctl disable --now "cs2@$(basename "$c" .conf)"; done`,
+  дараа нь **[Hostinger]** дээр мөн тэр давталтыг `enable --now`-оор ажиллуулна. Тиймээс Hostinger дээрх
+  CS2-ийг 1–2 өдөр бүү устга.
+- Бүх зүйл хэвийн бол **[Hostinger]** port бүрт `sudo /opt/legacyxxx-plugins/scripts/cs2-host.sh remove <port>`
+  ажиллуулна. Дараа нь `/home/cs2`-ийг устгавал 35 GB чөлөөлөгдөнө.
+- Шинэ GSLT ашиглах тохиромжтой үе: `/etc/legacyx/cs2/<port>.conf` → `GSLT=` → `sudo systemctl restart cs2@<port>`.
+
+---
+
 ## Товч: шинэ VPS-ийг 0-ээс ажиллуулах
 
 ```bash
