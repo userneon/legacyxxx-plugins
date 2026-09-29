@@ -635,7 +635,8 @@ pm2 restart all && sudo systemctl restart 'cs2@*'
 | **[Шинэ VPS]** | Монгол VPS: CS2 серверүүд энд шилжинэ |
 
 **Юу нүүх вэ:** plugin `.env`, `/etc/legacyx/cs2/*.conf` (GSLT, map), `banned_user.cfg`/`banned_ip.cfg`
-(локал ban), `communication_data.json` (mute/gag), `cfg/MatchZy` (stats, spawn), `configs/` (`core.json`,
+(локал ban), `communication_data.json` (mute/gag), `plugins/LegacyX-MatchZy/matchzy.db` (MatchZy stats),
+`cfg/MatchZy` (lineup, whitelist, spawn), `configs/` (`core.json`,
 plugin тохиргоо). Өөрчлөгдөх зүйл ганц мөр: `.env` дахь `LEGACYX_SERVER_HOST=<ШИНЭ-IP>`. Backend, bot,
 вэб, nginx, SSL, Supabase-д хүрэхгүй. Тоглогч, ban, match бүгд Supabase-д байгаа тул алдагдахгүй.
 
@@ -664,6 +665,9 @@ curl -sS https://api.legacyx.cc/health
 # [Hostinger] одоогийн plugin .env-ийг шинэ VPS руу илгээх
 scp /home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env root@<ШИНЭ-IP>:/root/legacyx-game.env
 
+# [Шинэ VPS] цагийн бүс: 05:00-ийн update Монголын цагаар явна (UTC бол 13:00-д серверүүд restart болно)
+sudo timedatectl set-timezone Asia/Ulaanbaatar && timedatectl | grep -E "Time zone|synchronized"
+
 # [Шинэ VPS] GitHub token хадгалах (3-р алхам), зөвхөн plugins repo-г татах
 git clone https://github.com/userneon/legacyxxx-plugins.git /opt/legacyxxx-plugins
 
@@ -686,9 +690,9 @@ CS=/home/cs2/cs2/game/csgo
 OUT=/root/legacyx-game-$(date +%Y%m%d-%H%M).tar.gz
 LIST=$(for p in /etc/legacyx $CS/cfg/banned_user.cfg $CS/cfg/banned_ip.cfg $CS/cfg/MatchZy \
   $CS/addons/counterstrikesharp/.env $CS/addons/counterstrikesharp/configs \
-  $(find $CS/addons/counterstrikesharp/plugins -name communication_data.json 2>/dev/null); do
+  $(find $CS/addons/counterstrikesharp/plugins \( -name communication_data.json -o -name matchzy.db \) 2>/dev/null); do
   [ -e "$p" ] && echo "${p#/}"; done)
-umask 077; tar -czf "$OUT" -C / $LIST && ls -lh "$OUT"
+umask 077; tar -czf "$OUT" -C / $LIST && tar -tzf "$OUT"
 '
 scp /root/legacyx-game-*.tar.gz root@<ШИНЭ-IP>:/root/
 
