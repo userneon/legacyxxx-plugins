@@ -12,6 +12,8 @@
 #       GSLT: a Steam game server login token, one per server (steamcommunity.com/dev/managegameservers, app 730).
 #   sudo ./scripts/cs2-host.sh update [--package legacyx-cs2.zip]
 #       stops the servers, updates CS2, Metamod, CounterStrikeSharp and the plugins, starts them again.
+#   sudo ./scripts/cs2-host.sh deploy
+#       git pull of this repository first, then update: new plugin commits live now, not at 05:00.
 #   sudo ./scripts/cs2-host.sh autoupdate on|off|check
 #       every 10 minutes (on by default after install): a new CS2 build, and the CounterStrikeSharp release
 #       that follows it, are applied at once; other updates (plugins from git, CounterStrikeSharp alone)
@@ -278,6 +280,15 @@ cmd_update() {
   say "Updated. Restarted: ${running[*]:-none}"
 }
 
+# By hand, now: pull this repository (new plugin commits) and run a full update.
+cmd_deploy() {
+  need_root
+  say "Pulling $(git_repo rev-parse --abbrev-ref HEAD)"
+  git_repo pull --ff-only
+  say "Plugins at $(git_repo log -1 --format='%h %s')"
+  cmd_update "$@"
+}
+
 installed_cs2_build() {
   { sed -n 's/^[[:space:]]*"buildid"[[:space:]]*"\([0-9]*\)".*/\1/p' "$CS2_DIR/steamapps/appmanifest_730.acf" 2>/dev/null || true; } | head -n1
 }
@@ -417,6 +428,7 @@ case "${1:-}" in
   install) shift; cmd_install "$@" ;;
   add) shift; cmd_add "$@" ;;
   update) shift; cmd_update "$@" ;;
+  deploy) shift; cmd_deploy "$@" ;;
   autoupdate) shift; cmd_autoupdate "$@" ;;
   remove) shift; cmd_remove "$@" ;;
   status) cmd_status ;;

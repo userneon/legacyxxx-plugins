@@ -53,7 +53,8 @@ all from one shared install:
 sudo ./scripts/cs2-host.sh install --env legacyx-srv-HOST.env     # once
 sudo ./scripts/cs2-host.sh add 27015 <GSLT> competitive de_dust2  # per server
 sudo ./scripts/cs2-host.sh add 27016 <GSLT> casual de_dust2 20 fun LEGACY-X FUN #1
-sudo ./scripts/cs2-host.sh update                                 # by hand, if ever needed
+sudo ./scripts/cs2-host.sh deploy                                 # git pull + update, now
+sudo ./scripts/cs2-host.sh update                                 # update without pulling
 ./scripts/cs2-host.sh status | logs 27015
 ```
 
