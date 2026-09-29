@@ -355,7 +355,7 @@ public partial class MatchZy
             team_key = teamKey,
             slot_index = slotIndex,
         });
-        PrintToAllChat($"{ChatColors.White}{fill.PlayerName}{ChatColors.Grey} is filling in and won't get rank or EXP.");
+        PrintToAllChat($"{ChatColors.White}{fill.PlayerName}{ChatColors.Grey} is filling in.");
     }
 
     private CoreSnapshot? CaptureMatchCoreSnapshot(CCSPlayerController player)

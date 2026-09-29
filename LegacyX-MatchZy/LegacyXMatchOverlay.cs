@@ -65,6 +65,6 @@ public partial class MatchZy
             "team2" => $"{matchzyTeam2.teamName} won",
             _ => "Draw",
         };
-        PrintToAllChat($"Final: {ChatColors.White}{outcome}{ChatColors.Grey}. Rank and EXP are saved.");
+        PrintToAllChat($"Final: {ChatColors.White}{outcome}{ChatColors.Grey}.");
     }
 }

@@ -981,7 +981,6 @@ namespace MatchZy
                     coachKillTimer?.Kill();
                     coachKillTimer = null;
                     (int t1score, int t2score) = GetTeamsScore();
-                    PrintToAllChat($"{ChatColors.White}{matchzyTeam1.teamName} {t1score}-{t2score} {matchzyTeam2.teamName}");
 
                     ShowDamageInfo();
 
