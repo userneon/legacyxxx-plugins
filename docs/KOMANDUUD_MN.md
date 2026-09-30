@@ -196,7 +196,7 @@ node --env-file=.env scripts/create-game-server.mjs <IP> "27015:competitive_5v5:
 | `!rank` | Таны цол, EXP, байр, дараагийн цол хүртэл | Хүссэн үедээ |
 | `!rs` | Вэб дээр сонгосон skin-ээ дахин ачаалах | Skin солиод, эсвэл skin гараагүй үед |
 | `!knife`, `!gloves`, `!agents`, `!music`, `!pins` | Цэснээс сонгох | Skin-ийг тоглоом дотроос |
-| `!calladmin` / `!callmanager` | Онлайн admin / manager-ийг дуудах | Тусламж хэрэгтэй үед |
+| `!calladmin` / `!callmanager` | Онлайн admin / manager-ийг дуудах. Онлайн staff байхгүй ч хүсэлт Discord-ын дуудлагын channel-д (`/admincalls`) очно | Тусламж хэрэгтэй үед |
 | `!report` | Тоглогчийг report хийх (цэс гарна) | Хуурсан, муу авир |
 | `!admins` | Онлайн staff | — |
 | `.ready` / `.unready` | Бэлэн / бэлэн биш | Match эхлэхийн өмнө |

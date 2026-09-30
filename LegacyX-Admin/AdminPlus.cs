@@ -882,9 +882,12 @@ public partial class AdminPlus : BasePlugin
             return;
         }
         var recipients = Utilities.GetPlayers().Where(player => player != null && player.IsValid && !player.IsBot && player.SteamID != caller.SteamID && adminStamina.TryGetValue(player.SteamID, out var stamina) && stamina >= requiredStamina && adminStaffRoles.TryGetValue(player.SteamID, out var staffRole) && eligibleRoles.Contains(staffRole, StringComparer.OrdinalIgnoreCase)).ToList();
+        // Recorded for the Discord bot whether or not anyone is here to see it in game.
+        ReportAdminCall(caller, roleName.ToLowerInvariant(), recipients.Count);
         if (recipients.Count == 0)
         {
-            caller.Print($"No {roleName.ToLowerInvariant()} is online.");
+            _lastReportTime[caller.SteamID] = DateTime.Now;
+            caller.Print($"No {roleName.ToLowerInvariant()} is online in game. Your request was sent to the team.");
             return;
         }
         var callerName = SanitizeName(caller.PlayerName);

@@ -1,8 +1,10 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using LegacyX.Shared.Configuration;
 using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Linq;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -81,6 +83,29 @@ public partial class AdminPlus
     {
         if (!_centralPenaltiesEnabled || !SteamId64Pattern.IsMatch(steamId64)) return;
         Send("/api/v1/plugin/bans/revoke", new { steamId = steamId64, issuerName = PenaltyIssuerName(caller), reason = "Lifted in-game" }, $"unban {steamId64}");
+    }
+
+    /// <summary>
+    /// !calladmin / !callmanager: recorded so the Discord bot can announce it in its calls channel, also when no
+    /// staff member is online on this server. target is "admin" or "manager".
+    /// </summary>
+    internal void ReportAdminCall(CCSPlayerController caller, string target, int onlineStaff)
+    {
+        var id = caller.SteamID.ToString();
+        if (!_centralPenaltiesEnabled || !SteamId64Pattern.IsMatch(id)) return;
+        var name = SanitizeName(caller.PlayerName);
+        if (string.IsNullOrWhiteSpace(name)) name = "Player";
+        var serverId = LegacyXServerRuntime.Load(LegacyXEnvironmentLoader.Load()).ServerId;
+        Send("/api/v1/plugin/admin-calls", new
+        {
+            callerSteamId = id,
+            callerName = name.Length <= 64 ? name : name[..64],
+            target,
+            serverId = string.IsNullOrWhiteSpace(serverId) ? "unknown" : serverId,
+            map = Server.MapName ?? "",
+            players = Utilities.GetPlayers().Count(player => player.IsValid && !player.IsBot),
+            onlineStaff,
+        }, $"admin call {id}");
     }
 
     /// <summary>type is AdminPlus's "MUTE" (voice) or "GAG" (chat).</summary>
