@@ -133,6 +133,18 @@ namespace MatchZy
             }
         }
 
+        /// <summary>Server console only: LegacyX-Hud's knife vote has a result. lx_knife_choice &lt;slot&gt; stay|switch, run as if that player of the winning team typed .stay / .switch.</summary>
+        [ConsoleCommand("lx_knife_choice", "LegacyX-Hud knife vote result: lx_knife_choice <slot> stay|switch")]
+        public void OnKnifeChoice(CCSPlayerController? caller, CommandInfo command)
+        {
+            if (caller != null || !isSideSelectionPhase) return;
+            if (!int.TryParse(command.GetArg(1), out var slot)) return;
+            var voter = Utilities.GetPlayerFromSlot(slot);
+            if (voter == null || !voter.IsValid || voter.TeamNum != knifeWinner) return;
+            if (string.Equals(command.GetArg(2), "switch", System.StringComparison.OrdinalIgnoreCase)) OnTeamSwitch(voter, null);
+            else OnTeamStay(voter, null);
+        }
+
         [ConsoleCommand("css_switch", "Switch after knife round")]
         [ConsoleCommand("css_swap", "Switch after knife round")]
         public void OnTeamSwitch(CCSPlayerController? player, CommandInfo? command)

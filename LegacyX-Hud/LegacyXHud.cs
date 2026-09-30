@@ -10,37 +10,47 @@ namespace LegacyXHud;
 
 /// <summary>
 /// Shows the LEGACY-X Workshop layouts (legacyxxx-workshop) to players. The layout is drawn on the
-/// client (Workshop addon via MultiAddonManager); this plugin creates the custom_hud_layout entity and
-/// fills it per player: texts by Label id, states by toggling classes (see CONTRACT.md of the addon).
+/// client (Workshop addon via MultiAddonManager); this plugin creates the custom_hud_layout entities and
+/// fills them per player: texts by variable name (= the Label id), states by toggling classes (see
+/// CONTRACT.md of the addon).
 ///
-/// First version = a pipeline test: a welcome announcement (legacyx_notify "ann") when a player joins,
-/// and !lxhud to show it again. Rank card, match card, knife vote and admin panel come after this works.
+/// Screens: legacyx_notify (welcome, toast, rank card, rank up / down), legacyx_match (result of a ranked
+/// match), legacyx_knife (side vote by keyboard). The !admin panel (legacyx_admin) is not driven yet.
+///
+/// Other plugins reach it through two server commands, so nothing is shared between plugin contexts:
+///   lx_hud_toast &lt;steamId64&gt; &lt;ok|info&gt; &lt;text…&gt;     one line under the top bar
+///   lx_hud_knife start &lt;team 2|3&gt; | stop              the knife-round side vote of that team
 /// </summary>
-public sealed class LegacyXHud : BasePlugin
+public sealed partial class LegacyXHud : BasePlugin
 {
     // PanoramaManager's own examples spawn the compiled name (.vxml_c). The addon CONTRACT.md said the
-    // source .xml, untested. LEGACYX_HUD_NOTIFY_LAYOUT in the .env overrides it if the other one is right.
-    private const string DefaultNotifyLayout = "panorama/layout/custom_game/legacyx_notify.vxml_c";
+    // source .xml, untested. LEGACYX_HUD_*_LAYOUT in the .env overrides it if the other one is right.
+    private const string LayoutDir = "panorama/layout/custom_game/";
 
-    // What PanelHandle needs to know about legacyx_notify.xml. PanoramaManager writes every text
-    // (dialog variable) on the panel with RootPanelId and toggles by panel id, so the layout has one
-    // inner wrapper with this id and its Labels read {s:<label id>}. Nothing here takes the mouse and
-    // there is no menu row pool. Only a player with an open session gets the entity and can be written
-    // to, so every player is Open()ed before the first text or class is set.
-    private static readonly LayoutContract NotifyContract = new()
+    // What PanelHandle needs to know about a layout. PanoramaManager writes every text (dialog variable)
+    // on the panel with RootPanelId and toggles by panel id, so each layout has one inner wrapper with
+    // this id and its Labels read {s:<label id>}. Nothing takes the mouse and there is no menu row pool.
+    // Only a player with an open session gets the entity and can be written to, so every player is
+    // Open()ed on a layout before the first text or class is set.
+    private static LayoutContract Contract(string rootId) => new()
     {
-        RootPanelId = "lx_notify",
+        RootPanelId = rootId,
         RowCount = 0,
         CaptureInput = false,
     };
 
     private bool enabled;
-    private string notifyLayout = DefaultNotifyLayout;
+    private string notifyLayout = LayoutDir + "legacyx_notify.vxml_c";
+    private string matchLayout = LayoutDir + "legacyx_match.vxml_c";
+    private string knifeLayout = LayoutDir + "legacyx_knife.vxml_c";
+    private bool rankCardEnabled = true;
     private PanelHandle? notify;
+    private PanelHandle? match;
+    private PanelHandle? knife;
 
     public override string ModuleAuthor => "LEGACY-X";
     public override string ModuleName => "LEGACY-X Hud";
-    public override string ModuleVersion => "0.1.0-legacyx.1";
+    public override string ModuleVersion => "0.2.0-legacyx.1";
 
     public override void Load(bool hotReload)
     {
@@ -51,20 +61,33 @@ public sealed class LegacyXHud : BasePlugin
             Console.WriteLine($"[{ModuleName}] Disabled by central environment.");
             return;
         }
-        notifyLayout = env.Get("LEGACYX_HUD_NOTIFY_LAYOUT", DefaultNotifyLayout);
+        notifyLayout = env.Get("LEGACYX_HUD_NOTIFY_LAYOUT", notifyLayout);
+        matchLayout = env.Get("LEGACYX_HUD_MATCH_LAYOUT", matchLayout);
+        knifeLayout = env.Get("LEGACYX_HUD_KNIFE_LAYOUT", knifeLayout);
+        rankCardEnabled = env.GetModuleBoolean("HUD", "RANK_CARD", true);
+        // Same API access the Community plugin uses for the rank card and the Tab icons.
+        apiBase = env.Get("LEGACYX_API_BASE_URL", "").TrimEnd('/');
+        pluginId = env.GetModule("COMMUNITY", "PLUGIN_ID", "legacyx-community");
+        pluginSecret = env.GetModule("COMMUNITY", "PLUGIN_TOKEN", "");
 
         Panorama.Init(this);
 
         // The entity system is not ready at plugin load: spawn after the first round starts.
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
         RegisterEventHandler<EventPlayerConnectFull>(OnPlayerConnectFull);
-        Console.WriteLine($"[{ModuleName}] Ready. Layout {notifyLayout}");
+        RegisterEventHandler<EventCsWinPanelMatch>(OnMatchEnd);
+        RegisterListener<Listeners.OnTick>(OnKnifeTick);
+        Console.WriteLine($"[{ModuleName}] Ready. Layouts {notifyLayout}, {matchLayout}, {knifeLayout}");
+        if (string.IsNullOrEmpty(apiBase) || string.IsNullOrEmpty(pluginSecret))
+            Console.WriteLine($"[{ModuleName}] No API address or plugin token: rank and match cards stay off.");
     }
 
     public override void Unload(bool hotReload)
     {
         notify?.Dispose();
-        notify = null;
+        match?.Dispose();
+        knife?.Dispose();
+        notify = match = knife = null;
         if (enabled) Panorama.Shutdown();
     }
 
@@ -72,6 +95,9 @@ public sealed class LegacyXHud : BasePlugin
     {
         Console.WriteLine($"[{ModuleName}] round_start, notify entity {(notify is null ? "not spawned yet" : "already spawned")}");
         EnsureNotify();
+        if (IsWarmup()) return HookResult.Continue;
+        CloseMatchCompactCards();
+        if (rankCardEnabled) ShowRankCards();
         return HookResult.Continue;
     }
 
@@ -80,6 +106,8 @@ public sealed class LegacyXHud : BasePlugin
         var player = e.Userid;
         if (player is null || !player.IsValid || player.IsBot) return HookResult.Continue;
         var slot = player.Slot;
+        var steamId = player.SteamID;
+        _ = LoadProfileAsync(steamId);
         // A few seconds: the client must finish loading the map and the addon before it can draw the panel.
         AddTimer(5f, () =>
         {
@@ -97,22 +125,92 @@ public sealed class LegacyXHud : BasePlugin
         Announce(player, "LEGACY-X HUD test", "If you can read this, the Workshop addon and the plugin work together.");
     }
 
-    private PanelHandle? EnsureNotify()
+    /// <summary>Server console / other plugins: lx_hud_toast &lt;steamId64&gt; &lt;ok|info&gt; &lt;text…&gt;</summary>
+    [ConsoleCommand("lx_hud_toast", "One line under the top bar for a player: lx_hud_toast <steamId64> <ok|info> <text>")]
+    public void OnToastCommand(CCSPlayerController? caller, CommandInfo command)
     {
-        if (notify is not null) return notify;
+        if (!enabled || caller != null || command.ArgCount < 4) return;
+        if (!ulong.TryParse(command.GetArg(1), out var steamId)) return;
+        var player = Utilities.GetPlayerFromSteamId(steamId);
+        if (player is not { IsValid: true, IsBot: false }) return;
+        var ok = command.GetArg(2).Equals("ok", StringComparison.OrdinalIgnoreCase);
+        var text = string.Join(' ', Enumerable.Range(3, command.ArgCount - 3).Select(command.GetArg)).Trim();
+        if (text.Length > 0) Toast(player, text, ok);
+    }
+
+    private PanelHandle? Ensure(ref PanelHandle? handle, string layout, string rootId)
+    {
+        if (handle is not null) return handle;
         try
         {
-            notify = Panorama.Spawn(notifyLayout, NotifyContract);
-            Console.WriteLine($"[{ModuleName}] Spawned {notifyLayout}: {(notify is null ? "null handle" : "ok")}");
-            // Every panel of legacyx_notify.xml is hittest="false": a read-only layout never takes the cursor.
+            handle = Panorama.Spawn(layout, Contract(rootId));
+            Console.WriteLine($"[{ModuleName}] Spawned {layout}: {(handle is null ? "null handle" : "ok")}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[{ModuleName}] Could not spawn {notifyLayout}: {ex.Message}");
-            notify = null;
+            Console.WriteLine($"[{ModuleName}] Could not spawn {layout}: {ex.Message}");
+            handle = null;
         }
-        return notify;
+        return handle;
     }
+
+    private PanelHandle? EnsureNotify() => Ensure(ref notify, notifyLayout, "lx_notify");
+    private PanelHandle? EnsureMatch() => Ensure(ref match, matchLayout, "lx_match");
+    private PanelHandle? EnsureKnife() => Ensure(ref knife, knifeLayout, "lx_knife");
+
+    /// <summary>SetVariableFor / SetClassFor do nothing for a player without a session: open the layout first.</summary>
+    private static bool OpenFor(PanelHandle panel, CCSPlayerController player)
+    {
+        if (!panel.IsOpenFor(player)) panel.Open(player);
+        return panel.IsOpenFor(player);
+    }
+
+    private static bool IsWarmup()
+    {
+        var rules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault()?.GameRules;
+        return rules?.WarmupPeriod ?? false;
+    }
+
+    // ---- classes that replace each other (rank-N, tier-x, pNN) ---------------------------------------
+
+    private readonly Dictionary<(int Slot, string PanelId, string Group), string> applied = new();
+
+    /// <summary>Puts <paramref name="cls"/> on the panel and takes off the one of the same group set before.</summary>
+    private void SetState(PanelHandle panel, CCSPlayerController player, string panelId, string group, string? cls)
+    {
+        var key = (player.Slot, panelId, group);
+        if (applied.TryGetValue(key, out var old) && old != cls)
+            panel.SetClassFor(player, panelId, old, false);
+        if (cls is null)
+        {
+            applied.Remove(key);
+            return;
+        }
+        panel.SetClassFor(player, panelId, cls, true);
+        applied[key] = cls;
+    }
+
+    // ---- open / close a panel for a while ---------------------------------------------------------------
+
+    private readonly Dictionary<(int Slot, string PanelId), int> generation = new();
+
+    /// <summary>Adds "open" to a panel and removes it after <paramref name="seconds"/> (a newer show keeps it open).</summary>
+    private void Flash(PanelHandle panel, CCSPlayerController player, string panelId, float seconds)
+    {
+        var key = (player.Slot, panelId);
+        var mine = generation.TryGetValue(key, out var g) ? g + 1 : 1;
+        generation[key] = mine;
+        panel.SetClassFor(player, panelId, "open", true);
+        var slot = player.Slot;
+        AddTimer(seconds, () =>
+        {
+            if (!generation.TryGetValue(key, out var current) || current != mine) return;
+            var still = Utilities.GetPlayerFromSlot(slot);
+            if (still is { IsValid: true }) panel.SetClassFor(still, panelId, "open", false);
+        });
+    }
+
+    // ---- legacyx_notify: announcement, toast ------------------------------------------------------------
 
     /// <summary>legacyx_notify "ann": sets the two texts for this player, drops the banner in, then away.</summary>
     private void Announce(CCSPlayerController player, string title, string body)
@@ -123,19 +221,21 @@ public sealed class LegacyXHud : BasePlugin
             Console.WriteLine($"[{ModuleName}] Announce for {player.PlayerName} skipped: layout is not spawned");
             return;
         }
-        // SetVariableFor / SetClassFor do nothing for a player without a session: open the layout first.
-        if (!panel.IsOpenFor(player)) panel.Open(player);
-        Console.WriteLine($"[{ModuleName}] Announce to slot {player.Slot}: \"{title}\" (open: {panel.IsOpenFor(player)})");
+        var opened = OpenFor(panel, player);
+        Console.WriteLine($"[{ModuleName}] Announce to slot {player.Slot}: \"{title}\" (open: {opened})");
         panel.SetVariableFor(player, "ann_title", title);
         panel.SetVariableFor(player, "ann_body", body);
-        panel.SetClassFor(player, "ann", "open", true);
+        Flash(panel, player, "ann", 7f);
+    }
 
-        var slot = player.Slot;
-        AddTimer(7f, () =>
-        {
-            var still = Utilities.GetPlayerFromSlot(slot);
-            if (still is { IsValid: true } && notify is not null)
-                notify.SetClassFor(still, "ann", "open", false);
-        });
+    /// <summary>legacyx_notify "toast": one short line.</summary>
+    private void Toast(CCSPlayerController player, string text, bool ok)
+    {
+        var panel = EnsureNotify();
+        if (panel is null || !OpenFor(panel, player)) return;
+        panel.SetVariableFor(player, "toast_text", text);
+        SetState(panel, player, "toast_icon", "icon", ok ? "ic-check" : "ic-circle-alert");
+        panel.SetClassFor(player, "toast", "ok", ok);
+        Flash(panel, player, "toast", 3.5f);
     }
 }

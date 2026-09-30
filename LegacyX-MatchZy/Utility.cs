@@ -211,6 +211,8 @@ namespace MatchZy
             isWarmup = true;
             ExecWarmupCfg();
             knifeWinnerName = knifeWinner == 3 ? reverseTeamSides["CT"].teamName : reverseTeamSides["TERRORIST"].teamName;
+            // LegacyX-Hud draws the side vote (A / D, E) for the winners and answers with lx_knife_choice; ignored when it is not loaded.
+            Server.ExecuteCommand($"lx_hud_knife start {knifeWinner}");
             ShowDamageInfo();
             PrintToAllChat(Localizer["matchzy.knife.sidedecisionpending", knifeWinnerName]);
             // Server.PrintToChatAll($"{chatPrefix} {ChatColors.White}{knifeWinnerName}{ChatColors.Grey} Won the knife. Waiting for them to type {ChatColors.White}.stay{ChatColors.Grey} or {ChatColors.White}.switch{ChatColors.Grey}");
@@ -221,6 +223,7 @@ namespace MatchZy
         {
             // Setting match phases bools
             isWarmup = false;
+            if (isSideSelectionPhase) Server.ExecuteCommand("lx_hud_knife stop");
             isSideSelectionPhase = false;
             matchStarted = true;
             isMatchLive = true;
