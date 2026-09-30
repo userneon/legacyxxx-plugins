@@ -59,6 +59,7 @@ public sealed class LegacyXHud : BasePlugin
 
     private HookResult OnRoundStart(EventRoundStart e, GameEventInfo info)
     {
+        Console.WriteLine($"[{ModuleName}] round_start, notify entity {(notify is null ? "not spawned yet" : "already spawned")}");
         EnsureNotify();
         return HookResult.Continue;
     }
@@ -91,6 +92,7 @@ public sealed class LegacyXHud : BasePlugin
         try
         {
             notify = Panorama.Spawn(notifyLayout);
+            Console.WriteLine($"[{ModuleName}] Spawned {notifyLayout}: {(notify is null ? "null handle" : "ok")}");
             // Every panel of legacyx_notify.xml is hittest="false": a read-only layout never takes the cursor.
         }
         catch (Exception ex)
@@ -105,7 +107,12 @@ public sealed class LegacyXHud : BasePlugin
     private void Announce(CCSPlayerController player, string title, string body)
     {
         var panel = EnsureNotify();
-        if (panel is null) return;
+        if (panel is null)
+        {
+            Console.WriteLine($"[{ModuleName}] Announce for {player.PlayerName} skipped: layout is not spawned");
+            return;
+        }
+        Console.WriteLine($"[{ModuleName}] Announce to slot {player.Slot}: \"{title}\"");
         panel.SetVariableFor(player, "ann_title", title);
         panel.SetVariableFor(player, "ann_body", body);
         panel.SetClassFor(player, "ann", "open", true);
