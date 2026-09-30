@@ -59,7 +59,7 @@
 | `!psay` | `css_psay` | `!psay <target> <message>` | Player private message |
 | `!admins` | `css_admins` | `!admins` | Online admins list |
 | `!hideadmin` | `css_hideadmin` | `!hideadmin` | `!admins` list-д харагдах эсэхийг солих |
-| `css_report` / `css_calladmin` | — | Report arguments server config-аас хамаарна | Player `!admin` / report → optional Call channel alert |
+| `css_report` / `css_calladmin` | — | Report arguments server config-аас хамаарна | Player `!report` / `!calladmin` → вэбсайтад бүртгэгдэж, Discord bot-ын `/admincalls` channel-д очно (webhook хэрэггүй) |
 
 ## Vote and match utility
 

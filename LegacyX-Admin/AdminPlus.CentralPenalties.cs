@@ -108,6 +108,34 @@ public partial class AdminPlus
         }, $"admin call {id}");
     }
 
+    /// <summary>
+    /// !report: who reported whom and why, recorded so the Discord bot can post it in its admin calls channel.
+    /// </summary>
+    internal void ReportPlayer(CCSPlayerController reporter, CCSPlayerController reported, string reason)
+    {
+        var reporterId = reporter.SteamID.ToString();
+        var reportedId = reported.SteamID.ToString();
+        if (!_centralPenaltiesEnabled || !SteamId64Pattern.IsMatch(reporterId) || !SteamId64Pattern.IsMatch(reportedId)) return;
+        var reporterName = SanitizeName(reporter.PlayerName);
+        var reportedName = SanitizeName(reported.PlayerName);
+        if (string.IsNullOrWhiteSpace(reporterName)) reporterName = "Player";
+        if (string.IsNullOrWhiteSpace(reportedName)) reportedName = "Player";
+        var text = string.IsNullOrWhiteSpace(reason) ? "No reason" : reason.Trim();
+        var serverId = LegacyXServerRuntime.Load(LegacyXEnvironmentLoader.Load()).ServerId;
+        Send("/api/v1/plugin/admin-calls", new
+        {
+            callerSteamId = reporterId,
+            callerName = reporterName.Length <= 64 ? reporterName : reporterName[..64],
+            target = "report",
+            reportedSteamId = reportedId,
+            reportedName = reportedName.Length <= 64 ? reportedName : reportedName[..64],
+            reason = text.Length <= 300 ? text : text[..300],
+            serverId = string.IsNullOrWhiteSpace(serverId) ? "unknown" : serverId,
+            map = Server.MapName ?? "",
+            players = Utilities.GetPlayers().Count(player => player.IsValid && !player.IsBot),
+        }, $"report {reporterId} -> {reportedId}");
+    }
+
     /// <summary>type is AdminPlus's "MUTE" (voice) or "GAG" (chat).</summary>
     internal void ReportCommunication(ulong steamId, string type, int minutes, string reason, CCSPlayerController? caller)
     {

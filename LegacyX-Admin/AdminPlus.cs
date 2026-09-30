@@ -1045,17 +1045,8 @@ public partial class AdminPlus : BasePlugin
 
         try
         {
-            var serverIp = GetServerAddress();
-
-            _ = Discord.SendPlayerReport(
-                reporter.PlayerName, 
-                reporter.SteamID.ToString(), 
-                reported.PlayerName, 
-                reported.SteamID.ToString(), 
-                reason,
-                serverIp,
-                this
-            );
+            // Recorded on the website; the Discord bot posts it in its admin calls channel.
+            ReportPlayer(reporter, reported, reason);
 
             SetPlayerToPlayerReportCooldown(reporter, reported);
             
