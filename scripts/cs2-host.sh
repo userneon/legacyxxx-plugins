@@ -142,8 +142,14 @@ install_multiaddonmanager() {
   say "MultiAddonManager"
   local release url tag tmp file
   release="$(latest_mam_release)" || { say "MultiAddonManager: GitHub not reachable, skipped."; return 0; }
-  url="$(printf '%s' "$release" \
-    | { grep -oiE '"browser_download_url": *"[^"]*linux[^"]*\.(tar\.gz|zip)"' || true; } | head -n1 | sed 's/.*"\(https[^"]*\)"/\1/')"
+  # Release assets are named per Steam runtime (e.g. ...-steamrt3.tar.gz, ...-steamrt4.tar.gz, ...-windows.zip).
+  # steamrt3 needs the oldest glibc, so it loads everywhere; MAM_ASSET_PATTERN picks another (e.g. steamrt4).
+  local pat all
+  all="$(printf '%s' "$release" | { grep -oiE '"browser_download_url": *"[^"]*"' || true; } | sed 's/.*"\(https[^"]*\)"/\1/')"
+  for pat in "${MAM_ASSET_PATTERN:-steamrt3}" linux steamrt4; do
+    url="$(printf '%s\n' "$all" | { grep -iE "${pat}[^/]*\.(tar\.gz|zip)$" || true; } | head -n1)"
+    [[ -n "$url" ]] && break
+  done
   tag="$(printf '%s' "$release" | release_tag || true)"
   if [[ -z "$url" ]]; then say "MultiAddonManager: no Linux package in the latest release, skipped."; return 0; fi
   tmp="$(mktemp -d)"
