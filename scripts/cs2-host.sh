@@ -3,7 +3,7 @@
 # all from one shared install, each as its own systemd service named by its port.
 #
 #   sudo ./scripts/cs2-host.sh install --env legacyx-srv-HOST.env [--package legacyx-cs2.zip]
-#       steamcmd, the CS2 dedicated server, Metamod:Source, CounterStrikeSharp, the LEGACY-X plugins
+#       steamcmd, the CS2 dedicated server, Metamod:Source, CounterStrikeSharp, MultiAddonManager, the LEGACY-X plugins
 #       and the .env from create-game-server.mjs (legacyxxx-backend). Safe to run again.
 #   sudo ./scripts/cs2-host.sh add <port> <GSLT> [competitive|wingman|casual|deathmatch] [map] [maxplayers] [site-mode] [name…]
 #       a server on <port>: config, firewall, systemd service, started now and at boot. site-mode picks the
@@ -11,13 +11,16 @@
 #       the name shown there; both are written to the .env as LEGACYX_<port>_SERVER_MODE / _NAME.
 #       GSLT: a Steam game server login token, one per server (steamcommunity.com/dev/managegameservers, app 730).
 #   sudo ./scripts/cs2-host.sh update [--package legacyx-cs2.zip]
-#       stops the servers, updates CS2, Metamod, CounterStrikeSharp and the plugins, starts them again.
+#       stops the servers, updates CS2, Metamod, CounterStrikeSharp, MultiAddonManager and the plugins, starts them again.
 #   sudo ./scripts/cs2-host.sh deploy
 #       git pull of this repository first, then update: new plugin commits live now, not at 05:00.
 #   sudo ./scripts/cs2-host.sh autoupdate on|off|check
 #       every 10 minutes (on by default after install): a new CS2 build, and the CounterStrikeSharp release
 #       that follows it, are applied at once; other updates (plugins from git, CounterStrikeSharp alone)
 #       wait for AUTOUPDATE_HOUR (default 5, local time). Log: journalctl -u legacyx-cs2-autoupdate
+#   sudo ./scripts/cs2-host.sh client-addons [id,id,...]
+#       Workshop addon IDs every player downloads on connect (MultiAddonManager mm_client_extra_addons),
+#       e.g. the custom Panorama UI. No IDs prints the current value; "none" clears it. Restart the servers after.
 #   sudo ./scripts/cs2-host.sh remove <port>        stops and deletes that server's service and config
 #   sudo ./scripts/announce.sh setup                 post what each update changed to a Discord channel
 #   ./scripts/cs2-host.sh status | logs <port>      what is running / that server's console
@@ -25,7 +28,7 @@
 # Each server knows itself by -port (LegacyX: id srv-<port>, address LEGACYX_SERVER_HOST:<port>), so
 # one install and one .env serve them all. About 2-3 GB RAM per running server.
 set -euo pipefail
-
+ 
 CS2_USER="${CS2_USER:-cs2}"
 CS2_HOME="/home/$CS2_USER"
 STEAMCMD_DIR="$CS2_HOME/steamcmd"
@@ -39,14 +42,14 @@ AUTOUPDATE_UNIT="/etc/systemd/system/legacyx-cs2-autoupdate"
 # local hour so they do not cut matches short.
 AUTOUPDATE_HOUR="${AUTOUPDATE_HOUR:-5}"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
+ 
 say() { printf '==> %s\n' "$*"; }
 die() { printf '!! %s\n' "$*" >&2; exit 1; }
 need_root() { [[ $EUID -eq 0 ]] || die "Run with sudo."; }
 # As the cs2 user, in its home, with its HOME (steamcmd writes there).
 as_cs2() { runuser -u "$CS2_USER" -- env HOME="$CS2_HOME" bash -c 'cd "$HOME" && exec "$@"' _ "$@"; }
 ports() { ls "$CONF_DIR" 2>/dev/null | sed -n 's/^\([0-9]\+\)\.conf$/\1/p' | sort -n; }
-
+ 
 install_packages() {
   local build_tools="$1"
   say "System packages"
@@ -63,7 +66,7 @@ install_packages() {
   fi
   id "$CS2_USER" >/dev/null 2>&1 || useradd --create-home --shell /bin/bash "$CS2_USER"
 }
-
+ 
 install_steamcmd() {
   if [[ ! -x "$STEAMCMD_DIR/steamcmd.sh" ]]; then
     say "steamcmd"
@@ -71,7 +74,7 @@ install_steamcmd() {
     curl -fsSL https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz | as_cs2 tar -xz -C "$STEAMCMD_DIR"
   fi
 }
-
+ 
 update_cs2() {
   say "CS2 dedicated server (first time about 35 GB, takes a while)"
   as_cs2 "$STEAMCMD_DIR/steamcmd.sh" +force_install_dir "$CS2_DIR" +login anonymous +app_update 730 validate +quit
@@ -80,7 +83,7 @@ update_cs2() {
   as_cs2 ln -sf "$STEAMCMD_DIR/linux64/steamclient.so" "$CS2_HOME/.steam/sdk64/steamclient.so"
   [[ -f "$CSGO_DIR/gameinfo.gi" ]] || die "CS2 did not install: $CSGO_DIR/gameinfo.gi is missing."
 }
-
+ 
 # CS2 updates rewrite gameinfo.gi; without this line Metamod (and every plugin) is not loaded.
 patch_gameinfo() {
   local gi="$CSGO_DIR/gameinfo.gi"
@@ -90,7 +93,7 @@ patch_gameinfo() {
     say "Metamod hooked into gameinfo.gi"
   fi
 }
-
+ 
 install_metamod() {
   say "Metamod:Source 2.0"
   local name
@@ -99,10 +102,10 @@ install_metamod() {
   curl -fsSL "https://mms.alliedmods.net/mmsdrop/2.0/$name" | as_cs2 tar -xz -C "$CSGO_DIR"
   patch_gameinfo
 }
-
+ 
 latest_css_release() { curl -fsSL https://api.github.com/repos/roflmuffin/CounterStrikeSharp/releases/latest; }
 release_tag() { grep -oE '"tag_name": *"[^"]*"' | head -n1 | sed 's/.*"\([^"]*\)"$/\1/'; }
-
+ 
 install_counterstrikesharp() {
   say "CounterStrikeSharp (with .NET runtime)"
   local release url tag tmp
@@ -129,7 +132,61 @@ install_counterstrikesharp() {
   mkdir -p "$STATE_DIR"
   printf '%s\n' "$tag" > "$STATE_DIR/css-version"
 }
-
+ 
+# MultiAddonManager (Source2ZE): a Metamod plugin that makes clients download Workshop addons on connect
+# (mm_client_extra_addons) and can mount server-side ones (mm_extra_addons). Not fatal if it cannot be
+# installed: the servers run fine without it, only Workshop addons (custom Panorama UI) are missing.
+latest_mam_release() { curl -fsSL https://api.github.com/repos/Source2ZE/MultiAddonManager/releases/latest; }
+ 
+install_multiaddonmanager() {
+  say "MultiAddonManager"
+  local release url tag tmp file
+  release="$(latest_mam_release)" || { say "MultiAddonManager: GitHub not reachable, skipped."; return 0; }
+  url="$(printf '%s' "$release" \
+    | { grep -oiE '"browser_download_url": *"[^"]*linux[^"]*\.(tar\.gz|zip)"' || true; } | head -n1 | sed 's/.*"\(https[^"]*\)"/\1/')"
+  tag="$(printf '%s' "$release" | release_tag || true)"
+  if [[ -z "$url" ]]; then say "MultiAddonManager: no Linux package in the latest release, skipped."; return 0; fi
+  tmp="$(mktemp -d)"
+  file="$tmp/mam.${url##*.}"
+  [[ "$url" == *.tar.gz ]] && file="$tmp/mam.tar.gz"
+  if ! curl -fsSL "$url" -o "$file"; then rm -rf "$tmp"; say "MultiAddonManager: download failed, skipped."; return 0; fi
+  mkdir -p "$tmp/pkg"
+  if [[ "$file" == *.tar.gz ]]; then tar -xzf "$file" -C "$tmp/pkg"; else unzip -oq "$file" -d "$tmp/pkg"; fi
+  # The package is laid out for game/csgo (addons/, cfg/). Program files are replaced on every run;
+  # cfg/ keeps whatever is already there (our mm_client_extra_addons line).
+  [[ -d "$tmp/pkg/addons" ]] && cp -a "$tmp/pkg/addons/." "$CSGO_DIR/addons/"
+  [[ -d "$tmp/pkg/cfg" ]] && cp -an "$tmp/pkg/cfg/." "$CSGO_DIR/cfg/" 2>/dev/null || true
+  chown -R "$CS2_USER:$CS2_USER" "$CSGO_DIR/addons" "$CSGO_DIR/cfg"
+  rm -rf "$tmp"
+  if [[ -z "$(find "$CSGO_DIR/addons" -iname 'multiaddonmanager*' -print -quit 2>/dev/null)" ]]; then
+    say "MultiAddonManager: the package had an unexpected layout, check $CSGO_DIR/addons by hand."
+    return 0
+  fi
+  mkdir -p "$STATE_DIR"
+  printf '%s\n' "$tag" > "$STATE_DIR/mam-version"
+  say "MultiAddonManager ${tag:-installed} (in the console: meta list)"
+}
+ 
+# Workshop addon IDs that every client downloads on connect. Written to MultiAddonManager's own cfg.
+cmd_client_addons() {
+  need_root
+  local cfg="$CSGO_DIR/cfg/multiaddonmanager/multiaddonmanager.cfg" ids="${1:-}"
+  if [[ -z "$ids" ]]; then
+    grep -E '^[[:space:]]*mm_client_extra_addons' "$cfg" 2>/dev/null || echo "mm_client_extra_addons is not set."
+    return 0
+  fi
+  [[ "$ids" == none ]] && ids=""
+  [[ -z "$ids" || "$ids" =~ ^[0-9]+(,[0-9]+)*$ ]] || die "Usage: $0 client-addons 3807024759[,id,...] | none"
+  [[ -d "$CSGO_DIR/addons" ]] || die "Run install first."
+  mkdir -p "$(dirname "$cfg")"
+  touch "$cfg"
+  sed -i '/^[[:space:]]*mm_client_extra_addons/d' "$cfg"
+  printf 'mm_client_extra_addons "%s"\n' "$ids" >> "$cfg"
+  chown -R "$CS2_USER:$CS2_USER" "$(dirname "$cfg")"
+  say "mm_client_extra_addons \"$ids\" written to $cfg"
+  say "Takes effect after a restart: sudo systemctl restart cs2@<port> (clients that join later download it)."
+}
+ 
 install_legacyx() {
   local package="$1" env_file="$2" args=()
   [[ -n "$package" ]] && args+=(--package "$package")
@@ -138,7 +195,7 @@ install_legacyx() {
   "$REPO/scripts/deploy.sh" "${args[@]}" "$CSGO_DIR"
   chown -R "$CS2_USER:$CS2_USER" "$CSGO_DIR/addons" "$CSGO_DIR/cfg"
 }
-
+ 
 # WeaponPaints' signature can break with a CS2 update: check it against this build's libserver.so and,
 # if needed, take a maintained one that matches exactly once (scripts/fix-gamedata.py). Returns 0 when
 # the signature is valid, 3 when no source has one for this build yet (retried by the timer).
@@ -151,14 +208,14 @@ fix_gamedata() {
   if [[ $rc -eq 3 ]]; then : > "$STATE_DIR/gamedata-pending"; else rm -f "$STATE_DIR/gamedata-pending"; fi
   return $rc
 }
-
+ 
 write_unit() {
   cat > "$UNIT" <<EOF
 [Unit]
 Description=LEGACY-X CS2 server on port %i
 After=network-online.target
 Wants=network-online.target
-
+ 
 [Service]
 Type=simple
 User=$CS2_USER
@@ -168,13 +225,13 @@ ExecStart=/bin/bash -c 'exec $CS2_DIR/game/cs2.sh -dedicated -port %i -maxplayer
 Restart=on-failure
 RestartSec=10
 LimitNOFILE=100000
-
+ 
 [Install]
 WantedBy=multi-user.target
 EOF
   systemctl daemon-reload
 }
-
+ 
 game_args() {
   case "$1" in
     competitive) echo "+game_type 0 +game_mode 1" ;;
@@ -184,7 +241,7 @@ game_args() {
     *) die "Mode must be competitive, wingman, casual or deathmatch." ;;
   esac
 }
-
+ 
 # Replaces (or adds) KEY=value in the shared .env; an empty value leaves the file as it is.
 set_env_value() {
   local key="$1" value="$2" env="$CSGO_DIR/addons/counterstrikesharp/.env"
@@ -197,13 +254,13 @@ set_env_value() {
   chmod 600 "$env"
   say "$key=$value"
 }
-
+ 
 open_port() {
   if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
     ufw allow "$1" >/dev/null && say "Firewall: port $1 open (TCP and UDP)"
   fi
 }
-
+ 
 cmd_install() {
   need_root
   local package="" env_file=""
@@ -221,6 +278,7 @@ cmd_install() {
   update_cs2
   install_metamod
   install_counterstrikesharp
+  install_multiaddonmanager
   install_legacyx "$package" "$env_file"
   fix_gamedata || true
   mkdir -p "$CONF_DIR"
@@ -228,7 +286,7 @@ cmd_install() {
   cmd_autoupdate on
   say "Installed. Next, add each server: sudo $0 add 27015 <GSLT> competitive de_dust2"
 }
-
+ 
 cmd_add() {
   need_root
   local port="${1:-}" gslt="${2:-}" mode="${3:-competitive}" map="${4:-de_dust2}" maxplayers="${5:-10}" site_mode="${6:-}"
@@ -258,7 +316,7 @@ EOF
   say "cs2@$port started ($mode, $map, $maxplayers players). Console: $0 logs $port"
   say "On the website it is srv-$port (it appears within 30 s of starting)."
 }
-
+ 
 cmd_update() {
   need_root
   local package=""
@@ -273,6 +331,7 @@ cmd_update() {
   update_cs2
   install_metamod
   install_counterstrikesharp
+  install_multiaddonmanager
   if [[ -n "$package" ]] || command -v dotnet >/dev/null; then
     install_legacyx "$package" ""
   else
@@ -283,7 +342,7 @@ cmd_update() {
   say "Updated. Restarted: ${running[*]:-none}"
   announce_update "$build_before" "$css_before" "${running[*]:-none}"
 }
-
+ 
 # Discord (scripts/announce.sh): what this update changed, from facts only: the CS2 build and
 # CounterStrikeSharp version before and after, and the plugin commits pulled since ANNOUNCE_FROM.
 ANNOUNCE_FROM=""
@@ -296,7 +355,7 @@ announce_update() {
   bash "$REPO/scripts/announce.sh" --title "Game servers updated" "${lines[@]}" \
     --commits "$REPO" "$ANNOUNCE_FROM" "$(git_repo rev-parse HEAD 2>/dev/null)" --footer "Restarted: $3" || true
 }
-
+ 
 # By hand, now: pull this repository (new plugin commits) and run a full update.
 cmd_deploy() {
   need_root
@@ -306,19 +365,19 @@ cmd_deploy() {
   say "Plugins at $(git_repo log -1 --format='%h %s')"
   cmd_update "$@"
 }
-
+ 
 installed_cs2_build() {
   { sed -n 's/^[[:space:]]*"buildid"[[:space:]]*"\([0-9]*\)".*/\1/p' "$CS2_DIR/steamapps/appmanifest_730.acf" 2>/dev/null || true; } | head -n1
 }
-
+ 
 latest_cs2_build() {
   # Empty when Steam cannot be reached: the check then skips CS2 this round.
   { as_cs2 "$STEAMCMD_DIR/steamcmd.sh" +login anonymous +app_info_update 1 +app_info_print 730 +quit 2>/dev/null || true; } \
     | awk '/"branches"/{b=1} b && /"public"/{p=1} p && /"buildid"/{gsub(/[^0-9]/, "", $2); print $2; exit}'
 }
-
+ 
 git_repo() { git -c safe.directory="$REPO" -C "$REPO" "$@"; }
-
+ 
 # One pass of the automatic updater (the timer runs it every 10 minutes). A new CS2 build is applied at
 # once (players on the new client cannot join an outdated server anyway); a CounterStrikeSharp release
 # that follows it is applied at once too, since plugins are down until it arrives. Everything else
@@ -334,7 +393,7 @@ cmd_autoupdate_check() {
   want="$(latest_cs2_build)"
   css_have="$(cat "$STATE_DIR/css-version" 2>/dev/null || true)"
   css_want="$(latest_css_release 2>/dev/null | release_tag || true)"
-
+ 
   if [[ -n "$want" && -n "$have" && "$have" != "$want" ]]; then
     reasons+=("CS2 build $have -> $want")
     urgent=yes
@@ -351,7 +410,7 @@ cmd_autoupdate_check() {
       pull=yes
     fi
   fi
-
+ 
   # Skins were left off by a CS2 update because no maintained signature matched yet: try again. A fix is
   # already written to disk; the servers load it on their next start (at the quiet hour, like any
   # non-urgent change, since skins are cosmetic and a restart would cut matches).
@@ -363,7 +422,7 @@ cmd_autoupdate_check() {
       reasons+=("WeaponPaints signature fixed")
     fi
   fi
-
+ 
   [[ ${#reasons[@]} -gt 0 ]] || exit 0
   if [[ "$urgent" == no && "$(date +%-H)" != "$AUTOUPDATE_HOUR" ]]; then
     say "Update waiting for ${AUTOUPDATE_HOUR}:00: ${reasons[*]}"
@@ -388,7 +447,7 @@ cmd_autoupdate_check() {
     rm -f "$STATE_DIR/awaiting-css"
   fi
 }
-
+ 
 cmd_autoupdate() {
   need_root
   case "${1:-}" in
@@ -398,7 +457,7 @@ cmd_autoupdate() {
 Description=LEGACY-X CS2 automatic update check
 After=network-online.target
 Wants=network-online.target
-
+ 
 [Service]
 Type=oneshot
 Environment=AUTOUPDATE_HOUR=$AUTOUPDATE_HOUR
@@ -407,11 +466,11 @@ EOF
       cat > "$AUTOUPDATE_UNIT.timer" <<EOF
 [Unit]
 Description=LEGACY-X CS2 automatic update check every 10 minutes
-
+ 
 [Timer]
 OnBootSec=5min
 OnUnitActiveSec=10min
-
+ 
 [Install]
 WantedBy=timers.target
 EOF
@@ -427,7 +486,7 @@ EOF
     *) die "Usage: $0 autoupdate on|off|check" ;;
   esac
 }
-
+ 
 cmd_remove() {
   need_root
   local port="${1:-}"
@@ -436,7 +495,7 @@ cmd_remove() {
   rm -f "$CONF_DIR/$port.conf"
   say "cs2@$port removed."
 }
-
+ 
 cmd_status() {
   local any=0
   for port in $(ports); do
@@ -445,15 +504,17 @@ cmd_status() {
   done
   [[ $any -eq 1 ]] || echo "No servers yet: sudo $0 add <port> <GSLT>"
 }
-
+ 
 case "${1:-}" in
   install) shift; cmd_install "$@" ;;
   add) shift; cmd_add "$@" ;;
   update) shift; cmd_update "$@" ;;
   deploy) shift; cmd_deploy "$@" ;;
   autoupdate) shift; cmd_autoupdate "$@" ;;
+  client-addons) shift; cmd_client_addons "$@" ;;
   remove) shift; cmd_remove "$@" ;;
   status) cmd_status ;;
   logs) [[ -n "${2:-}" ]] || die "Usage: $0 logs <port>"; journalctl -u "cs2@$2" -f ;;
   *) sed -n '2,/^set -euo/{/^set -euo/!p}' "$0"; exit 1 ;;
 esac
+ 
