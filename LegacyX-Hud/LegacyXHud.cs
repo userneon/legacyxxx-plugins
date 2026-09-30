@@ -18,10 +18,21 @@ namespace LegacyXHud;
 /// </summary>
 public sealed class LegacyXHud : BasePlugin
 {
-    // The source path of the layout, extension included (CONTRACT.md). If nothing shows in game, try
-    // LEGACYX_HUD_NOTIFY_LAYOUT=panorama/layout/custom_game/legacyx_notify.vxml_c in the .env:
-    // PanoramaManager's own example uses the compiled name.
-    private const string DefaultNotifyLayout = "panorama/layout/custom_game/legacyx_notify.xml";
+    // PanoramaManager's own examples spawn the compiled name (.vxml_c). The addon CONTRACT.md said the
+    // source .xml, untested. LEGACYX_HUD_NOTIFY_LAYOUT in the .env overrides it if the other one is right.
+    private const string DefaultNotifyLayout = "panorama/layout/custom_game/legacyx_notify.vxml_c";
+
+    // What PanelHandle needs to know about legacyx_notify.xml. PanoramaManager writes every text
+    // (dialog variable) on the panel with RootPanelId and toggles by panel id, so the layout has one
+    // inner wrapper with this id and its Labels read {s:<label id>}. Nothing here takes the mouse and
+    // there is no menu row pool. Only a player with an open session gets the entity and can be written
+    // to, so every player is Open()ed before the first text or class is set.
+    private static readonly LayoutContract NotifyContract = new()
+    {
+        RootPanelId = "lx_notify",
+        RowCount = 0,
+        CaptureInput = false,
+    };
 
     private bool enabled;
     private string notifyLayout = DefaultNotifyLayout;
@@ -91,7 +102,7 @@ public sealed class LegacyXHud : BasePlugin
         if (notify is not null) return notify;
         try
         {
-            notify = Panorama.Spawn(notifyLayout);
+            notify = Panorama.Spawn(notifyLayout, NotifyContract);
             Console.WriteLine($"[{ModuleName}] Spawned {notifyLayout}: {(notify is null ? "null handle" : "ok")}");
             // Every panel of legacyx_notify.xml is hittest="false": a read-only layout never takes the cursor.
         }
@@ -112,7 +123,9 @@ public sealed class LegacyXHud : BasePlugin
             Console.WriteLine($"[{ModuleName}] Announce for {player.PlayerName} skipped: layout is not spawned");
             return;
         }
-        Console.WriteLine($"[{ModuleName}] Announce to slot {player.Slot}: \"{title}\"");
+        // SetVariableFor / SetClassFor do nothing for a player without a session: open the layout first.
+        if (!panel.IsOpenFor(player)) panel.Open(player);
+        Console.WriteLine($"[{ModuleName}] Announce to slot {player.Slot}: \"{title}\" (open: {panel.IsOpenFor(player)})");
         panel.SetVariableFor(player, "ann_title", title);
         panel.SetVariableFor(player, "ann_body", body);
         panel.SetClassFor(player, "ann", "open", true);

@@ -17,8 +17,8 @@ player a few seconds after joining, and `!lxhud` shows it again. Rank card, matc
 ## If nothing shows
 
 1. Console at start: `[LEGACY-X Hud] Ready. Layout ...`, or `Could not spawn ...: <reason>`.
-2. Try the compiled layout name in `.env`: `LEGACYX_HUD_NOTIFY_LAYOUT=panorama/layout/custom_game/legacyx_notify.vxml_c`
-   (CONTRACT.md says the source `.xml` path, PanoramaManager's example uses `.vxml_c`; the real one is found by testing).
+2. The default layout path is the compiled name (`...legacyx_notify.vxml_c`, as PanoramaManager's examples use). If that is wrong for this game build, set
+   `LEGACYX_HUD_NOTIFY_LAYOUT=panorama/layout/custom_game/legacyx_notify.xml` in the .env.
 3. `css_panorama_diag` (from PanoramaManager) shows the entity and per-player state.
 4. The player must have downloaded the addon: map change once after the first join.
 
