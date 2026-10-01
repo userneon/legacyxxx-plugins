@@ -21,6 +21,8 @@
 #       every 10 minutes (on by default after install): a new CS2 build, and the CounterStrikeSharp release
 #       that follows it, are applied at once; other updates (plugins from git, CounterStrikeSharp alone)
 #       wait for AUTOUPDATE_HOUR (default 5, local time). Log: journalctl -u legacyx-cs2-autoupdate
+#       A new CS2 build is announced on Discord when found ("CS2 update released") and again once CounterStrikeSharp
+#       and the plugin signatures work with it and the servers are back ("CS2 update finished").
 #   sudo ./scripts/cs2-host.sh client-addons [id,id,...]
 #       Workshop addon IDs every player downloads on connect (MultiAddonManager mm_client_extra_addons),
 #       e.g. the custom Panorama UI. No IDs prints the current value; "none" clears it. Restart the servers after.
@@ -434,6 +436,25 @@ git_repo() { git -c safe.directory="$REPO" -C "$REPO" "$@"; }
 # once (players on the new client cannot join an outdated server anyway); a CounterStrikeSharp release
 # that follows it is applied at once too, since plugins are down until it arrives. Everything else
 # (a newer CounterStrikeSharp on its own, new LEGACY-X plugin commits) waits for AUTOUPDATE_HOUR.
+# Discord, for a CS2 update from the autoupdater: one message when the new build is found, one when the servers
+# run it again with everything working (CounterStrikeSharp and the plugin signatures fixed). A CS2 update often
+# breaks plugins until CounterStrikeSharp or a signature catches up, so the second message can come later.
+announce_cs2_found() {
+  local from="$1" to="$2"
+  printf '%s\n' "$to" > "$STATE_DIR/cs2-update-open"
+  bash "$REPO/scripts/announce.sh" --title "CS2 update released" --line "CS2 build $from → $to" \
+    --line "The game servers are being updated and restarted. Some plugins may stay off until they support the new build." || true
+}
+announce_cs2_done() {
+  [[ -f "$STATE_DIR/cs2-update-open" ]] || return 0
+  [[ -f "$STATE_DIR/awaiting-css" || -f "$STATE_DIR/gamedata-pending" || -f "$STATE_DIR/gamedata-restart" ]] && return 0
+  local build
+  build="$(cat "$STATE_DIR/cs2-update-open")"
+  rm -f "$STATE_DIR/cs2-update-open"
+  bash "$REPO/scripts/announce.sh" --title "CS2 update finished" --line "The game servers run CS2 build $build again." \
+    --line "CounterStrikeSharp and the plugins are working." || true
+}
+
 cmd_autoupdate_check() {
   need_root
   exec 9>/run/legacyx-cs2-update.lock
@@ -481,6 +502,9 @@ cmd_autoupdate_check() {
     exit 0
   fi
   say "Updating: ${reasons[*]}"
+  if [[ -n "$want" && -n "$have" && "$have" != "$want" && "$(cat "$STATE_DIR/cs2-update-open" 2>/dev/null)" != "$want" ]]; then
+    announce_cs2_found "$have" "$want"
+  fi
   rm -f "$STATE_DIR/gamedata-restart"
   if [[ "$restart_only" == yes ]]; then
     local restarted=()
@@ -489,6 +513,7 @@ cmd_autoupdate_check() {
     done
     bash "$REPO/scripts/announce.sh" --title "Game servers restarted" --line "WeaponPaints signature fixed" \
       --footer "Restarted: ${restarted[*]:-none}" || true
+    announce_cs2_done
     return 0
   fi
   ANNOUNCE_FROM="$(git_repo rev-parse HEAD)"
@@ -498,6 +523,7 @@ cmd_autoupdate_check() {
   if [[ -f "$STATE_DIR/awaiting-css" && "$(cat "$STATE_DIR/css-version" 2>/dev/null)" != "$(cat "$STATE_DIR/awaiting-css")" ]]; then
     rm -f "$STATE_DIR/awaiting-css"
   fi
+  announce_cs2_done
 }
  
 cmd_autoupdate() {
