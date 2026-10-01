@@ -17,7 +17,7 @@ namespace LegacyXHud;
 // votes count; most votes wins, a tie or no votes is Stay. Votes are secret (nothing shows a count or a name).
 public sealed partial class LegacyXHud
 {
-    private const int KnifeSeconds = 5;
+    private const int KnifeSeconds = 10;
 
     private sealed class Vote
     {

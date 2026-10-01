@@ -2,6 +2,7 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Timers;
 using LegacyX.Shared.Configuration;
 using PanoramaManager;
@@ -44,6 +45,7 @@ public sealed partial class LegacyXHud : BasePlugin
     private string matchLayout = LayoutDir + "legacyx_match.vxml_c";
     private string knifeLayout = LayoutDir + "legacyx_knife.vxml_c";
     private bool rankCardEnabled = true;
+    private string serverName = "";
     private PanelHandle? notify;
     private PanelHandle? match;
     private PanelHandle? knife;
@@ -65,6 +67,8 @@ public sealed partial class LegacyXHud : BasePlugin
         matchLayout = env.Get("LEGACYX_HUD_MATCH_LAYOUT", matchLayout);
         knifeLayout = env.Get("LEGACYX_HUD_KNIFE_LAYOUT", knifeLayout);
         rankCardEnabled = env.GetModuleBoolean("HUD", "RANK_CARD", true);
+        // The name players know this server by (LEGACYX_<port>_SERVER_NAME or LEGACYX_SERVER_NAME), shown on the welcome card.
+        serverName = env.Get("LEGACYX_SERVER_NAME", "").Trim();
         // Same API access the Community plugin uses for the rank card and the Tab icons.
         apiBase = env.Get("LEGACYX_API_BASE_URL", "").TrimEnd('/');
         pluginId = env.GetModule("COMMUNITY", "PLUGIN_ID", "legacyx-community");
@@ -112,8 +116,9 @@ public sealed partial class LegacyXHud : BasePlugin
         AddTimer(5f, () =>
         {
             var joined = Utilities.GetPlayerFromSlot(slot);
-            if (joined is { IsValid: true, IsBot: false })
-                Announce(joined, $"Welcome to LEGACY-X, {joined.PlayerName}", "Custom HUD is on. Type !lxhud to test it again.");
+            if (joined is not { IsValid: true, IsBot: false }) return;
+            if (profiles.TryGetValue(steamId, out var known)) Welcome(joined, known);
+            else _ = WelcomeAfterLookupAsync(slot, steamId);
         });
         return HookResult.Continue;
     }
@@ -226,6 +231,43 @@ public sealed partial class LegacyXHud : BasePlugin
         panel.SetVariableFor(player, "ann_title", title);
         panel.SetVariableFor(player, "ann_body", body);
         Flash(panel, player, "ann", 7f);
+    }
+
+    /// <summary>The rank was not loaded yet: ask once more, then show the card with it (or without, for a player with no rank).</summary>
+    private async Task WelcomeAfterLookupAsync(int slot, ulong steamId)
+    {
+        var profile = await FetchProfileAsync(steamId);
+        Server.NextFrame(() =>
+        {
+            var joined = Utilities.GetPlayerFromSlot(slot);
+            if (joined is not { IsValid: true, IsBot: false }) return;
+            if (profile is not null) profiles[steamId] = profile;
+            Welcome(joined, profile);
+        });
+    }
+
+    /// <summary>
+    /// legacyx_notify "wc": the welcome card in the middle of the screen for 7 seconds, with the server's name, the
+    /// player's name and rank in one box. A player without a rank yet gets the server and the name only.
+    /// </summary>
+    private void Welcome(CCSPlayerController player, Profile? profile)
+    {
+        var panel = EnsureNotify();
+        if (panel is null || !OpenFor(panel, player)) return;
+        var name = serverName.Length > 0 ? serverName : (ConVar.Find("hostname")?.StringValue ?? "LEGACY-X");
+        panel.SetVariableFor(player, "wc_server", name);
+        panel.SetVariableFor(player, "wc_name", player.PlayerName);
+        var ranked = profile is not null;
+        panel.SetClassFor(player, "wc_emblem", "hidden", !ranked);
+        panel.SetClassFor(player, "wc_rankrow", "hidden", !ranked);
+        if (profile is not null)
+        {
+            panel.SetVariableFor(player, "wc_rank", profile.RankName);
+            panel.SetVariableFor(player, "wc_exp", $"{profile.Exp:N0} EXP");
+            SetState(panel, player, "wc_emblem", "rank", $"rank-{profile.RankId}");
+            SetState(panel, player, "wc_rank", "tier", TierClass(profile.RankName));
+        }
+        Flash(panel, player, "wc", 7f);
     }
 
     /// <summary>legacyx_notify "toast": one short line.</summary>

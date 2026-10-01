@@ -4,9 +4,9 @@ Shows the LEGACY-X Workshop HUD (repository `legacyxxx-workshop`) to players. Th
 plugin creates the `custom_hud_layout` entity through **PanoramaManager** and fills it per player: texts by
 Label id, states by toggling classes. Every id is listed in the addon's `CONTRACT.md`.
 
-**Screens** (0.2.0): welcome banner, `!lxhud` test, rank card at round start, result card of every counted match
+**Screens** (0.2.0): welcome card (server, player and rank in one box, centre of the screen, 7 s), `!lxhud` test, rank card at round start, result card of every counted match
 (then a compact card until the next live round), rank up / down, the "Skins updated." toast, and the knife-round
-side vote by keyboard (**A / D** move, **E** confirm; moving again takes the confirmation back; only confirmed votes
+side vote by keyboard, 10 seconds (**A / D** move, **E** confirm; moving again takes the confirmation back; only confirmed votes
 count, a tie or none is Stay). The `!admin` panel is not driven yet.
 
 Other plugins call it through server commands: `lx_hud_toast <steamId64> <ok|info> <text>` (LegacyX-WeaponPaints),
