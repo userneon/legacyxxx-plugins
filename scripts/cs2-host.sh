@@ -15,8 +15,8 @@
 #   sudo ./scripts/cs2-host.sh deploy
 #       git pull of this repository first, then update: new plugin commits live now, not at 05:00.
 #   sudo ./scripts/cs2-host.sh env
-#       copy this repository's .env (edit it with `nano .env`; deploy and update copy it too) to where the
-#       plugins read it, then restart the servers you changed.
+#       make this repository's .env (edit it with `nano .env`) the file the plugins read: the servers' .env
+#       becomes a link to it. Run once; after that a restart is all an edit needs.
 #   sudo ./scripts/cs2-host.sh autoupdate on|off|check
 #       every 10 minutes (on by default after install): a new CS2 build, and the CounterStrikeSharp release
 #       that follows it, are applied at once; other updates (plugins from git, CounterStrikeSharp alone)
@@ -260,24 +260,45 @@ set_env_value() {
   # The repository's .env is the one people edit; keep it and the servers' copy in step.
   for file in "$source" "$env"; do
     [[ -f "$file" ]] || continue
-    sed -i "/^${key}=/d" "$file"
+    sed -i --follow-symlinks "/^${key}=/d" "$file"
     printf '%s=%s\n' "$key" "$value" >> "$file"
   done
   [[ -f "$env" ]] || sync_env
-  # sed -i writes a new file owned by root; the servers run as $CS2_USER and must still read it.
-  chown "$CS2_USER:$CS2_USER" "$env"
-  chmod 600 "$env"
+  if [[ -L "$env" ]]; then
+    # Linked to the repository's .env: sed -i made it a new file, keep it readable by the servers' user.
+    chgrp "$CS2_USER" "$source"
+    chmod 640 "$source"
+  else
+    # sed -i writes a new file owned by root; the servers run as $CS2_USER and must still read it.
+    chown "$CS2_USER:$CS2_USER" "$env"
+    chmod 600 "$env"
+  fi
   say "$key=$value"
 }
  
-# The .env in this repository (edit it with `nano .env`) is the servers' settings file: copy it to where
-# the plugins read it. deploy and update do this too; this is the quick way after a small edit.
+# The .env in this repository (edit it with `nano .env`) is the one the plugins read: the servers' copy
+# addons/counterstrikesharp/.env is a link to it, so an edit applies at the next server start with no copying.
+# The servers run as $CS2_USER, so that user is given read access to the file and passage through its folders
+# (this repository usually sits under /root, which is closed to everyone else).
 sync_env() {
-  local source="$REPO/.env" target="$CSGO_DIR/addons/counterstrikesharp/.env"
+  local source="$REPO/.env" target="$CSGO_DIR/addons/counterstrikesharp/.env" dir
   [[ -f "$source" ]] || die "No $source: create it from .env.example first."
   [[ -d "$CSGO_DIR/addons/counterstrikesharp" ]] || die "Run install first."
-  install -m 600 -o "$CS2_USER" -g "$CS2_USER" "$source" "$target"
-  say "$source -> $target"
+  chgrp "$CS2_USER" "$source"
+  chmod 640 "$source"
+  dir="$(dirname "$source")"
+  while [[ "$dir" != "/" ]]; do
+    if command -v setfacl >/dev/null; then setfacl -m "u:$CS2_USER:x" "$dir"; else chmod o+x "$dir"; fi
+    dir="$(dirname "$dir")"
+  done
+  if [[ -f "$target" && ! -L "$target" ]]; then
+    mv "$target" "$target.before-link"
+    chmod 600 "$target.before-link"
+    say "The servers' old .env is kept as $target.before-link (it holds secrets: delete it once the link works)."
+  fi
+  ln -sfn "$source" "$target"
+  sudo -u "$CS2_USER" test -r "$target" || die "$CS2_USER cannot read $source: check the permissions of its folders."
+  say "$target -> $source"
 }
 
 cmd_env() {

@@ -41,7 +41,7 @@ creates the token and writes the complete `.env`; unzip the package into `game/c
 file as `addons/counterstrikesharp/.env`, restart. Nothing else to fill in.
 
 On a host set up with `scripts/cs2-host.sh`, edit the `.env` in this repository's root (`cd legacyxxx-plugins && nano .env`);
-`deploy`, `update` and `sudo ./scripts/cs2-host.sh env` copy it to `addons/counterstrikesharp/.env`, where the plugins read it.
+Run `sudo ./scripts/cs2-host.sh env` once: it makes `addons/counterstrikesharp/.env` a link to that file, so an edit only needs a server restart.
 
 Every CS2 server on a machine can share one install and that one `.env`: each process knows itself
 by the port it was started with (`-port 27016`), so its id is `srv-27016`, its address

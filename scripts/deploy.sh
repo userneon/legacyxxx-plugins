@@ -82,7 +82,9 @@ for dir in "${targets[@]}"; do
   cp -a "$src/cfg/." "$dir/cfg/"
   if [[ -d "$kept" ]]; then cp -a "$kept/." "$dir/cfg/"; fi
   env_target="$dir/addons/counterstrikesharp/.env"
-  if [[ -n "$env_file" ]]; then
+  if [[ -n "$env_file" && "$env_target" -ef "$env_file" ]]; then
+    echo "    .env linked to $env_file"
+  elif [[ -n "$env_file" ]]; then
     install -m 600 "$env_file" "$env_target"
     echo "    .env installed"
   elif [[ -f "$env_target" ]]; then
