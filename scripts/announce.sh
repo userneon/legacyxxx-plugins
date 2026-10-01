@@ -7,7 +7,7 @@
 #   sudo ./scripts/announce.sh setup      save the channel's webhook (typed, not shown), then post a test
 #   sudo ./scripts/announce.sh test       post a test message
 #   ./scripts/announce.sh --title "Website updated" [--commits <repo-dir> <from> <to>] [--line "text"]…
-#                         [--footer "text"] [--dry-run]
+#                         [--footer "text"] [--image banner.png] [--dry-run]
 #
 # The webhook lives in /etc/legacyx/announce.env (root only). Without it, or when Discord cannot be
 # reached, nothing is posted and the update that called this is not affected: this always exits 0.
@@ -35,9 +35,9 @@ commit_subjects() {
 
 # One embed: the title, a bullet per line (Discord markdown escaped, no mentions), a footer and the time.
 payload() {
-  python3 - "$1" "$2" "$3" <<'PY'
+  python3 - "$1" "$2" "$3" "${4:-}" <<'PY'
 import datetime, json, re, sys
-title, footer, body = sys.argv[1], sys.argv[2], sys.argv[3]
+title, footer, body, image = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 lines = [line.strip() for line in body.split("\n") if line.strip()]
 escape = lambda text: re.sub(r"([\\*_~`|>])", r"\\\1", text)
 shown = lines[:15]
@@ -46,6 +46,8 @@ if len(lines) > len(shown):
     description += f"\nand {len(lines) - len(shown)} more."
 embed = {"title": title[:256], "description": description[:4000], "color": 0xE11D48,
          "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+if image:
+    embed["image"] = {"url": "attachment://banner.png"}
 if footer:
     embed["footer"] = {"text": footer[:200]}
 print(json.dumps({"username": "LEGACY-X", "allowed_mentions": {"parse": []}, "embeds": [embed]}))
@@ -53,9 +55,10 @@ PY
 }
 
 post() {
-  local title="$1" footer="$2" body="$3" dry="$4" url json
+  local title="$1" footer="$2" body="$3" dry="$4" image="${5:-}" url json
   command -v python3 >/dev/null || { say "python3 is missing; not posted."; return 0; }
-  json="$(payload "$title" "$footer" "$body")" || { say "could not build the message; not posted."; return 0; }
+  [[ -n "$image" && ! -r "$image" ]] && image=""
+  json="$(payload "$title" "$footer" "$body" "$image")" || { say "could not build the message; not posted."; return 0; }
   if [[ "$dry" == yes ]]; then printf '%s\n' "$json"; return 0; fi
   url="$(webhook)"
   if [[ -z "$url" ]]; then
@@ -64,8 +67,10 @@ post() {
     return 0
   fi
   # The URL goes to curl on stdin, so it never shows in the process list or in an error message.
-  if printf 'url = "%s"\n' "$url" | curl -fsS -m 10 -o /dev/null -H 'content-type: application/json' \
-      --data-binary "$json" -K - 2>/dev/null; then
+  local form=(-H 'content-type: application/json' --data-binary "$json")
+  # With a banner the message goes as a form: the JSON plus the picture it points to.
+  if [[ -n "$image" ]]; then form=(-F "payload_json=$json" -F "files[0]=@$image;filename=banner.png;type=image/png"); fi
+  if printf 'url = "%s"\n' "$url" | curl -fsS -m 20 -o /dev/null "${form[@]}" -K - 2>/dev/null; then
     say "posted \"$title\"."
   else
     say "Discord did not accept the message; the update itself is done."
@@ -91,11 +96,12 @@ case "${1:-}" in
     ;;
 esac
 
-title="" footer="" dry=no lines=()
+title="" footer="" image="" dry=no lines=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --title) title="${2:-}"; shift 2 ;;
     --footer) footer="${2:-}"; shift 2 ;;
+    --image) image="${2:-}"; shift 2 ;;
     --line) [[ -n "${2:-}" ]] && lines+=("$2"); shift 2 ;;
     --commits)
       while IFS= read -r subject; do [[ -n "$subject" ]] && lines+=("$subject"); done \
@@ -110,5 +116,5 @@ if [[ ${#lines[@]} -eq 0 ]]; then
   say "nothing to announce (no code changes)."
   exit 0
 fi
-post "$title" "$footer" "$(printf '%s\n' "${lines[@]}")" "$dry"
+post "$title" "$footer" "$(printf '%s\n' "${lines[@]}")" "$dry" "$image"
 exit 0
