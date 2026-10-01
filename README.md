@@ -40,6 +40,9 @@ One token carries all of these scopes. Setting up a machine is one command on th
 creates the token and writes the complete `.env`; unzip the package into `game/csgo/`, upload that
 file as `addons/counterstrikesharp/.env`, restart. Nothing else to fill in.
 
+On a host set up with `scripts/cs2-host.sh`, edit the `.env` in this repository's root (`cd legacyxxx-plugins && nano .env`);
+`deploy`, `update` and `sudo ./scripts/cs2-host.sh env` copy it to `addons/counterstrikesharp/.env`, where the plugins read it.
+
 Every CS2 server on a machine can share one install and that one `.env`: each process knows itself
 by the port it was started with (`-port 27016`), so its id is `srv-27016`, its address
 `<host>:27016`, and `LEGACYX_27016_…` lines apply to it alone (see `.env.example`).

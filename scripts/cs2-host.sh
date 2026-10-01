@@ -14,6 +14,9 @@
 #       stops the servers, updates CS2, Metamod, CounterStrikeSharp, MultiAddonManager and the plugins, starts them again.
 #   sudo ./scripts/cs2-host.sh deploy
 #       git pull of this repository first, then update: new plugin commits live now, not at 05:00.
+#   sudo ./scripts/cs2-host.sh env
+#       copy this repository's .env (edit it with `nano .env`; deploy and update copy it too) to where the
+#       plugins read it, then restart the servers you changed.
 #   sudo ./scripts/cs2-host.sh autoupdate on|off|check
 #       every 10 minutes (on by default after install): a new CS2 build, and the CounterStrikeSharp release
 #       that follows it, are applied at once; other updates (plugins from git, CounterStrikeSharp alone)
@@ -252,15 +255,37 @@ game_args() {
 set_env_value() {
   local key="$1" value="$2" env="$CSGO_DIR/addons/counterstrikesharp/.env"
   [[ -n "$value" ]] || return 0
-  [[ -f "$env" ]] || die "No $env yet: run install with --env first."
-  sed -i "/^${key}=/d" "$env"
-  printf '%s=%s\n' "$key" "$value" >> "$env"
+  local source="$REPO/.env"
+  [[ -f "$env" || -f "$source" ]] || die "No $env yet: run install with --env first."
+  # The repository's .env is the one people edit; keep it and the servers' copy in step.
+  for file in "$source" "$env"; do
+    [[ -f "$file" ]] || continue
+    sed -i "/^${key}=/d" "$file"
+    printf '%s=%s\n' "$key" "$value" >> "$file"
+  done
+  [[ -f "$env" ]] || sync_env
   # sed -i writes a new file owned by root; the servers run as $CS2_USER and must still read it.
   chown "$CS2_USER:$CS2_USER" "$env"
   chmod 600 "$env"
   say "$key=$value"
 }
  
+# The .env in this repository (edit it with `nano .env`) is the servers' settings file: copy it to where
+# the plugins read it. deploy and update do this too; this is the quick way after a small edit.
+sync_env() {
+  local source="$REPO/.env" target="$CSGO_DIR/addons/counterstrikesharp/.env"
+  [[ -f "$source" ]] || die "No $source: create it from .env.example first."
+  [[ -d "$CSGO_DIR/addons/counterstrikesharp" ]] || die "Run install first."
+  install -m 600 -o "$CS2_USER" -g "$CS2_USER" "$source" "$target"
+  say "$source -> $target"
+}
+
+cmd_env() {
+  need_root
+  sync_env
+  say "Takes effect after a restart: sudo systemctl restart cs2@<port>"
+}
+
 open_port() {
   if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
     ufw allow "$1" >/dev/null && say "Firewall: port $1 open (TCP and UDP)"
@@ -516,6 +541,7 @@ case "${1:-}" in
   add) shift; cmd_add "$@" ;;
   update) shift; cmd_update "$@" ;;
   deploy) shift; cmd_deploy "$@" ;;
+  env) cmd_env ;;
   autoupdate) shift; cmd_autoupdate "$@" ;;
   client-addons) shift; cmd_client_addons "$@" ;;
   remove) shift; cmd_remove "$@" ;;

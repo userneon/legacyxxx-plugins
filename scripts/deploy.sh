@@ -7,7 +7,8 @@
 #                Several servers sharing one install: give that one folder. Separate installs: list each.
 #   --package    use this prebuilt zip instead of building from source (building needs .NET 8 SDK and Node).
 #   --env        the .env from `scripts/create-game-server.mjs` in legacyxxx-backend; installed as
-#                addons/counterstrikesharp/.env in every folder. Without it an existing .env is kept.
+#                addons/counterstrikesharp/.env in every folder. Without it, a `.env` in this repository's root
+#                (the file `nano .env` edits there) is installed; without that, an existing .env is kept.
 #
 # Copies only the plugin files (addons/…, cfg/MatchZy/…); nothing else in the server folder is touched,
 # an existing .env is never overwritten unless --env is given, and servers are not restarted.
@@ -21,13 +22,17 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --package) package="${2:-}"; shift 2 ;;
     --env) env_file="${2:-}"; shift 2 ;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
     *) targets+=("$1"); shift ;;
   esac
 done
 if [[ ${#targets[@]} -eq 0 ]]; then
-  sed -n '2,15p' "$0" >&2
+  sed -n '2,17p' "$0" >&2
   exit 1
+fi
+if [[ -z "$env_file" && -f "$root/.env" ]]; then
+  env_file="$root/.env"
+  echo "==> Using $env_file as the servers' .env"
 fi
 if [[ -n "$env_file" && ! -f "$env_file" ]]; then
   echo "!! --env file not found: $env_file" >&2
