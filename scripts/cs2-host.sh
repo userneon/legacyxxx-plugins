@@ -451,7 +451,7 @@ announce_cs2_done() {
   local build
   build="$(cat "$STATE_DIR/cs2-update-open")"
   rm -f "$STATE_DIR/cs2-update-open"
-  bash "$REPO/scripts/announce.sh" --title "CS2 update finished" --image "$REPO/assets/cs2-update-finished.png" --line "The game servers run CS2 build $build again." \
+  bash "$REPO/scripts/announce.sh" --title "CS2 update finished" --banner cs2-update-finished --line "The game servers run CS2 build $build again." \
     --line "CounterStrikeSharp and the plugins are working." || true
 }
 

@@ -4,13 +4,17 @@
 # Nothing is generated or translated. Commits that only touch docs/ or *.md, and commits whose message
 # contains [skip announce], are left out; when nothing is left, nothing is posted.
 #
-#   sudo ./scripts/announce.sh setup      save the channel's webhook (typed, not shown), then post a test
-#   sudo ./scripts/announce.sh test       post a test message
+#   sudo ./scripts/announce.sh setup          save the API address and an announce token (typed, not shown), then test
+#   sudo ./scripts/announce.sh setup-webhook  instead: save a Discord channel webhook (typed, not shown), then test
+#   sudo ./scripts/announce.sh test           post a test message
 #   ./scripts/announce.sh --title "Website updated" [--commits <repo-dir> <from> <to>] [--line "text"]…
-#                         [--footer "text"] [--image banner.png] [--dry-run]
+#                         [--footer "text"] [--banner cs2-update-finished] [--dry-run]
 #
-# The webhook lives in /etc/legacyx/announce.env (root only). Without it, or when Discord cannot be
-# reached, nothing is posted and the update that called this is not affected: this always exits 0.
+# The messages go to the LEGACY-X API, and the Discord bot posts them in the channel chosen with /updates
+# (the bot also draws the banner). With only a webhook saved they are posted straight to that channel instead.
+# The settings live in /etc/legacyx/announce.env (root only). Without them, or when the API or Discord cannot
+# be reached, nothing is posted and the update that called this is not affected: this always exits 0.
+# The token: node --env-file=.env scripts/create-api-token.mjs legacyx-announce announce:write (legacyxxx-backend).
 # The ops/deploy.sh of legacyxxx-backend, -discord-bot and -frontend, and cs2-host.sh, call it.
 set -uo pipefail
 
@@ -18,6 +22,9 @@ CONF="${LEGACYX_ANNOUNCE_CONF:-/etc/legacyx/announce.env}"
 WEBHOOK_PATTERN='^https://(canary\.|ptb\.)?discord(app)?\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+$'
 
 say() { printf '==> Discord: %s\n' "$*"; }
+
+BANNER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/assets"
+setting() { [[ -r "$CONF" ]] && sed -n "s/^$1=//p" "$CONF" | tail -n1 | tr -d '\r\n ' || true; }
 
 webhook() {
   local url=""
@@ -54,9 +61,38 @@ print(json.dumps({"username": "LEGACY-X", "allowed_mentions": {"parse": []}, "em
 PY
 }
 
+# Through the API: the bot posts it. Lines go as written; the bot escapes them.
+post_api() {
+  local api="$1" token="$2" title="$3" footer="$4" body="$5" banner="$6" dry="$7" json
+  json="$(python3 - "$title" "$footer" "$body" "$banner" <<'PY'
+import json, sys
+title, footer, body, banner = sys.argv[1:5]
+lines = [line.strip()[:200] for line in body.split("\n") if line.strip()][:30]
+note = {"title": title[:80], "lines": lines}
+if footer:
+    note["footer"] = footer[:200]
+if banner:
+    note["banner"] = banner
+print(json.dumps(note))
+PY
+)" || { say "could not build the message; not posted."; return 0; }
+  if [[ "$dry" == yes ]]; then printf '%s\n' "$json"; return 0; fi
+  # The address and token go to curl on stdin, so they never show in the process list or in an error message.
+  if printf 'url = "%s/api/v1/plugin/announcements"\nheader = "authorization: Bearer %s"\n' "${api%/}" "$token" \
+      | curl -fsS -m 15 -o /dev/null -H 'content-type: application/json' --data-binary "$json" -K - 2>/dev/null; then
+    say "sent \"$title\" to the bot."
+  else
+    say "the API did not accept the message; the update itself is done."
+  fi
+}
+
 post() {
-  local title="$1" footer="$2" body="$3" dry="$4" image="${5:-}" url json
+  local title="$1" footer="$2" body="$3" dry="$4" image="${5:-}" banner="${6:-}" url json api token
   command -v python3 >/dev/null || { say "python3 is missing; not posted."; return 0; }
+  api="$(setting LEGACYX_ANNOUNCE_API_URL)"
+  token="$(setting LEGACYX_ANNOUNCE_TOKEN)"
+  if [[ -n "$api" && -n "$token" ]]; then post_api "$api" "$token" "$title" "$footer" "$body" "$banner" "$dry"; return 0; fi
+  [[ -z "$image" && -f "$BANNER_DIR/$banner.png" ]] && image="$BANNER_DIR/$banner.png"
   [[ -n "$image" && ! -r "$image" ]] && image=""
   json="$(payload "$title" "$footer" "$body" "$image")" || { say "could not build the message; not posted."; return 0; }
   if [[ "$dry" == yes ]]; then printf '%s\n' "$json"; return 0; fi
@@ -80,6 +116,21 @@ post() {
 case "${1:-}" in
   setup)
     [[ $EUID -eq 0 ]] || { echo "!! Run with sudo." >&2; exit 1; }
+    echo "The LEGACY-X API address (e.g. https://api.legacyx.cc) and a token with the announce:write scope."
+    read -rp "API address: " api
+    [[ "$api" =~ ^https://[A-Za-z0-9.-]+(:[0-9]+)?/?$ ]] || { echo "!! That is not an https address." >&2; exit 1; }
+    read -rsp "Token: " token; echo
+    [[ "$token" =~ ^[A-Za-z0-9_-]{20,}$ ]] || { echo "!! That does not look like a token." >&2; exit 1; }
+    mkdir -p "$(dirname "$CONF")"
+    old="$(sed -n 's/^DISCORD_ANNOUNCE_WEBHOOK=//p' "$CONF" 2>/dev/null | tail -n1)"
+    (umask 077; { printf 'LEGACYX_ANNOUNCE_API_URL=%s\nLEGACYX_ANNOUNCE_TOKEN=%s\n' "${api%/}" "$token"; [[ -n "$old" ]] && printf 'DISCORD_ANNOUNCE_WEBHOOK=%s\n' "$old"; true; } > "$CONF")
+    chmod 600 "$CONF"
+    say "saved to $CONF. Pick the channel with /updates in Discord."
+    post "Update announcements are on" "" "Website, API, Discord bot and game server updates are posted here." no
+    exit 0
+    ;;
+  setup-webhook)
+    [[ $EUID -eq 0 ]] || { echo "!! Run with sudo." >&2; exit 1; }
     echo "Discord: channel settings > Integrations > Webhooks > New Webhook > Copy Webhook URL."
     read -rsp "Webhook URL: " url; echo
     [[ "$url" =~ $WEBHOOK_PATTERN ]] || { echo "!! That is not a Discord webhook URL." >&2; exit 1; }
@@ -96,12 +147,13 @@ case "${1:-}" in
     ;;
 esac
 
-title="" footer="" image="" dry=no lines=()
+title="" footer="" image="" banner="" dry=no lines=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --title) title="${2:-}"; shift 2 ;;
     --footer) footer="${2:-}"; shift 2 ;;
     --image) image="${2:-}"; shift 2 ;;
+    --banner) banner="${2:-}"; shift 2 ;;
     --line) [[ -n "${2:-}" ]] && lines+=("$2"); shift 2 ;;
     --commits)
       while IFS= read -r subject; do [[ -n "$subject" ]] && lines+=("$subject"); done \
@@ -116,5 +168,5 @@ if [[ ${#lines[@]} -eq 0 ]]; then
   say "nothing to announce (no code changes)."
   exit 0
 fi
-post "$title" "$footer" "$(printf '%s\n' "${lines[@]}")" "$dry" "$image"
+post "$title" "$footer" "$(printf '%s\n' "${lines[@]}")" "$dry" "$image" "$banner"
 exit 0
