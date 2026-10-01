@@ -24,24 +24,24 @@ MatchZy warmup нь LEGACY-X дээр 5v5 ready lobby-ийн үүрэгтэй. �
 Requirements: .NET 8 SDK, Metamod:Source and CounterStrikeSharp.
 
 ```bash
-cd afkmanager
+cd LegacyX-AFKManager
 dotnet build --configuration Release
 ```
 
 Artifact:
 
 ```text
-afkmanager/bin/Release/net8.0/AFKManager.dll
+LegacyX-AFKManager/bin/Release/net8.0/LegacyX-AFKManager.dll (+ LegacyX.Shared.Configuration.dll, *.deps.json, lang/)
 ```
 
 ## Install
 
 ```text
-csgo/addons/counterstrikesharp/plugins/AFKManager/AFKManager.dll
-csgo/addons/counterstrikesharp/configs/plugins/AFKManager/AFKManager.json
+csgo/addons/counterstrikesharp/plugins/LegacyX-AFKManager/LegacyX-AFKManager.dll
+csgo/addons/counterstrikesharp/configs/plugins/LegacyX-AFKManager/LegacyX-AFKManager.json
 ```
 
-Copy `config/AFKManager.json` to the CounterStrikeSharp plugin config path. If the config already exists, merge the LEGACY-X values rather than overwriting local server-specific admin flags without review.
+Copy `LegacyX-AFKManager/config/AFKManager.json` (renamed to `LegacyX-AFKManager.json`) to the CounterStrikeSharp plugin config path. If the config already exists, merge the LEGACY-X values rather than overwriting local server-specific admin flags without review.
 
 ## Integration boundary
 
