@@ -14,6 +14,7 @@
 | [7. Discord](#part7) | Bot юу хийдэг, game server Discord-той яаж холбогддог | Discord тохируулах |
 | [8. Chat-ийн хэв маяг](#part8) | In-game текстийн дүрэм | Шинэ текст бичих |
 | [9. Түүх, хүчингүй болсон шийдвэрүүд](#part9) | Өмнө нь юу байсан, яагаад өөрчлөгдсөн | Эргэлзэхэд |
+| [10. Repo бүрийн README](#part10) | 5 repo-ийн README (ангилсан хуулбар) | Тодорхой repo, plugin-ийн дэлгэрэнгүй |
 
 > Шинэ мэдээлэл нэмэхдээ зөвхөн энэ файлыг засна. Тусдаа нэмэлт баримт үүсгэхгүй.
 
@@ -1882,3 +1883,19 @@ CounterStrikeSharp shows English unless the server language (`core.json`) or a p
 | `LEGACYX_MODULE_NAMING_AND_ADMIN_REPLACEMENT` | AdminPlus солилт, нэршил | Хэсэг 5-д нэгтгэсэн |
 
 Хуучин файлууд git түүхэнд хадгалагдсан: `git log --follow docs/<файл>`.
+
+<a id="part10"></a>
+## Хэсэг 10. Repo бүрийн README
+
+Таван repo-ийн (`legacyxxx-plugins`, `-backend`, `-frontend`, `-discord-bot`, `-workshop`) болон plugin бүрийн README-г
+ангилж [`docs/readmes/`](readmes/README.md) хавтсанд цуглуулсан. **Эдгээр нь хуулбар**: жинхэнэ, шинэ хувилбар нь тухайн repo дээр.
+
+| Ангилал | README-ууд |
+|---|---|
+| **Game server plugin-ууд** | [repo](readmes/1-game-server-plugins/00-repo.md), [Admin](readmes/1-game-server-plugins/admin.md), [AFKManager](readmes/1-game-server-plugins/afkmanager.md), [Community](readmes/1-game-server-plugins/community.md), [Hud](readmes/1-game-server-plugins/hud.md), [MatchZy](readmes/1-game-server-plugins/matchzy.md), [Spectator](readmes/1-game-server-plugins/spectator.md), [Status](readmes/1-game-server-plugins/status.md), [WeaponPaints](readmes/1-game-server-plugins/weaponpaints.md), [configs](readmes/1-game-server-plugins/configs.md), [src](readmes/1-game-server-plugins/src.md) |
+| **API ба database** | [legacyxxx-backend](readmes/2-api-backend/00-repo.md) |
+| **Вэб сайт** | [legacyxxx-frontend](readmes/3-website-frontend/00-repo.md) |
+| **Discord bot** | [legacyxxx-discord-bot](readmes/4-discord-bot/00-repo.md) |
+| **Тоглоом доторх HUD (Workshop)** | [legacyxxx-workshop](readmes/5-hud-workshop/00-repo.md) |
+
+Шинэчлэх: repo-ийн README өөрчлөгдсөн бол тухайн файлыг дахин хуулна (файлын дээд талын "Эх сурвалж" холбоосоос).
