@@ -4,6 +4,8 @@
 шинэчлэх, алдаа засах**, мөн **вэб, API, Discord bot-ыг нэг командаар шинэчлэх** бүх алхмыг
 эхнээс нь дарааллаар нь тайлбарлана.
 
+**Өдөр тутмын командууд ба тэдгээрийн үүрэг** (Windows build, server restart, HUD асаах/унтраах, Discord): [KOMANDUUD_GARIIN_AVLAGA_MN.md](KOMANDUUD_GARIIN_AVLAGA_MN.md).
+
 **Бүх командын дэлгэрэнгүй лавлах** (хэрхэн бичих, хэзээ, жишээ, алдаа ба шалтгаан):
 [KOMANDUUD_MN.md](KOMANDUUD_MN.md). Хаана юу ажиллуулах, юуг
 хаанаас авахыг алхам бүрт тэмдэглэсэн:
@@ -53,10 +55,10 @@ bot үүнийг хэзээ ч мэдэх ёсгүй.
 |---|---|---|---|
 | **1. API** | `/root/legacyxxx-backend/.env` | Supabase service-role key, JWT, Steam login | Зөвхөн API |
 | **2. Discord bot** | `/root/legacyxxx-discord-bot/.env` | `DISCORD_TOKEN`, API хаяг, bot-ын token | Зөвхөн bot |
-| **3. CS2 plugins** | `/home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env` | API хаяг, plugin token, IP, порт бүрийн нэр/mode | **Бүх CS2 сервер хамтдаа** |
+| **3. CS2 plugins** | plugin repo-ийн үндсэн `.env` (жишээ `/opt/legacyxxx-plugins/.env`). Plugin-ийн уншдаг `…/counterstrikesharp/.env` нь түүн рүү заасан холбоос | API хаяг, plugin token, IP, порт бүрийн нэр/mode | **Бүх CS2 сервер хамтдаа** |
 | Вэб | байхгүй | API хаяг build-д `ops/deploy.sh`-ээр орно | — |
 
-Энэ алхам №3-ыг үүсгэнэ. Нэг VPS-т **нэг л удаа**: дараа нь сервер нэмэхэд (`cs2-host.sh add`) шинэ
+Энэ алхам №3-ыг үүсгэнэ. Суулгасны дараа тэр `.env`-ийг plugin repo-ийн үндэс рүү хуулж, `sudo ./scripts/cs2-host.sh env`-ээр холбоно (§4-ийн төгсгөл): тэгвэл `cd /opt/legacyxxx-plugins && nano .env` гэж засаад зөвхөн restart хийхэд хангалттай. Нэг VPS-т **нэг л удаа**: дараа нь сервер нэмэхэд (`cs2-host.sh add`) шинэ
 `.env` хэрэггүй, `add` өөрөө порт бүрийн мөрийг энэ файлд нэмнэ. Зөвхөн **хоёр дахь VPS** нэмбэл
 тэр VPS-т өөрийн №3 хэрэгтэй.
 
@@ -204,6 +206,18 @@ sudo ./scripts/cs2-host.sh install --env /root/legacyx-srv-187.127.109.125.env
 Амжилттай бол сүүлд нь `==> Installed. Next, add each server: ...` гэж гарна.
 
 > Дахин ажиллуулахад аюулгүй. Тасалдвал ижил command-аа дахин өгнө.
+
+**Суулгасны дараа, `.env`-ээ нэг газар болгох** (хэрэв `nano .env`-ээр plugin repo-оос засахыг хүсвэл):
+
+```bash
+cd /opt/legacyxxx-plugins
+sudo cp /home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env .env     # одоогийн тохиргоог repo-ийн үндэс рүү
+sudo ./scripts/cs2-host.sh env                                          # plugin-ийн .env-ийг түүн рүү холбоно
+sudo systemctl restart 'cs2@*'
+```
+
+Энэ нь `.env` нь git-д ордоггүй (`.gitignore`) тул GitHub-д орохгүй. Дараагийн `deploy`, `update` үед хэвээр.
+Хуучин файлыг `.before-link` нэрээр хадгална: ажиллаж байгааг баталгаажуулсны дараа `sudo shred -u` -оор устга.
 
 ---
 
@@ -353,7 +367,7 @@ sudo AUTOUPDATE_HOUR=4 ./scripts/cs2-host.sh autoupdate on
 | Юу | Файл (Game VPS) | Дараа нь |
 |---|---|---|
 | GSLT, map, тоглогчийн тоо, mode | `/etc/legacyx/cs2/27015.conf` | `sudo systemctl restart cs2@27015` |
-| Plugin тохиргоо (цолны төрөл, skin, AFK…) | `/home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env` | `sudo systemctl restart 'cs2@*'` |
+| Plugin тохиргоо (цолны төрөл, skin, AFK, HUD…) | plugin repo-ийн `.env` (`cd /opt/legacyxxx-plugins && sudo nano .env`) | `sudo systemctl restart 'cs2@*'` |
 | Вэб дээрх нэр/mode | `.env` дотор `LEGACYX_27015_SERVER_NAME=…`, `LEGACYX_27015_SERVER_MODE=…` | `sudo systemctl restart cs2@27015` |
 | CounterStrikeSharp (`ServerLanguage`, `!`/`/` trigger) | `/home/cs2/cs2/game/csgo/addons/counterstrikesharp/configs/core.json` | `sudo systemctl restart 'cs2@*'` |
 
@@ -368,7 +382,7 @@ Update ямар файлд хүрдэг, хүрдэггүй вэ:
 
 ```bash
 sudo nano /etc/legacyx/cs2/27015.conf
-sudo nano /home/cs2/cs2/game/csgo/addons/counterstrikesharp/.env
+cd /opt/legacyxxx-plugins && sudo nano .env      # plugin тохиргоо (холбоосоор дамжин plugin-д очно)
 ```
 
 Жишээ `27015.conf`:
@@ -538,17 +552,25 @@ Deploy болон CS2-ийн update амжилттай дуусах бүрт Dis
   Шинэ зүйл байхгүй бол (дахин deploy хийсэн) юу ч илгээхгүй.
 - Deploy амжилтгүй бол илгээхгүй. Discord унасан, webhook байхгүй бол deploy-д нөлөөлөхгүй.
 
-**Нэг удаа тохируулах**, VPS бүр дээр (Hostinger, Game VPS):
+Мэдэгдэл **Discord bot-оор** дамжина: скриптүүд API руу илгээж, bot өөрийн `/updates` командаар сонгосон
+channel-д тавина. CS2-ийн "finished" мэдэгдэл алтан banner-тай. (Webhook-оор шууд илгээдэг хуучин арга
+`announce.sh setup-webhook` хэвээр.)
 
-1. **[Discord]** Зарлал гарах channel → **Edit Channel → Integrations → Webhooks → New Webhook** →
-   нэр `LEGACY-X` → **Copy Webhook URL**. Энэ URL-ийг хэнд ч, чатад ч бүү явуул.
-2. **[VPS]**
+**Нэг удаа тохируулах**, VPS бүр дээр:
+
+1. **[Backend VPS]** Token үүсгэнэ (нэг удаа):
+   ```bash
+   cd /root/legacyxxx-backend
+   node --env-file=.env scripts/create-api-token.mjs legacyx-announce announce:write
+   ```
+   Token нэг л удаа харагдана, хуулж ав.
+2. **[Бүх VPS]**
    ```bash
    git -C /opt/legacyxxx-plugins pull --ff-only
-   sudo /opt/legacyxxx-plugins/scripts/announce.sh setup   # URL-ийг paste хийнэ (дэлгэцэнд харагдахгүй)
+   sudo /opt/legacyxxx-plugins/scripts/announce.sh setup   # API хаяг, token (дэлгэцэнд харагдахгүй)
    ```
-   Channel-д `Update announcements are on` гарвал бэлэн. URL `/etc/legacyx/announce.env`-д (зөвхөн root)
-   хадгалагдана, `env-backup.sh` үүнийг хамт нөөцөлнө.
+   API хаяг, token `/etc/legacyx/announce.env`-д (зөвхөн root) хадгалагдана, `env-backup.sh` үүнийг хамт нөөцөлнө.
+3. **[Discord]** Мэдэгдэл гарах channel дээр `/updates` (зөвхөн server-ийн эзэн). Зогсоох: `/updates off`.
 
 Урьдчилж харах (илгээхгүй): `/opt/legacyxxx-plugins/scripts/announce.sh --title Test --commits /root/legacyxxx-frontend HEAD~3 HEAD --dry-run`
 
@@ -647,7 +669,7 @@ pm2 restart all && sudo systemctl restart 'cs2@*'
 Сэргээхээсээ өмнө одоогийн файлуудыг өөрөө нөөцөлнө, тиймээс алдаж болохгүй.
 
 **Хэзээ ч бүү ажиллуул:**
-- `git clean -x` / `git clean -fdx`: git-д ордоггүй файлыг (`.env`-ийг) **устгана**.
+- `git clean -x` / `git clean -fdx`: git-д ордоггүй файлыг (`.env`-ийг) **устгана**. Plugin repo-ийн үндсэн `.env` (§1) мөн адил.
 - repo-гийн фолдерыг `rm -rf` хийж дахин clone хийх: `.env` хамт устана. Хэрэгтэй бол эхлээд `env-backup.sh run`.
 
 **Нэмэлт:** Hostinger VPS panel → **Snapshots / Backups**-ийг асаавал бүх VPS долоо хоног бүр нөөцлөгдөнө.
