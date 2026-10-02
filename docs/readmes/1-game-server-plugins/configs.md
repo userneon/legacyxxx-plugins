@@ -1,4 +1,4 @@
-> **Хуулбар.** Эх сурвалж: [legacyxxx-plugins/configs/README.md](https://github.com/userneon/legacyxxx-plugins/blob/main/configs/README.md), 2026-10-02-д хуулсан. Зөв, шинэ хувилбар нь эх repo дээр байна. Энэ доторх харьцангуй (relative) холбоосууд ажиллахгүй байж болно.
+> **Хуулбар.** Эх сурвалж: [legacyxxx-plugins/configs/README.md](https://github.com/userneon/legacyxxx-plugins/blob/main/configs/README.md), 2026-10-02-д хуулсан. Зөв, шинэ хувилбар нь эх repo дээр. Харьцангуй холбоосууд ажиллахгүй байж болно.
 
 # Secret-Free Module Defaults
 

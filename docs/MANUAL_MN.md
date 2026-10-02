@@ -1899,7 +1899,7 @@ CounterStrikeSharp shows English unless the server language (`core.json`) or a p
 | **Discord bot** | [legacyxxx-discord-bot](readmes/4-discord-bot/00-repo.md) |
 | **Тоглоом доторх HUD (Workshop)** | [legacyxxx-workshop](readmes/5-hud-workshop/00-repo.md) |
 
-Шинэчлэх: repo-ийн README өөрчлөгдсөн бол тухайн файлыг дахин хуулна (файлын дээд талын "Эх сурвалж" холбоосоос).
+Шинэчлэх: бүх хуулбарыг (энэ хэсэг ба Хэсэг 11) нэг командаар шинэчилнэ: `python3 scripts/collect-docs.py` (таван repo нэг хавтсанд байх ёстой; `--repos <хавтас>`). Эхлээд repo бүрт `git pull` хийж, дараа нь commit хийнэ.
 
 <a id="part11"></a>
 ## Хэсэг 11. Бусад бүх баримт
@@ -1919,4 +1919,4 @@ README-ээс бусад бүх `.md` баримтыг (67) 10 ангилалд 
 | [Бусад](repo-docs/README.md#бусад) | Context, todo, promotion code |
 | [Upstream (гадны) баримт](repo-docs/README.md#upstream-гадны-баримт) | MatchZy, WeaponPaints-ийн гадны баримт |
 
-Bot-ын `faq/` ба `rules/` хавтас баримт биш (bot-ын харуулдаг агуулга) тул оруулаагүй.
+Bot-ын `faq/` ба `rules/` хавтас баримт биш (bot-ын харуулдаг агуулга) тул оруулаагүй. Шинэчлэх: `python3 scripts/collect-docs.py` (Хэсэг 10). Скрипт шинэ, жагсаалтад ороогүй баримт олбол нэрийг нь хэлнэ.

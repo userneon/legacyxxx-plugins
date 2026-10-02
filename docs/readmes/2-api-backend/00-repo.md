@@ -1,4 +1,4 @@
-> **Хуулбар.** Эх сурвалж: [legacyxxx-backend/README.md](https://github.com/userneon/legacyxxx-backend/blob/main/README.md), 2026-10-02-д хуулсан. Зөв, шинэ хувилбар нь эх repo дээр байна. Энэ доторх харьцангуй (relative) холбоосууд ажиллахгүй байж болно.
+> **Хуулбар.** Эх сурвалж: [legacyxxx-backend/README.md](https://github.com/userneon/legacyxxx-backend/blob/main/README.md), 2026-10-02-д хуулсан. Зөв, шинэ хувилбар нь эх repo дээр. Харьцангуй холбоосууд ажиллахгүй байж болно.
 
 # LEGACY-X Backend
 
