@@ -1,7 +1,7 @@
 # LEGACY-X CounterStrikeSharp Plugins
 
-> **Монгол гарын авлага:** [docs/GARIIN_AVLAGA_MN.md](docs/GARIIN_AVLAGA_MN.md): VPS суулгах, сервер нэмэх, GSLT, update, алдаа засах, бүгд жишээтэй.
-> **Бүх командын лавлах:** [docs/KOMANDUUD_MN.md](docs/KOMANDUUD_MN.md): VPS, CS2, Discord командууд, алдаа ба шалтгаан.
+> **Монгол гарын авлага:** [docs/MANUAL_MN.md](docs/MANUAL_MN.md#part2): VPS суулгах, сервер нэмэх, GSLT, update, алдаа засах, бүгд жишээтэй.
+> **Бүх командын лавлах:** [docs/MANUAL_MN.md](docs/MANUAL_MN.md#part4): VPS, CS2, Discord командууд, алдаа ба шалтгаан.
 
 This repository contains **source only** for LEGACY-X CS2 server plugins. It has no game server, VPS installation, production secret, or deployed DLL. Every LEGACY-X module reads its server-side configuration from one future host file: `CounterStrikeSharp/.env`. The committed root `.env.example` is the only template.
 
@@ -129,13 +129,13 @@ MANIFEST.sha256
 
 CounterStrikeSharp.API and its dependencies (Microsoft.Extensions.*, McMaster, Serilog, …) are never
 packaged: the server's CounterStrikeSharp install provides them. The package script fails if one slips in.
-In-game staff come from the website only: see [Admin authorization](docs/ADMIN_AUTHORIZATION.md).
+In-game staff come from the website only: see [Admin authorization](docs/MANUAL_MN.md#part6).
 
-The source-only preparation, future host layout and intentional no-deploy boundary are documented in [Phase A deployment preparation](docs/PHASE_A_DEPLOYMENT_PREPARATION.md). The per-module environment and local configuration ownership matrix is in [Plugin Registry](docs/PLUGIN_REGISTRY.md).
+Installing and running a host is documented in the [deployment guide](docs/MANUAL_MN.md#part2). The per-module environment and local configuration ownership matrix is in [plugin chapter of the manual](docs/MANUAL_MN.md#part5).
 
 ## References
 
-- [LEGACY-X plugin registry](docs/PLUGIN_REGISTRY.md)
-- [LEGACY-X naming and admin replacement boundary](docs/LEGACYX_MODULE_NAMING_AND_ADMIN_REPLACEMENT.md)
+- [LEGACY-X plugin registry](docs/MANUAL_MN.md#part5)
+- [LEGACY-X naming and admin replacement boundary](docs/MANUAL_MN.md#part5)
 - [LEGACY-X Admin upstream attribution](LegacyX-Admin/README.md)
 - [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp)
