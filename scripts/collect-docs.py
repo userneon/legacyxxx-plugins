@@ -90,6 +90,7 @@ CATS = {
  '07-changelogs': ('Changelog-ууд', 'Plugin, rank, reconnect-ийн өөрчлөлтийн түүх'),
  '08-frontend-design': ('Вэб дизайн ба ажлын дүрэм', 'Frontend-ийн дизайн, token, зураг, `CLAUDE.md`'),
  '09-other': ('Бусад', 'Context, todo, promotion code, reconnect, Steam background'),
+ '11-manuals': ('Repo бүрийн гарын авлага', 'Repo бүрийн өөрийн docs/MANUAL_MN.md: тухайн repo-г суулгах, ажиллуулах, засах'),
  '10-upstream': ('Upstream (гадны) баримт', 'MatchZy болон бусад гадны төслийн баримт: LEGACY-X-ийнх биш'),
 }
 MAP = {}
@@ -103,12 +104,13 @@ put('03-rank-match', B, ['docs/RANK_SYSTEM.md', 'docs/MONTHLY_RANK_RESET.md', 'd
 put('03-rank-match', P, ['LegacyX-MatchZy/RANK_BRIDGE.md'])
 put('04-admin-staff', B, ['docs/ADMINPLUS_API_ONLY.md', 'docs/ADMINPLUS_PRODUCTION_SETUP.md', 'docs/STAFF_PANEL.md'])
 put('05-skin-hud', B, ['docs/SKINCHANGER_OPERATOR_RUNBOOK.md', 'docs/SKINCHANGER_STATIC_ASSET_HOSTING.md'])
-put('05-skin-hud', W, ['CONTRACT.md', 'docs/GARIIN_AVLAGA_MN.md'])
+put('05-skin-hud', W, ['CONTRACT.md'])
 put('06-audits', B, ['AUDIT_2026-09-20.md', 'docs/PLUGIN_GAP_AUDIT_2026-08-24.md', 'docs/PRODUCTION_DB_AUDIT.md', 'docs/RANK_EXP_AUDIT_2026-08-24.md', 'docs/ROLE_MIGRATION_AUDIT.md', 'docs/USER_ROLE_MIGRATION_AUDIT_2026-08-24.md', 'docs/SERVER_LIVE_MATCH_AUDIT_2026-08-24.md', 'docs/UNIFIED_MATCH_SYSTEM_AUDIT.md', 'docs/V1_CLEANUP_AUDIT.md'])
 put('07-changelogs', B, ['docs/ADMINPLUS_LEGACYX_CHANGELOG.md', 'docs/COMMUNITY_PROGRESSION_CHANGELOG.md', 'docs/MONTHLY_RANK_RESET_CHANGELOG.md', 'docs/RANK_ADMINPLUS_CHANGELOG.md', 'docs/RECONNECT_CHANGELOG.md'])
 put('07-changelogs', P, ['AFKMANAGER_LEGACYX_CHANGELOG.md', 'COMMUNITY_LEGACYX_CHANGELOG.md', 'MATCHZY_LEGACYX_CHANGELOG.md', 'SPECTATOR_COMMS_LEGACYX_CHANGELOG.md', 'LegacyX-MatchZy/CHANGELOG.md'])
 put('08-frontend-design', F, ['CLAUDE.md', 'docs/design/README.md', 'docs/design/PROMPT.md', 'docs/design/RANK-SYSTEM.md'])
 put('09-other', B, ['MASTER_CONTEXT.md', 'todo.md', 'docs/PROMOTION_CODES.md', 'docs/RECONNECT_LAST_PLAYED.md', 'docs/STEAM_PROFILE_BACKGROUND_FEASIBILITY.md'])
+for _r in (B, F, W, 'legacyxxx-discord-bot'): put('11-manuals', _r, ['docs/MANUAL_MN.md'])
 put('10-upstream', P, ['README.upstream.md', 'LegacyX-MatchZy/README.upstream.md', 'LegacyX-WeaponPaints/UPSTREAM.md'])
 mz = H / P / 'LegacyX-MatchZy/documentation/docs'
 for f in sorted(mz.glob('*.md')): MAP[(P, f'LegacyX-MatchZy/documentation/docs/{f.name}')] = '10-upstream'
@@ -155,6 +157,6 @@ for repo in ('plugins', 'backend', 'frontend', 'discord-bot', 'workshop'):
     import subprocess
     files = subprocess.run(['git', '-C', str(root), 'ls-files', '*.md'], capture_output=True, text=True).stdout.split()
     new = [f for f in files if f not in known and not f.startswith(('CounterStrikeSharp/', 'faq/', 'rules/', 'docs/readmes/', 'docs/repo-docs/'))
-           and f not in ('docs/MANUAL_MN.md', 'ADMINPLUS_DISCORD_CONNECTION.md') and not f.endswith('README.md')]
+           and f != 'docs/MANUAL_MN.md' and f not in ('ADMINPLUS_DISCORD_CONNECTION.md') and not f.endswith('README.md')]
     if new:
         print(f'NOT IN ANY LIST in legacyxxx-{repo}:', *new, sep='\n  ')

@@ -14,9 +14,7 @@ server by the LEGACY-X plugins through CS2's `custom_hud_layout` entity (added b
 
 Same look as legacyx.cc: dark glass cards, white text, crimson only for the `-X` and the "this one" bar.
 
-**Status.** Written and checked by `tools/validate.py`; not yet compiled or seen in game, and the plugin side
-(filling texts, toggling classes, handling clicks) is not written yet. The first build is also the first real
-test: see "Test in your own game". Mongolian guide: [docs/GARIIN_AVLAGA_MN.md](docs/GARIIN_AVLAGA_MN.md).
+**Status.** Published to the Workshop and loaded by the servers through MultiAddonManager. `tools/validate.py` checks every layout and stylesheet (also in CI on every push); how a screen looks in game still has to be seen in the game (`tools/build.cmd -Local`). Mongolian manual: [docs/MANUAL_MN.md](docs/MANUAL_MN.md). All documents: [docs/README.md](docs/README.md).
 
 ## Layout
 

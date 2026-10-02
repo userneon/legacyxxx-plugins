@@ -93,8 +93,8 @@ Only for the team that won the knife round. Votes are secret: nothing shows coun
 
 | Id | Kind | Content |
 |---|---|---|
-| `knife`, `knife_dim` | window | `shown` for the 5 second vote |
-| `knife_count` | text | `5` … `0` |
+| `knife`, `knife_dim` | window | `shown` for the 10 second vote |
+| `knife_count` | text | `10` … `0` |
 | `knife_fill` | panel | `p100` … `p0` |
 | `knife_sub` | text | `Stay on Terrorists or switch to Counter-Terrorists. Most votes wins.` |
 | `knife_stay`, `knife_switch` | panel | cards, no mouse: `sel` = highlighted (A / D), `mine` = confirmed (E) |

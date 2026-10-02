@@ -15,7 +15,7 @@
 | [8. Chat-ийн хэв маяг](#part8) | In-game текстийн дүрэм | Шинэ текст бичих |
 | [9. Түүх, хүчингүй болсон шийдвэрүүд](#part9) | Өмнө нь юу байсан, яагаад өөрчлөгдсөн | Эргэлзэхэд |
 | [10. Repo бүрийн README](#part10) | 5 repo-ийн README (ангилсан хуулбар) | Тодорхой repo, plugin-ийн дэлгэрэнгүй |
-| [11. Бусад бүх баримт](#part11) | Backend, frontend, plugin-ийн 67 баримт (ангилсан хуулбар) | Аудит, runbook, changelog, дизайн хайх |
+| [11. Бусад бүх баримт](#part11) | Backend, frontend, plugin-ийн 70 баримт (ангилсан хуулбар) | Аудит, runbook, changelog, дизайн хайх |
 
 > Шинэ мэдээлэл нэмэхдээ зөвхөн энэ файлыг засна. Тусдаа нэмэлт баримт үүсгэхгүй.
 
@@ -1904,7 +1904,7 @@ CounterStrikeSharp shows English unless the server language (`core.json`) or a p
 <a id="part11"></a>
 ## Хэсэг 11. Бусад бүх баримт
 
-README-ээс бусад бүх `.md` баримтыг (67) 10 ангилалд цуглуулсан: [`docs/repo-docs/`](repo-docs/README.md). Хуулбар: жинхэнэ нь эх repo дээр.
+README-ээс бусад бүх `.md` баримтыг (70) 11 ангилалд цуглуулсан: [`docs/repo-docs/`](repo-docs/README.md). Хуулбар: жинхэнэ нь эх repo дээр.
 
 | Ангилал | Юу байдаг |
 |---|---|
@@ -1917,6 +1917,7 @@ README-ээс бусад бүх `.md` баримтыг (67) 10 ангилалд 
 | [Changelog-ууд](repo-docs/README.md#changelog-ууд) | Plugin, rank, reconnect-ийн түүх |
 | [Вэб дизайн ба ажлын дүрэм](repo-docs/README.md#вэб-дизайн-ба-ажлын-дүрэм) | Frontend-ийн `CLAUDE.md`, design spec |
 | [Бусад](repo-docs/README.md#бусад) | Context, todo, promotion code |
+| [Repo бүрийн гарын авлага](repo-docs/README.md#repo-бүрийн-гарын-авлага) | Backend, frontend, bot, workshop-ийн өөрийн `docs/MANUAL_MN.md` |
 | [Upstream (гадны) баримт](repo-docs/README.md#upstream-гадны-баримт) | MatchZy, WeaponPaints-ийн гадны баримт |
 
 Bot-ын `faq/` ба `rules/` хавтас баримт биш (bot-ын харуулдаг агуулга) тул оруулаагүй. Шинэчлэх: `python3 scripts/collect-docs.py` (Хэсэг 10). Скрипт шинэ, жагсаалтад ороогүй баримт олбол нэрийг нь хэлнэ.

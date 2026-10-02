@@ -62,7 +62,6 @@ Skinchanger runbook, Workshop HUD гэрээ ба гарын авлага
 | [LEGACY-X Production Skinchanger Operator Runbook](05-skin-hud/backend--docs__SKINCHANGER_OPERATOR_RUNBOOK.md) | `backend/docs/SKINCHANGER_OPERATOR_RUNBOOK.md` | 55 |
 | [Skinchanger Static Asset Hosting](05-skin-hud/backend--docs__SKINCHANGER_STATIC_ASSET_HOSTING.md) | `backend/docs/SKINCHANGER_STATIC_ASSET_HOSTING.md` | 33 |
 | [Contract between the addon and the plugins](05-skin-hud/workshop--CONTRACT.md) | `workshop/CONTRACT.md` | 137 |
-| [LEGACY-X Workshop: гарын авлага (Монгол)](05-skin-hud/workshop--docs__GARIIN_AVLAGA_MN.md) | `workshop/docs/GARIIN_AVLAGA_MN.md` | 49 |
 
 ## Аудит, шалгалт
 
@@ -119,6 +118,17 @@ Context, todo, promotion code, reconnect, Steam background
 | [LEGACY-X Reconnect & Last Played](09-other/backend--docs__RECONNECT_LAST_PLAYED.md) | `backend/docs/RECONNECT_LAST_PLAYED.md` | 25 |
 | [Steam Profile Background Feasibility](09-other/backend--docs__STEAM_PROFILE_BACKGROUND_FEASIBILITY.md) | `backend/docs/STEAM_PROFILE_BACKGROUND_FEASIBILITY.md` | 17 |
 | [LEGACY-X Backend & Plugin Integration TODO](09-other/backend--todo.md) | `backend/todo.md` | 129 |
+
+## Repo бүрийн гарын авлага
+
+Repo бүрийн өөрийн docs/MANUAL_MN.md: тухайн repo-г суулгах, ажиллуулах, засах
+
+| Баримт | Repo | Мөр |
+|---|---|---|
+| [legacyxxx-backend: гарын авлага](11-manuals/backend--docs__MANUAL_MN.md) | `backend/docs/MANUAL_MN.md` | 248 |
+| [legacyxxx-discord-bot: гарын авлага](11-manuals/discord-bot--docs__MANUAL_MN.md) | `discord-bot/docs/MANUAL_MN.md` | 238 |
+| [legacyxxx-frontend: гарын авлага](11-manuals/frontend--docs__MANUAL_MN.md) | `frontend/docs/MANUAL_MN.md` | 184 |
+| [legacyxxx-workshop: гарын авлага](11-manuals/workshop--docs__MANUAL_MN.md) | `workshop/docs/MANUAL_MN.md` | 163 |
 
 ## Upstream (гадны) баримт
 
