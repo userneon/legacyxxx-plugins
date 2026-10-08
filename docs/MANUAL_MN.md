@@ -1468,7 +1468,7 @@ Plugin-д зөвхөн нууцгүй gameplay-ийн анхдагч утга (J
 |---|---|---|
 | `LegacyX-Admin` | Ban, mute, gag, report, vote, цэс; staff эрх API-аас | `LEGACYX_ADMIN_ENABLED`, `LEGACYX_ADMIN_PLUGIN_SECRET` (admin:read), `LEGACYX_ADMIN_AUTH_*`, `LEGACYX_ADMIN_CENTRAL_BANS_*`, `LEGACYX_ADMIN_CENTRAL_PENALTIES_ENABLED` |
 | `LegacyX-AFKManager` | AFK, C4, spectator, anti-camp | `LEGACYX_AFKMANAGER_ENABLED` |
-| `LegacyX-Community` | Цол, EXP, welcome chat, Tab дахь цол | `LEGACYX_COMMUNITY_*` (WELCOME, SCOREBOARD_RANKS, SCOREBOARD_RANK_TYPE) |
+| `LegacyX-Community` | Цол, EXP, welcome chat, Tab дахь цол | `LEGACYX_COMMUNITY_*` (WELCOME, SCOREBOARD_RANKS, SCOREBOARD_RANK_TYPE, CLAN_TAG) |
 | `LegacyX-Hud` | Workshop HUD: welcome card, rank card, match дүн, knife vote | `LEGACYX_HUD_ENABLED`, `LEGACYX_HUD_RANK_CARD` |
 | `LegacyX-Killfeed` | Kill feed (сайтын дээд талын ticker) | `LEGACYX_KILLFEED_ENABLED` |
 | `LegacyX-MatchZy` | Match lifecycle, EXP, Match Core | `LEGACYX_MATCHZY_ENABLED`, `…_RANK_ENABLED`, `…_MATCH_CORE_ENABLED` |

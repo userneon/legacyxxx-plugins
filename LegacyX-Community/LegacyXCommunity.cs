@@ -20,6 +20,8 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public string ChatPrefix { get; set; } = LegacyXChat.Prefix;
     public bool ScoreboardRanks { get; set; } = true;
     public bool Welcome { get; set; } = true;
+    /// <summary>A player in a LEGACY-X clan shows the clan tag before the rank in Tab: [WOLF | OPERATOR I].</summary>
+    public bool ClanTag { get; set; } = true;
 }
 
 public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
@@ -28,7 +30,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     public required LegacyXCommunityConfig Config { get; set; }
     // SteamID64 -> LEGACY-X rank (1-18) and ranked matches, from the API; re-applied every round
     // because the game resets the scoreboard fields.
-    private readonly Dictionary<ulong, (int RankId, int Matches, int Exp, string Name)> scoreboardRanks = new();
+    private readonly Dictionary<ulong, (int RankId, int Matches, int Exp, string Name, string Clan)> scoreboardRanks = new();
     // The rank name is always the clan tag, shown as [OPERATOR I]. On top of it, the rank column can try
     // 12 = skill-group icon or 11 = Premier rating (EXP); 0 = tag only (default). Switchable live with lx_scoreboard_type.
     private int scoreboardRankType = 0;
@@ -52,6 +54,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         config.PluginSecret = environment.GetModule("COMMUNITY", "PLUGIN_TOKEN", config.PluginSecret);
         config.ScoreboardRanks = environment.GetModuleBoolean("COMMUNITY", "SCOREBOARD_RANKS", config.ScoreboardRanks);
         config.Welcome = environment.GetModuleBoolean("COMMUNITY", "WELCOME", config.Welcome);
+        config.ClanTag = environment.GetModuleBoolean("COMMUNITY", "CLAN_TAG", config.ClanTag);
         scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 0, 0, 12);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
@@ -140,9 +143,10 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         var matches = IntOrNull(found, "matches_completed") ?? 0;
         var exp = IntOrNull(found, "current_exp") ?? 0;
         var rankName = StringOrNull(found, "rank_name")?.Trim() ?? "";
+        var clanTag = Config.ClanTag ? SafeClanTag(StringOrNull(found, "clan_tag")) : "";
         Server.NextFrame(() =>
         {
-            if (rankId is >= 1 and <= 18 && rankName.Length > 0) scoreboardRanks[steamId] = (rankId, matches, exp, rankName);
+            if (rankId is >= 1 and <= 18 && rankName.Length > 0) scoreboardRanks[steamId] = (rankId, matches, exp, rankName, clanTag);
             else scoreboardRanks.Remove(steamId);
             if (player.IsValid) ApplyScoreboardRank(player);
             RevealScoreboardRanks();
@@ -187,7 +191,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         if (scoreboardBlocked || !player.IsValid || player.IsBot || !scoreboardRanks.TryGetValue(player.SteamID, out var rank)) return;
         try
         {
-            ApplyRankTag(player, rank.Name);
+            ApplyRankTag(player, rank.Name, rank.Clan);
             if (scoreboardRankType == 0) return;
             player.CompetitiveRankType = (sbyte)scoreboardRankType;
             player.CompetitiveRanking = scoreboardRankType == 11 ? rank.Exp : rank.RankId;
@@ -207,13 +211,27 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         }
     }
 
+    /// <summary>The website clan tag, upper-case letters and digits only (anything else could break the scoreboard text).</summary>
+    private static string SafeClanTag(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "";
+        var clean = new string(raw.Trim().ToUpperInvariant().Where(c => char.IsLetterOrDigit(c) || c is '-' or '_' or '.').ToArray());
+        return clean.Length > 8 ? clean[..8] : clean;
+    }
+
     /// <summary>The rank name as the player's clan tag: shown before the name in Tab, chat and the kill feed.</summary>
-    private void ApplyRankTag(CCSPlayerController player, string rankName)
+    private void ApplyRankTag(CCSPlayerController player, string rankName, string clanTag = "")
     {
         // Staff (every LEGACY-X staff role carries @css/generic) show their role instead; LegacyX-Admin sets it.
         if (AdminManager.PlayerHasPermissions(new SteamID(player.SteamID), "@css/generic")) return;
         // The scoreboard puts the clan tag in brackets itself: [OPERATOR I] 777.
+        // A clan member shows the clan first: [WOLF | OPERATOR I]. The clan part is cut before the rank is.
         var tag = rankName.ToUpperInvariant();
+        if (clanTag.Length > 0)
+        {
+            var room = 31 - tag.Length - 3;
+            if (room >= 2) tag = $"{(clanTag.Length > room ? clanTag[..room] : clanTag)} | {tag}";
+        }
         if (tag.Length > 31) tag = tag[..31];
         var current = player.Clan ?? "";
         // MatchZy's coach tag ([TEAM COACH]) says more during a match; leave it.
