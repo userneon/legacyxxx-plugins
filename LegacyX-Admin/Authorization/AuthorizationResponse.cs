@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text.Json;
 
 namespace LegacyX.Admin.Authorization;
 
 /// <summary>A player's confirmed in-game role on this server, as of <see cref="CheckedAt"/>.</summary>
-public sealed record PlayerAuthorization(ulong SteamId, StaffRole Role, DateTimeOffset? ExpiresAt, DateTimeOffset CheckedAt)
+public sealed record PlayerAuthorization(ulong SteamId, StaffRole Role, DateTimeOffset? ExpiresAt, DateTimeOffset CheckedAt, string ClanTag = "")
 {
     public bool IsStaff => Role != StaffRole.Player;
 
@@ -94,7 +95,15 @@ public static class AuthorizationResponseParser
             if (parsed <= now) return player;
             expiresAt = parsed;
         }
-        return new PlayerAuthorization(steamId, role, expiresAt, now);
+        return new PlayerAuthorization(steamId, role, expiresAt, now, ParseClanTag(entry));
+    }
+
+    /// <summary>The website clan tag, if the API sent one: upper-case letters, digits and - _ . only, at most 8 (it is shown in the Tab tag).</summary>
+    private static string ParseClanTag(JsonElement entry)
+    {
+        if (!entry.TryGetProperty("clanTag", out var value) || value.ValueKind != JsonValueKind.String) return "";
+        var clean = new string((value.GetString() ?? "").Trim().ToUpperInvariant().Where(c => char.IsLetterOrDigit(c) || c is '-' or '_' or '.').ToArray());
+        return clean.Length > 8 ? clean[..8] : clean;
     }
 
     public static bool TryParseSteamId64(string? value, out ulong steamId)

@@ -20,6 +20,7 @@ public partial class AdminPlus
     private Dictionary<ulong, int> adminImmunity = new();
     private Dictionary<ulong, int> adminStamina = new();
     private Dictionary<ulong, string> adminStaffRoles = new();
+    private Dictionary<ulong, string> adminStaffClans = new();
     private Dictionary<ulong, (DateTime seenAt, string ip)> recentSeen = new();
 
     private string FormatDiscordBanDurationMinutes(int minutes) =>
@@ -34,6 +35,7 @@ public partial class AdminPlus
             adminImmunity.Clear();
             adminStamina.Clear();
             adminStaffRoles.Clear();
+            adminStaffClans.Clear();
             recentSeen.Clear();
         }
         catch (Exception ex)

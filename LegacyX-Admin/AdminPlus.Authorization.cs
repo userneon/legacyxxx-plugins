@@ -78,17 +78,26 @@ public partial class AdminPlus
 
     private static readonly HashSet<string> StaffTagNames = new(StringComparer.Ordinal) { "OWNER", "MANAGER", "ADMIN", "STAFF" };
 
-    /// <summary>Staff show their role before their name in Tab, chat and the kill feed: [OWNER] name.</summary>
+    /// <summary>A role tag set by this plugin: "OWNER", or with a clan "WOLF | OWNER".</summary>
+    private static bool IsStaffTag(string tag) =>
+        StaffTagNames.Contains(tag) || StaffTagNames.Any(name => tag.EndsWith(" | " + name, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Staff show their role (in place of their rank) before their name in Tab, chat and the kill feed: [OWNER] name,
+    /// or [WOLF | OWNER] when they are in a website clan.
+    /// </summary>
     private void ApplyStaffTags()
     {
         if (!_authorizationActive) return;
         foreach (var player in OnlineHumans())
         {
             if (!adminStaffRoles.TryGetValue(player.SteamID, out var roleName)) continue;
+            var wanted = roleName;
+            if (adminStaffClans.TryGetValue(player.SteamID, out var clan) && clan.Length > 0 && clan.Length + 3 + roleName.Length <= 31) wanted = $"{clan} | {roleName}";
             var current = player.Clan ?? "";
             // MatchZy's coach tag ([TEAM COACH]) says more during a match; leave it.
-            if (current == roleName || current.EndsWith("COACH]", StringComparison.Ordinal)) continue;
-            player.Clan = roleName; // the scoreboard adds the brackets
+            if (current == wanted || current.EndsWith("COACH]", StringComparison.Ordinal)) continue;
+            player.Clan = wanted; // the scoreboard adds the brackets
             Utilities.SetStateChanged(player, "CCSPlayerController", "m_szClan");
         }
     }
@@ -204,7 +213,7 @@ public partial class AdminPlus
         if (grant == null || !grant.IsStaff)
         {
             // No longer staff: drop the role tag so the rank tag (LegacyX-Community) can come back.
-            if (StaffTagNames.Contains(player.Clan ?? ""))
+            if (IsStaffTag(player.Clan ?? ""))
             {
                 player.Clan = "";
                 Utilities.SetStateChanged(player, "CCSPlayerController", "m_szClan");
@@ -221,6 +230,7 @@ public partial class AdminPlus
         adminImmunity[player.SteamID] = (int)role.Immunity;
         adminStamina[player.SteamID] = role.Stamina;
         adminStaffRoles[player.SteamID] = role.Name;
+        adminStaffClans[player.SteamID] = grant.ClanTag;
         ApplyStaffTags();
     }
 
@@ -230,6 +240,7 @@ public partial class AdminPlus
         adminImmunity.Remove(steamId);
         adminStamina.Remove(steamId);
         adminStaffRoles.Remove(steamId);
+        adminStaffClans.Remove(steamId);
     }
 
     private void ClearAllStaffPermissions()
