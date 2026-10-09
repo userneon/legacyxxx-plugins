@@ -1,4 +1,4 @@
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <!-- Installs for the current user only (no administrator needed), starts the checker, and is removed again by the checker itself once the result is sent. -->
   <Package Name="LEGACY-X Checker" Manufacturer="LEGACY-X" Version="1.0.0.0" UpgradeCode="6f0c7f7e-3c1b-4a54-9a0e-6a8d4f1f2c11" Scope="perUser" Compressed="yes">
     <!-- Every rebuilt installer replaces an older one, even with the same version number (otherwise Windows says "another version is already installed"). -->
@@ -19,10 +19,17 @@
       <ComponentRef Id="CheckerProgram" />
     </Feature>
 
-    <!-- Start the checker as soon as the install is done (a fresh install only, not an uninstall or repair). -->
-    <CustomAction Id="StartChecker" Directory="INSTALLFOLDER" ExeCommand="&quot;[INSTALLFOLDER]LegacyX-Checker.exe&quot;" Execute="immediate" Return="asyncNoWait" />
-    <InstallExecuteSequence>
-      <Custom Action="StartChecker" After="InstallFinalize" Condition="NOT Installed" />
-    </InstallExecuteSequence>
+    <!-- The window: a dark sidebar on the left, what the checker does (license.rtf) with an "I accept", then progress, then a finish page that can start the checker. -->
+    <WixVariable Id="WixUIDialogBmp" Value="Assets\dialog.bmp" />
+    <WixVariable Id="WixUIBannerBmp" Value="Assets\banner.bmp" />
+    <WixVariable Id="WixUILicenseRtf" Value="Assets\license.rtf" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Start the checker now" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <ui:WixUI Id="WixUI_Minimal" />
+
+    <CustomAction Id="StartChecker" Directory="INSTALLFOLDER" ExeCommand="&quot;[INSTALLFOLDER]LegacyX-Checker.exe&quot;" Execute="immediate" Return="asyncNoWait" Impersonate="yes" />
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="StartChecker" Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+    </UI>
   </Package>
 </Wix>

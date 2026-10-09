@@ -5,4 +5,7 @@
     <!-- The published single-file program; build-msi.ps1 sets it. -->
     <DefineConstants>ExePath=$(ExePath)</DefineConstants>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="4.0.5" />
+  </ItemGroup>
 </Project>
