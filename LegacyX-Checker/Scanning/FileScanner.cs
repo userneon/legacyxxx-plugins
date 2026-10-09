@@ -38,6 +38,7 @@ public static class FileScanner
                     foreach (var child in Directory.EnumerateDirectories(directory))
                     {
                         if (Skip(child)) continue;
+                        CheckFolder(context, child);
                         // Junctions and links can loop back on themselves.
                         if ((File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0) continue;
                         pending.Push(child);
@@ -49,6 +50,14 @@ public static class FileScanner
                 }
             }
         }
+    }
+
+    /// <summary>A folder named like a cheat is worth a look even when the files inside have harmless names.</summary>
+    private static void CheckFolder(ScanContext context, string path)
+    {
+        var name = Path.GetFileName(path);
+        var hit = Rules.Match(context.Rules.NameKeywords, name);
+        if (hit is not null) context.Add(new Finding(name, "file", Finding.Suspicion, path, $"Folder name matches \"{hit}\""));
     }
 
     private static void CheckFile(ScanContext context, string path)
