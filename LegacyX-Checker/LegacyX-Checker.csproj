@@ -20,5 +20,7 @@
     <Content Include="rules.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- Also inside the program, so it still knows what to look for when only the .exe was copied. -->
+    <EmbeddedResource Include="rules.json" LogicalName="rules.json" />
   </ItemGroup>
 </Project>

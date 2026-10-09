@@ -40,7 +40,10 @@ public sealed class Rules
         try
         {
             var path = Path.Combine(AppContext.BaseDirectory, "rules.json");
+            // A rules.json next to the program wins (staff can ship newer rules); otherwise the copy built into the program.
             if (File.Exists(path)) return JsonSerializer.Deserialize<Rules>(File.ReadAllText(path)) ?? new Rules();
+            using var built = typeof(Rules).Assembly.GetManifestResourceStream("rules.json");
+            if (built is not null) return JsonSerializer.Deserialize<Rules>(built) ?? new Rules();
         }
         catch
         {
