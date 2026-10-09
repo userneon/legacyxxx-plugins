@@ -1,0 +1,54 @@
+# LEGACY-X Checker
+
+A small Windows program a player runs when staff (Admin, Manager or Owner) ask for a check. The website makes a one-time code
+(Checks page, or *Staff → Ask for a check* on a profile); the player types it in, sees who asked, agrees, and the program scans
+this PC and sends back a short result. **A result is not a verdict:** staff read it and decide. Nothing here bans anyone.
+
+> **Status:** written without a compiler (the cloud session had no .NET), so build it first and fix anything the compiler says.
+> The scan is deliberately simple and the rules list (`rules.json`) is empty of real cheats until staff fill it in from verified samples.
+
+## Build and run (Windows, .NET 8 SDK)
+
+```
+cd LegacyX-Checker
+dotnet build -c Release
+dotnet run
+```
+
+Publish one file for players:
+
+```
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+```
+
+`rules.json` is copied next to the program. Put it beside the `.exe` when you share the file.
+
+**Sign the `.exe`** (a code-signing certificate). A scanner that reads files looks like malware to antivirus and SmartScreen; unsigned
+builds get warnings and false alarms. Sign it, and submit it to Microsoft Defender as a false positive if it is still flagged.
+
+## What it does
+
+| Scanner | Looks at | Finds |
+| --- | --- | --- |
+| `FileScanner` | file names on every fixed drive; for programs, a SHA-256 when `rules.json` has hashes | name hit = suspicion, known file name or hash = detection |
+| `ProcessScanner` | running programs: name and window title | name hit = suspicion |
+| `TraceScanner` | Prefetch (what ran recently, needs administrator) and the Recent list | name hit = suspicion; Prefetch off or empty = suspicion of tampering |
+| `SteamScanner` | `Steam\config\loginusers.vdf` | Steam IDs, so the site can say whether the player who was asked is on this PC |
+
+## What it sends
+
+`POST /api/v1/checks/code/:code/report` with exactly: `consent`, `checkerVersion`, `steamIds`, `filesScanned`, `durationSeconds`,
+`findings[{name, kind, confidence, path?, note?}]`. Paths are shortened (the Windows user name becomes `***`). The server rejects any
+other field. File contents, screenshots, passwords, browser data and keystrokes are never read or sent. The same list is written to
+`LegacyX-Checker-report.txt` on the Desktop so the player can read it.
+
+## Settings
+
+`checker.json` next to the program: `{ "apiUrl": "https://legacyx.cc" }` points it at a test server.
+
+## Not done yet
+
+- Real cheat signatures in `rules.json`, and fetching them from the website so they can change without a new release.
+- Reading Amcache / ShimCache / the USN journal (deeper traces of deleted programs).
+- Checking loaded modules inside `cs2.exe`.
+- A signed installer.

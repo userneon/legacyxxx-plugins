@@ -1,0 +1,76 @@
+<Window x:Class="LegacyX.Checker.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LEGACY-X Checker" Width="720" Height="560" MinWidth="620" MinHeight="520"
+        WindowStartupLocation="CenterScreen" Background="{StaticResource Bg}" Foreground="{StaticResource Text}"
+        FontFamily="Segoe UI" ResizeMode="CanResizeWithGrip">
+  <Grid Margin="28">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <StackPanel Grid.Row="0" Margin="0,0,0,18">
+      <TextBlock FontSize="20" FontWeight="Bold"><Run Text="LEGACY-" /><Run Text="X" Foreground="#FF3D6E" /><Run Text="  Checker" Foreground="{StaticResource Dim}" FontWeight="Normal" /></TextBlock>
+      <TextBlock x:Name="Subtitle" Margin="0,4,0,0" FontSize="13" Foreground="{StaticResource Dim}" Text="A staff member asked you to run this. It looks for cheats on this PC." />
+    </StackPanel>
+
+    <Border Grid.Row="1" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="12" Padding="22">
+      <Grid>
+        <!-- 1. The code -->
+        <StackPanel x:Name="CodePanel">
+          <TextBlock Text="Your check code" FontSize="13" Foreground="{StaticResource Dim}" />
+          <TextBox x:Name="CodeBox" Margin="0,8,0,0" MaxLength="9" FontSize="22" FontFamily="Consolas" CharacterCasing="Upper" KeyDown="CodeBox_KeyDown" />
+          <TextBlock Text="The staff member sent it to you, like K7F2-9QX4. It works once, for one hour." Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource Faint}" TextWrapping="Wrap" />
+          <TextBlock x:Name="CodeError" Margin="0,10,0,0" FontSize="12" Foreground="{StaticResource Red}" TextWrapping="Wrap" />
+          <Button x:Name="CheckCodeButton" Style="{StaticResource PrimaryButton}" Content="Continue" Margin="0,16,0,0" HorizontalAlignment="Left" Click="CheckCode_Click" />
+        </StackPanel>
+
+        <!-- 2. Who asked, and what happens -->
+        <ScrollViewer x:Name="ConsentPanel" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock x:Name="RequestedBy" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock Text="What this program does" Margin="0,16,0,0" FontSize="12" Foreground="{StaticResource Dim}" FontWeight="SemiBold" />
+            <TextBlock Margin="0,6,0,0" FontSize="13" TextWrapping="Wrap" LineHeight="20" x:Name="WhatItDoes" />
+            <TextBlock Text="What is sent to legacyx.cc" Margin="0,16,0,0" FontSize="12" Foreground="{StaticResource Dim}" FontWeight="SemiBold" />
+            <TextBlock Margin="0,6,0,0" FontSize="13" TextWrapping="Wrap" LineHeight="20" x:Name="WhatIsSent" />
+            <TextBlock Margin="0,16,0,0" FontSize="12" Foreground="{StaticResource Faint}" TextWrapping="Wrap" x:Name="NotSent" />
+            <CheckBox x:Name="ConsentBox" Margin="0,18,0,0" Content="I agree to this scan of this computer." Checked="Consent_Changed" Unchecked="Consent_Changed" />
+            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+              <Button x:Name="StartButton" Style="{StaticResource PrimaryButton}" Content="Start scan" IsEnabled="False" Click="Start_Click" />
+              <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Margin="10,0,0,0" Click="Cancel_Click" />
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- 3. Scanning -->
+        <StackPanel x:Name="ScanPanel" Visibility="Collapsed">
+          <TextBlock x:Name="ScanTitle" Text="Scanning…" FontSize="16" FontWeight="SemiBold" />
+          <ProgressBar x:Name="Progress" IsIndeterminate="True" Height="8" Margin="0,14,0,0" Background="{StaticResource Raised}" Foreground="#FAFAFA" BorderThickness="0" />
+          <TextBlock x:Name="ScanStatus" Margin="0,8,0,0" FontSize="12" Foreground="{StaticResource Faint}" TextTrimming="CharacterEllipsis" />
+          <UniformGrid Columns="4" Margin="0,22,0,0">
+            <StackPanel><TextBlock Text="Files" FontSize="12" Foreground="{StaticResource Dim}" /><TextBlock x:Name="FilesText" Text="0" FontSize="22" FontWeight="SemiBold" /></StackPanel>
+            <StackPanel><TextBlock Text="Detections" FontSize="12" Foreground="{StaticResource Dim}" /><TextBlock x:Name="DetectionsText" Text="0" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource Red}" /></StackPanel>
+            <StackPanel><TextBlock Text="Suspicion" FontSize="12" Foreground="{StaticResource Dim}" /><TextBlock x:Name="SuspicionsText" Text="0" FontSize="22" FontWeight="SemiBold" /></StackPanel>
+            <StackPanel><TextBlock Text="Elapsed" FontSize="12" Foreground="{StaticResource Dim}" /><TextBlock x:Name="ElapsedText" Text="00:00" FontSize="22" FontWeight="SemiBold" /></StackPanel>
+          </UniformGrid>
+          <Button x:Name="StopButton" Style="{StaticResource SecondaryButton}" Content="Stop scan" Margin="0,26,0,0" HorizontalAlignment="Stretch" Click="Stop_Click" />
+        </StackPanel>
+
+        <!-- 4. Done -->
+        <StackPanel x:Name="DonePanel" Visibility="Collapsed">
+          <TextBlock x:Name="DoneTitle" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock x:Name="DoneText" Margin="0,10,0,0" FontSize="13" Foreground="{StaticResource Dim}" TextWrapping="Wrap" LineHeight="20" />
+          <TextBlock x:Name="DoneError" Margin="0,10,0,0" FontSize="12" Foreground="{StaticResource Red}" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+            <Button x:Name="RetryButton" Style="{StaticResource PrimaryButton}" Content="Try sending again" Visibility="Collapsed" Click="Retry_Click" />
+            <Button Style="{StaticResource SecondaryButton}" Content="Close" Margin="10,0,0,0" Click="Cancel_Click" />
+          </StackPanel>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <TextBlock Grid.Row="2" Margin="0,14,0,0" FontSize="11" Foreground="{StaticResource Faint}" x:Name="Footer" />
+  </Grid>
+</Window>

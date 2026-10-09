@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "note": "What the checker looks for. Staff fill this in from verified samples; nothing here is a verdict. A name hit is only a suspicion. A hash or exact file name hit is a detection.",
+  "nameKeywords": ["aimbot", "triggerbot", "wallhack", "spinbot", "antiaim", "norecoil"],
+  "processKeywords": ["aimbot", "triggerbot", "wallhack", "spinbot"],
+  "knownFileNames": [],
+  "sha256": []
+}
