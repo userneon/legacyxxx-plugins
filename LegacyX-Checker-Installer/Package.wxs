@@ -11,6 +11,8 @@
           <File Id="CheckerExe" Source="$(ExePath)" Name="LegacyX-Checker.exe" KeyPath="no" />
           <RegistryValue Root="HKCU" Key="Software\LEGACY-X\Checker" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
           <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
+          <!-- The "already used" marks of an earlier check must not block the next install. -->
+          <RemoveFile Id="ClearUsedFlags" Name="used*.flag" On="both" />
         </Component>
       </Directory>
     </StandardDirectory>

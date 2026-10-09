@@ -100,7 +100,8 @@ public partial class App : Application
             {
                 if (!string.IsNullOrEmpty(place)) zips.Add($"\"{System.IO.Path.Combine(place, "LegacyX-Checker*.zip")}\"");
             }
-            var files = $"\"{exe}\" \"{rules}\" \"{CheckFilePath}\" \"{UsedFlagPath}\" {string.Join(" ", zips)}";
+            var elsewhere = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LegacyX-Checker", "used-*.flag");
+            var files = $"\"{exe}\" \"{rules}\" \"{CheckFilePath}\" \"{UsedFlagPath}\" \"{elsewhere}\" {string.Join(" ", zips)}";
             // Wait for this program to end, delete (bypassing the Recycle Bin), try once more in case a file was still locked, and
             // remove the folder it was unpacked into if nothing else is left in it.
             // Installed from the .msi: let Windows uninstall it first (so it also leaves "Installed apps"), then sweep what is left.
