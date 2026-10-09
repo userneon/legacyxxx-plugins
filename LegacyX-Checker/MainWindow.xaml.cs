@@ -56,6 +56,13 @@ public partial class MainWindow : Window
             // One slow scan line drifting down the window.
             ScanLineMove.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-90, 700, TimeSpan.FromSeconds(5.5)) { RepeatBehavior = RepeatBehavior.Forever });
             CodeBox.Focus();
+            // A personal download has the code in check.json: fill it in and check it, so the player only has to read and agree.
+            if (App.CodeFromFile() is { Length: > 0 } fileCode)
+            {
+                CodeBox.Text = fileCode;
+                CodeError.Text = "";
+                CheckCode_Click(this, new RoutedEventArgs());
+            }
         };
     }
 
@@ -307,6 +314,7 @@ public partial class MainWindow : Window
         try
         {
             await _api.SendReportAsync(_code, _report);
+            App.DeleteCheckFile();
             var found = _report.Findings.Count;
             ShowDone(
                 found == 0 ? Outcome.Good : Outcome.Warning,

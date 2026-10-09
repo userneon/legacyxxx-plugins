@@ -38,7 +38,13 @@ builds get warnings and false alarms. Sign it, and submit it to Microsoft Defend
    ```
    The site finds `https://legacyx.cc/downloads/LegacyX-Checker.zip` by itself: the "Ask for a check" window then shows a download link
    and a message ready to paste to the player. (Or set `VITE_CHECKER_DOWNLOAD_URL` when building the site to use any other address.)
-4. Every new build: replace the zip, and keep `rules.json` next to the `.exe`.
+4. **A personal download for each check (recommended).** Put the signed `LegacyX-Checker.exe` (and `rules.json`) somewhere on the API server and set
+   `CHECKER_EXE_PATH` / `CHECKER_RULES_PATH` in the API's `.env`, then restart it. After that every check can give the player
+   `…/api/v1/checks/code/<code>/download`: a zip made on the spot with the program, the rules and a `check.json` that holds *that* check's code.
+   The player unzips it and runs the program; the code is already filled in and checked, so they only read and agree. The link works only
+   while the check is waiting and not expired, at most 3 times. The program deletes `check.json` after it has sent its result.
+   Run it from the unzipped folder, not from inside the zip (`check.json` must sit next to the `.exe`).
+5. Every new build: replace the zip, and keep `rules.json` next to the `.exe`.
 
 ## What it does
 
