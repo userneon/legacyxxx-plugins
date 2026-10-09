@@ -26,6 +26,20 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 **Sign the `.exe`** (a code-signing certificate). A scanner that reads files looks like malware to antivirus and SmartScreen; unsigned
 builds get warnings and false alarms. Sign it, and submit it to Microsoft Defender as a false positive if it is still flagged.
 
+## Giving it to players
+
+1. Build the single file (above) and put `LegacyX-Checker.exe` and `rules.json` in a zip named **`LegacyX-Checker.zip`**.
+2. **While the site is behind the countdown**, players cannot open `legacyx.cc/downloads/...` (the gate serves nobody but the team). Send them
+   the zip yourself (Discord direct message).
+3. **After launch**, put the zip on the web server, outside the repository, where a deploy does not remove it:
+   ```
+   sudo mkdir -p /var/www/legacyx/downloads
+   sudo cp LegacyX-Checker.zip /var/www/legacyx/downloads/
+   ```
+   The site finds `https://legacyx.cc/downloads/LegacyX-Checker.zip` by itself: the "Ask for a check" window then shows a download link
+   and a message ready to paste to the player. (Or set `VITE_CHECKER_DOWNLOAD_URL` when building the site to use any other address.)
+4. Every new build: replace the zip, and keep `rules.json` next to the `.exe`.
+
 ## What it does
 
 | Scanner | Looks at | Finds |
