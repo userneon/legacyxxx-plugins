@@ -1,7 +1,6 @@
 <Application x:Class="LegacyX.Checker.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="MainWindow.xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Application.Resources>
     <!-- The site's own palette: near-black, flat outlines, white as the one accent, red and green only for status. -->
     <SolidColorBrush x:Key="Bg" Color="#0A0A0A" />

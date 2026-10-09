@@ -4,6 +4,42 @@ namespace LegacyX.Checker;
 
 public partial class App : Application
 {
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        base.OnStartup(e);
+        // LegacyX-Checker.exe --explain "C:\path\to\file.exe": say why the content check does or does not flag this one file.
+        if (e.Args.Length >= 2 && e.Args[0].Equals("--explain", StringComparison.OrdinalIgnoreCase))
+        {
+            ExplainFile(e.Args[1]);
+            Shutdown();
+            return;
+        }
+        new MainWindow().Show();
+    }
+
+    private static void ExplainFile(string path)
+    {
+        string text;
+        try
+        {
+            var length = new System.IO.FileInfo(path).Length;
+            text = Scanning.ContentAnalyzer.Explain(Scanning.ContentAnalyzer.Inspect(Rules.Load(), path, length));
+        }
+        catch (Exception problem)
+        {
+            text = $"Could not look at \"{path}\": {problem.Message}";
+        }
+        try
+        {
+            System.IO.File.WriteAllText(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "LegacyX-Checker-explain.txt"), text);
+        }
+        catch
+        {
+            // The Desktop can be read-only: the message box below still shows it.
+        }
+        MessageBox.Show(text, "LEGACY-X Checker: explain", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
     public const string Version = "1.0.0";
 
     /// <summary>The path of check.json next to the program: a personal download carries the check's code in it.</summary>

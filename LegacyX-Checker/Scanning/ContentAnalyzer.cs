@@ -30,40 +30,140 @@ public static class ContentAnalyzer
         return !(windows.Length > 0 && path.StartsWith(windows, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Everything the content check learned about one file, and why it did or did not raise a finding.</summary>
+    public sealed class Inspection
+    {
+        public string Path { get; init; } = "";
+        public long Length { get; init; }
+        public bool Candidate { get; init; }
+        public bool IsProgram { get; set; }
+        public bool Signed { get; set; }
+        public bool Managed { get; set; }
+        public List<string> Sections { get; } = new();
+        public string? Protector { get; set; }
+        public int ImportCount { get; set; }
+        public bool OpensProcesses { get; set; }
+        public List<string> MemoryApis { get; } = new();
+        public bool UsesMemory { get; set; }
+        public bool ReadText { get; set; }
+        public List<string> GameMarkers { get; } = new();
+        public List<string> OffsetMarkers { get; } = new();
+        public Finding? Finding { get; set; }
+        /// <summary>In plain words: why this file was or was not flagged.</summary>
+        public string Reason { get; set; } = "";
+    }
+
     public static void Analyze(ScanContext context, string path)
     {
-        var pe = PeFile.Read(path);
-        if (pe is null) return;
-        var rules = context.Rules;
+        var inspection = Inspect(context.Rules, path, new FileInfo(path).Length);
+        if (inspection.Finding is not null) context.Add(inspection.Finding);
+    }
+
+    /// <summary>Looks at one file the way the scan does, and writes down every step. Also used by --explain on a test file.</summary>
+    public static Inspection Inspect(Rules rules, string path, long length)
+    {
         var name = Path.GetFileName(path);
-
-        // A protector (VMProtect, Themida …) hides what a program does. Cheat loaders use them; so do some honest games.
-        var protector = pe.SectionNames.FirstOrDefault(section => rules.ProtectorSections.Contains(section, StringComparer.OrdinalIgnoreCase));
-        if (protector is not null && !pe.IsSigned)
+        var result = new Inspection { Path = path, Length = length, Candidate = IsCandidate(path, length) };
+        if (!result.Candidate)
         {
-            context.Add(new Finding(name, "file", Finding.Suspicion, path, $"Unsigned program packed with a protector (section \"{protector}\")"));
+            result.Reason = length < 16 * 1024 ? "Skipped: the file is smaller than 16 KB." : length > MaxDeepBytes ? "Skipped: the file is larger than 64 MB." : !Extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase) ? $"Skipped: only .exe, .dll and .sys files are read for content (this is \"{Path.GetExtension(path)}\")." : "Skipped: it is inside the Windows folder.";
+            return result;
         }
-        if (pe.IsSigned) return;
+        var pe = PeFile.Read(path);
+        if (pe is null)
+        {
+            result.Reason = "Not read: the file is not a Windows program (no valid PE header), or it could not be opened.";
+            return result;
+        }
+        result.IsProgram = true;
+        result.Signed = pe.IsSigned;
+        result.Managed = pe.IsManaged;
+        result.Sections.AddRange(pe.SectionNames);
+        result.ImportCount = pe.Imports.Count;
+        result.OpensProcesses = pe.Imports.Contains("openprocess", StringComparer.OrdinalIgnoreCase);
+        result.MemoryApis.AddRange(MemoryApis.Where(api => pe.Imports.Contains(api, StringComparer.OrdinalIgnoreCase)));
 
-        var usesMemory = pe.Imports.Any(import => MemoryApis.Contains(import, StringComparer.OrdinalIgnoreCase)) && pe.Imports.Contains("openprocess", StringComparer.OrdinalIgnoreCase);
+        result.Protector = pe.SectionNames.FirstOrDefault(section => rules.ProtectorSections.Contains(section, StringComparer.OrdinalIgnoreCase));
+        if (pe.IsSigned)
+        {
+            result.Reason = "Not flagged: the program has a digital signature, and signed programs are left alone.";
+            return result;
+        }
+        if (result.Protector is not null)
+        {
+            result.Finding = new Finding(name, "file", Finding.Suspicion, path, $"Unsigned program packed with a protector (section \"{result.Protector}\")");
+        }
+
+        var usesMemory = result.OpensProcesses && result.MemoryApis.Count > 0;
         // A .NET program names its functions in its own data, not in the import table: look at its text instead.
-        if (!usesMemory && !pe.IsManaged) return;
-
-        var text = ReadText(path);
-        if (text is null) return;
-        if (pe.IsManaged) usesMemory = MemoryApis.Any(api => ContainsAscii(text, api, ignoreCase: true));
-        if (!usesMemory) return;
-
-        var games = rules.GameMarkers.Where(marker => ContainsAscii(text, marker, ignoreCase: true)).ToList();
-        var offsets = rules.OffsetMarkers.Where(marker => ContainsAscii(text, marker, ignoreCase: false)).ToList();
-        if (offsets.Count >= 2)
+        byte[]? text = null;
+        if (!usesMemory && pe.IsManaged)
         {
-            context.Add(new Finding(name, "file", Finding.Detection, path, $"Unsigned program that reads other programs' memory and carries CS2 offsets ({string.Join(", ", offsets.Take(4))})"));
+            text = ReadText(path);
+            if (text is not null) usesMemory = MemoryApis.Any(api => ContainsAscii(text, api, ignoreCase: true));
         }
-        else if (games.Count > 0)
+        result.UsesMemory = usesMemory;
+        if (!usesMemory)
         {
-            context.Add(new Finding(name, "file", Finding.Suspicion, path, $"Unsigned program that reads other programs' memory and names {string.Join(", ", games.Take(3))}"));
+            result.Reason = result.Finding is not null
+                ? "Flagged only for the protector. It does not import functions for reading another program's memory (it may call Windows directly, use a driver, or load that code later)."
+                : "Not flagged: it does not import the functions a program needs to read another program's memory" + (pe.IsManaged ? " (and its .NET text does not name them either)." : ". If this is a cheat it may call Windows directly, use a driver, or load that code from somewhere else.");
+            return result;
         }
+
+        text ??= ReadText(path);
+        if (text is null)
+        {
+            result.Reason = "Could not read the file's contents to look for CS2 names.";
+            return result;
+        }
+        result.ReadText = true;
+        result.GameMarkers.AddRange(rules.GameMarkers.Where(marker => ContainsAscii(text, marker, ignoreCase: true)));
+        result.OffsetMarkers.AddRange(rules.OffsetMarkers.Where(marker => ContainsAscii(text, marker, ignoreCase: false)));
+        if (result.OffsetMarkers.Count >= 2)
+        {
+            result.Finding = new Finding(name, "file", Finding.Detection, path, $"Unsigned program that reads other programs' memory and carries CS2 offsets ({string.Join(", ", result.OffsetMarkers.Take(4))})");
+            result.Reason = "DETECTION: unsigned, reads other programs' memory, and carries two or more CS2 offset names.";
+        }
+        else if (result.GameMarkers.Count > 0)
+        {
+            result.Finding = new Finding(name, "file", Finding.Suspicion, path, $"Unsigned program that reads other programs' memory and names {string.Join(", ", result.GameMarkers.Take(3))}");
+            result.Reason = "SUSPICION: unsigned, reads other programs' memory, and names CS2 (cs2.exe / client.dll …), but has fewer than two offset names.";
+        }
+        else
+        {
+            result.Reason = "Not flagged: it reads other programs' memory, but no CS2 names or offsets were found inside (they may be encrypted, or the target is not CS2).";
+        }
+        return result;
+    }
+
+    /// <summary>The result of <see cref="Inspect"/> as lines of text a person can read.</summary>
+    public static string Explain(Inspection result)
+    {
+        var lines = new List<string>
+        {
+            $"File: {result.Path}",
+            $"Size: {result.Length:N0} bytes",
+            $"Looked at by the scan: {(result.Candidate ? "yes" : "no")}",
+        };
+        if (result.IsProgram)
+        {
+            lines.Add($"Digital signature: {(result.Signed ? "YES (signed programs are skipped)" : "no")}");
+            lines.Add($"Kind: {(result.Managed ? ".NET program" : "native program")}");
+            lines.Add($"Sections: {string.Join(" ", result.Sections)}{(result.Protector is not null ? $"   <- protector: {result.Protector}" : "")}");
+            lines.Add($"Imported names: {result.ImportCount}");
+            lines.Add($"Opens other processes (OpenProcess): {(result.OpensProcesses ? "yes" : "no")}");
+            lines.Add($"Memory functions imported: {(result.MemoryApis.Count == 0 ? "none" : string.Join(", ", result.MemoryApis))}");
+            lines.Add($"Reads other programs' memory (by the scan's rule): {(result.UsesMemory ? "yes" : "no")}");
+            if (result.ReadText)
+            {
+                lines.Add($"CS2 names found inside: {(result.GameMarkers.Count == 0 ? "none" : string.Join(", ", result.GameMarkers))}");
+                lines.Add($"CS2 offset names found inside: {(result.OffsetMarkers.Count == 0 ? "none" : string.Join(", ", result.OffsetMarkers))}");
+            }
+        }
+        lines.Add("");
+        lines.Add(result.Reason);
+        return string.Join("\n", lines);
     }
 
     private static byte[]? ReadText(string path)

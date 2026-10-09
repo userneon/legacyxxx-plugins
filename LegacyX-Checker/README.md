@@ -80,6 +80,19 @@ overlays also read memory, so a hit is a reason to look, not a verdict. Edit the
 other field. File contents, screenshots, passwords, browser data and keystrokes are never read or sent. The same list is written to
 `LegacyX-Checker-report.txt` on the Desktop so the player can read it.
 
+## Why did it not flag my test file?
+
+Run the checker on that one file and it says exactly why it was or was not flagged (signed? imports memory functions? CS2 names inside?):
+
+```
+LegacyX-Checker.exe --explain "C:\path\to\the\file.exe"
+```
+
+A window shows the steps and a copy is written to the Desktop (`LegacyX-Checker-explain.txt`). Typical reasons a real cheat is missed: it is
+signed; it is not a Windows program (a .jar, .py, .lua, .ahk or a config); it reads memory through a driver or by calling Windows directly (no
+imported memory functions); it loads the real code from the internet later; or its CS2 names are encrypted. The content check is a net for the common
+cases, not a guarantee.
+
 ## One check, one program
 
 A check's code works once, and so does the program that carries it: after the result has been **sent** and the window is closed, the program deletes
