@@ -48,25 +48,64 @@ public partial class MainWindow : Window
         NotSent.Text = "The contents of your files, screenshots, passwords, browser data, or anything you type.";
         _timer.Tick += (_, _) => UpdateProgress();
         SetStep(1);
-        Loaded += (_, _) => { FadeIn(CodePanel, 10); CodeBox.Focus(); };
+        Loaded += (_, _) =>
+        {
+            FadeIn(CodePanel, 10);
+            Typewriter(CodeTitle, "> enter your check code");
+            CodeCaret.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(520)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
+            // One slow scan line drifting down the window.
+            ScanLineMove.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(-90, 700, TimeSpan.FromSeconds(5.5)) { RepeatBehavior = RepeatBehavior.Forever });
+            CodeBox.Focus();
+        };
     }
 
-    // Windows 11: round the window's corners like every other app.
+    // Windows 11: round the corners, and let the window be frosted glass (Acrylic blur of what is behind it).
+    // Older Windows gets a plain dark window instead of a half-working effect.
     [DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
+        var glass = false;
         try
         {
-            var preference = 2; // DWMWCP_ROUND
-            DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, 33, ref preference, sizeof(int));
+            var handle = new WindowInteropHelper(this).Handle;
+            var corners = 2; // DWMWCP_ROUND
+            DwmSetWindowAttribute(handle, 33, ref corners, sizeof(int));
+            if (Environment.OSVersion.Version.Build >= 22621 && HwndSource.FromHwnd(handle) is { } source)
+            {
+                source.CompositionTarget.BackgroundColor = Colors.Transparent;
+                var dark = 1; // DWMWA_USE_IMMERSIVE_DARK_MODE
+                DwmSetWindowAttribute(handle, 20, ref dark, sizeof(int));
+                var acrylic = 3; // DWMWA_SYSTEMBACKDROP_TYPE: transient window = Acrylic
+                glass = DwmSetWindowAttribute(handle, 38, ref acrylic, sizeof(int)) == 0;
+            }
         }
         catch
         {
-            // Older Windows keeps square corners.
+            // Not supported here: the plain dark window below is used.
         }
+        if (!glass)
+        {
+            Background = new SolidColorBrush(Color.FromRgb(0x0A, 0x0A, 0x0A));
+            Shell.Background = new SolidColorBrush(Color.FromRgb(0x0A, 0x0A, 0x0A));
+        }
+    }
+
+    /// <summary>Text that types itself out, like a terminal.</summary>
+    private void Typewriter(System.Windows.Controls.TextBlock block, string text)
+    {
+        var shown = 0;
+        block.Text = "";
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(22) };
+        timer.Tick += (_, _) =>
+        {
+            shown += 1;
+            block.Text = text[..Math.Min(shown, text.Length)];
+            if (shown >= text.Length) timer.Stop();
+        };
+        timer.Start();
     }
 
     /// <summary>A panel eases in: it fades up and slides a few pixels, instead of snapping into place.</summary>
@@ -191,7 +230,8 @@ public partial class MainWindow : Window
         _cancel = new CancellationTokenSource();
         _clock = Stopwatch.StartNew();
         ShowPanel(ScanPanel, 3);
-        LatestText.Text = "Nothing yet.";
+        Typewriter(ScanTitle, "> scanning this pc");
+        LogText.Text = "";
         // A bar that slides across while the scan runs (the total number of files is not known in advance).
         Bar.BeginAnimation(MarginProperty, new ThicknessAnimation(new Thickness(-180, 0, 0, 0), new Thickness(660, 0, 0, 0), TimeSpan.FromSeconds(1.6)) { RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
         _timer.Start();
@@ -250,8 +290,11 @@ public partial class MainWindow : Window
         SuspicionsText.Text = _context.Suspicions.ToString();
         ElapsedText.Text = _clock.Elapsed.ToString(@"mm\:ss");
         ScanStatus.Text = _context.Status;
-        var latest = _context.Findings.TakeLast(3).Select(finding => $"{(finding.Confidence == Finding.Detection ? "●" : "○")}  {finding.Name}").ToList();
-        if (latest.Count > 0) LatestText.Text = string.Join("\n", latest);
+        // The last lines of what the scan did, then the folder it is reading right now.
+        var lines = _context.RecentLog(7).ToList();
+        var current = _context.CurrentPath;
+        if (current.Length > 0) lines.Add("▸ " + Masking.Path(current));
+        LogText.Text = string.Join("\n", lines);
     }
 
     private void Stop_Click(object sender, RoutedEventArgs e) => _cancel?.Cancel();
@@ -302,7 +345,7 @@ public partial class MainWindow : Window
 
     private void ShowDone(Outcome outcome, string title, string text, bool canRetry, string error = "")
     {
-        DoneTitle.Text = title;
+        Typewriter(DoneTitle, "> " + title.ToLowerInvariant());
         DoneText.Text = text;
         DoneError.Text = error;
         // A tick when all is well, an exclamation mark when something was found or went wrong.

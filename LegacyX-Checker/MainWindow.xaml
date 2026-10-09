@@ -4,13 +4,13 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="LEGACY-X Checker" Width="720" Height="640"
         WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="CanMinimize"
-        Background="{StaticResource Bg}" Foreground="{StaticResource Text}"
+        Background="Transparent" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource UiFont}" Icon="Assets/app.ico" UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
   <shell:WindowChrome.WindowChrome>
-    <shell:WindowChrome CaptionHeight="48" ResizeBorderThickness="0" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+    <shell:WindowChrome CaptionHeight="48" ResizeBorderThickness="0" GlassFrameThickness="-1" CornerRadius="0" UseAeroCaptionButtons="False" />
   </shell:WindowChrome.WindowChrome>
 
-  <Border BorderBrush="{StaticResource Line}" BorderThickness="1">
+  <Border x:Name="Shell" Background="#A60A0A0C" BorderBrush="{StaticResource GlassLine}" BorderThickness="1">
     <Grid>
       <Grid.RowDefinitions>
         <RowDefinition Height="48" />
@@ -18,12 +18,14 @@
         <RowDefinition Height="*" />
         <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
+      <!-- Behind everything: a faint grid. In front of everything: one slow scan line. -->
+      <Rectangle Grid.RowSpan="4" Fill="{StaticResource GridBrush}" IsHitTestVisible="False" />
 
       <!-- Title bar -->
-      <Grid Grid.Row="0" Background="#0F0F0F">
+      <Grid Grid.Row="0" Background="#33000000">
         <StackPanel Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
           <Image Source="Assets/logo.png" Width="20" Height="20" />
-          <TextBlock Margin="10,0,0,0" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"><Run Text="LEGACY-" /><Run Text="X" Foreground="#FF3D6E" /><Run Text="  Checker" Foreground="{StaticResource Dim}" FontWeight="Normal" /></TextBlock>
+          <TextBlock Margin="10,0,0,0" FontFamily="{StaticResource MonoFont}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"><Run Text="LEGACY-" /><Run Text="X" Foreground="#FF3D6E" /><Run Text=" // CHECKER" Foreground="{StaticResource Dim}" FontWeight="Normal" /></TextBlock>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
           <Button Style="{StaticResource TitleButton}" shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="Minimize_Click" ToolTip="Minimize">
@@ -40,22 +42,22 @@
       <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,22,0,6">
         <StackPanel Orientation="Horizontal">
           <Border x:Name="Dot1" Width="22" Height="22" CornerRadius="11" BorderThickness="1"><TextBlock x:Name="Num1" Text="1" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-          <TextBlock x:Name="Lbl1" Text="Code" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
+          <TextBlock x:Name="Lbl1" Text="Code" FontFamily="{StaticResource MonoFont}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
         </StackPanel>
         <Border x:Name="Bar1" Width="28" Height="1" Margin="12,0" Background="{StaticResource Line}" />
         <StackPanel Orientation="Horizontal">
           <Border x:Name="Dot2" Width="22" Height="22" CornerRadius="11" BorderThickness="1"><TextBlock x:Name="Num2" Text="2" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-          <TextBlock x:Name="Lbl2" Text="Agree" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
+          <TextBlock x:Name="Lbl2" Text="Agree" FontFamily="{StaticResource MonoFont}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
         </StackPanel>
         <Border x:Name="Bar2" Width="28" Height="1" Margin="12,0" Background="{StaticResource Line}" />
         <StackPanel Orientation="Horizontal">
           <Border x:Name="Dot3" Width="22" Height="22" CornerRadius="11" BorderThickness="1"><TextBlock x:Name="Num3" Text="3" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-          <TextBlock x:Name="Lbl3" Text="Scan" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
+          <TextBlock x:Name="Lbl3" Text="Scan" FontFamily="{StaticResource MonoFont}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
         </StackPanel>
         <Border x:Name="Bar3" Width="28" Height="1" Margin="12,0" Background="{StaticResource Line}" />
         <StackPanel Orientation="Horizontal">
           <Border x:Name="Dot4" Width="22" Height="22" CornerRadius="11" BorderThickness="1"><TextBlock x:Name="Num4" Text="4" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-          <TextBlock x:Name="Lbl4" Text="Done" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
+          <TextBlock x:Name="Lbl4" Text="Done" FontFamily="{StaticResource MonoFont}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
         </StackPanel>
       </StackPanel>
 
@@ -64,7 +66,7 @@
 
         <!-- 1. The code -->
         <StackPanel x:Name="CodePanel" VerticalAlignment="Top" Margin="0,24,0,0">
-          <TextBlock Text="Enter your check code" FontSize="24" FontWeight="SemiBold" />
+          <StackPanel Orientation="Horizontal"><TextBlock x:Name="CodeTitle" FontFamily="{StaticResource MonoFont}" FontSize="22" FontWeight="SemiBold" Text="> enter your check code" /><TextBlock x:Name="CodeCaret" Text="▌" FontFamily="{StaticResource MonoFont}" FontSize="22" Foreground="{StaticResource TerminalGreen}" Margin="2,0,0,0" /></StackPanel>
           <TextBlock Margin="0,8,0,0" FontSize="13" Foreground="{StaticResource Dim}" TextWrapping="Wrap" LineHeight="20" Text="A LEGACY-X staff member asked you to run this check. They sent you a code, like K7F2-9QX4. It works once and stops working after an hour." />
           <TextBox x:Name="CodeBox" Margin="0,26,0,0" MaxLength="9" FontSize="28" FontFamily="Consolas" CharacterCasing="Upper" Padding="16,12" TextChanged="CodeBox_TextChanged" KeyDown="CodeBox_KeyDown" />
           <TextBlock x:Name="CodeError" Margin="0,12,0,0" FontSize="12" Foreground="{StaticResource Red}" TextWrapping="Wrap" MinHeight="18" />
@@ -79,26 +81,26 @@
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
           <StackPanel Grid.Row="0">
-            <TextBlock x:Name="RequestedBy" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock x:Name="RequestedBy" FontFamily="{StaticResource MonoFont}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
             <TextBlock Margin="0,6,0,0" FontSize="13" Foreground="{StaticResource Dim}" TextWrapping="Wrap" Text="Read what this does before you agree. You can close this window at any time and nothing will be sent." />
           </StackPanel>
           <ScrollViewer Grid.Row="1" Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
             <StackPanel>
-              <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="16,14">
+              <Border Background="{StaticResource GlassFill}" BorderBrush="{StaticResource GlassLine}" BorderThickness="1" CornerRadius="10" Padding="16,14">
                 <StackPanel>
-                  <TextBlock Text="WHAT IT LOOKS AT" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" />
+                  <TextBlock Text="WHAT IT LOOKS AT" FontFamily="{StaticResource MonoFont}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" />
                   <TextBlock x:Name="WhatItDoes" Margin="0,8,0,0" FontSize="13" TextWrapping="Wrap" LineHeight="21" />
                 </StackPanel>
               </Border>
-              <Border Margin="0,10,0,0" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="16,14">
+              <Border Margin="0,10,0,0" Background="{StaticResource GlassFill}" BorderBrush="{StaticResource GlassLine}" BorderThickness="1" CornerRadius="10" Padding="16,14">
                 <StackPanel>
-                  <TextBlock Text="WHAT IS SENT TO LEGACY-X" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" />
+                  <TextBlock Text="WHAT IS SENT TO LEGACY-X" FontFamily="{StaticResource MonoFont}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" />
                   <TextBlock x:Name="WhatIsSent" Margin="0,8,0,0" FontSize="13" TextWrapping="Wrap" LineHeight="21" />
                 </StackPanel>
               </Border>
-              <Border Margin="0,10,0,0" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="16,14">
+              <Border Margin="0,10,0,0" Background="{StaticResource GlassFill}" BorderBrush="{StaticResource GlassLine}" BorderThickness="1" CornerRadius="10" Padding="16,14">
                 <StackPanel>
-                  <TextBlock Text="NEVER SENT" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Green}" />
+                  <TextBlock Text="NEVER SENT" FontFamily="{StaticResource MonoFont}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Green}" />
                   <TextBlock x:Name="NotSent" Margin="0,8,0,0" FontSize="13" TextWrapping="Wrap" LineHeight="21" Foreground="{StaticResource Dim}" />
                 </StackPanel>
               </Border>
@@ -115,34 +117,35 @@
 
         <!-- 3. Scanning -->
         <StackPanel x:Name="ScanPanel" Visibility="Collapsed" Margin="0,24,0,0">
-          <TextBlock Text="Scanning this PC" FontSize="24" FontWeight="SemiBold" />
+          <TextBlock x:Name="ScanTitle" FontFamily="{StaticResource MonoFont}" FontSize="22" FontWeight="SemiBold" Text="> scanning this pc" />
           <TextBlock x:Name="ScanStatus" Margin="0,8,0,0" FontSize="13" Foreground="{StaticResource Dim}" TextTrimming="CharacterEllipsis" />
-          <Border Height="6" Margin="0,22,0,0" CornerRadius="3" Background="{StaticResource Raised}" ClipToBounds="True">
-            <Border x:Name="Bar" Width="180" CornerRadius="3" Background="#FAFAFA" HorizontalAlignment="Left" Margin="-180,0,0,0" />
+          <Border Height="6" Margin="0,22,0,0" CornerRadius="3" Background="#22FFFFFF" ClipToBounds="True">
+            <Border x:Name="Bar" Width="180" CornerRadius="3" Background="{StaticResource TerminalGreen}" HorizontalAlignment="Left" Margin="-180,0,0,0"><Border.Effect><DropShadowEffect Color="#22C55E" BlurRadius="14" ShadowDepth="0" Opacity="0.9" /></Border.Effect></Border>
           </Border>
           <UniformGrid Columns="4" Margin="0,24,0,0">
-            <Border Margin="0,0,8,0" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="FILES" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="FilesText" Text="0" Margin="0,6,0,0" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
-            <Border Margin="0,0,8,0" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="DETECTIONS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="DetectionsText" Text="0" Margin="0,6,0,0" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
-            <Border Margin="0,0,8,0" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="SUSPICION" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="SuspicionsText" Text="0" Margin="0,6,0,0" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
-            <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="ELAPSED" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="ElapsedText" Text="00:00" Margin="0,6,0,0" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
+            <Border Margin="0,0,8,0" Background="{StaticResource GlassFill}" BorderBrush="{StaticResource GlassLine}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="FILES" FontFamily="{StaticResource MonoFont}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="FilesText" Text="0" Margin="0,6,0,0" FontFamily="{StaticResource MonoFont}" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
+            <Border Margin="0,0,8,0" Background="{StaticResource GlassFill}" BorderBrush="{StaticResource GlassLine}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="DETECTIONS" FontFamily="{StaticResource MonoFont}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="DetectionsText" Text="0" Margin="0,6,0,0" FontFamily="{StaticResource MonoFont}" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
+            <Border Margin="0,0,8,0" Background="{StaticResource GlassFill}" BorderBrush="{StaticResource GlassLine}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="SUSPICION" FontFamily="{StaticResource MonoFont}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="SuspicionsText" Text="0" Margin="0,6,0,0" FontFamily="{StaticResource MonoFont}" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
+            <Border Background="{StaticResource GlassFill}" BorderBrush="{StaticResource GlassLine}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="ELAPSED" FontFamily="{StaticResource MonoFont}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="ElapsedText" Text="00:00" Margin="0,6,0,0" FontFamily="{StaticResource MonoFont}" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
           </UniformGrid>
-          <TextBlock Text="FOUND SO FAR" Margin="0,22,0,0" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" />
-          <TextBlock x:Name="LatestText" Margin="0,8,0,0" FontSize="13" Foreground="{StaticResource Dim}" TextWrapping="Wrap" LineHeight="21" MinHeight="64" Text="Nothing yet." />
-          <Button x:Name="StopButton" Style="{StaticResource SecondaryButton}" Content="Stop scan" Margin="0,20,0,0" HorizontalAlignment="Left" Click="Stop_Click" />
+          <Border Margin="0,18,0,0" Background="#59000000" BorderBrush="{StaticResource GlassLine}" BorderThickness="1" CornerRadius="10" Padding="14,12">
+            <TextBlock x:Name="LogText" FontFamily="{StaticResource MonoFont}" FontSize="12" LineHeight="18" Foreground="{StaticResource TerminalGreen}" TextTrimming="CharacterEllipsis" MinHeight="138" />
+          </Border>
+          <Button x:Name="StopButton" Style="{StaticResource SecondaryButton}" Content="Stop scan" Margin="0,16,0,0" HorizontalAlignment="Left" Click="Stop_Click" />
         </StackPanel>
 
         <!-- 4. Done -->
         <StackPanel x:Name="DonePanel" Visibility="Collapsed" Margin="0,24,0,0">
-          <Border x:Name="DoneBadge" Width="56" Height="56" CornerRadius="28" BorderThickness="1" HorizontalAlignment="Left" Background="#0F0F0F">
+          <Border x:Name="DoneBadge" Width="56" Height="56" CornerRadius="28" BorderThickness="1" HorizontalAlignment="Left" Background="#33000000">
             <Path x:Name="DoneIcon" Stroke="#22C55E" StrokeThickness="2.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="M0,11 L9,20 L24,1" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="None" />
           </Border>
-          <TextBlock x:Name="DoneTitle" Margin="0,18,0,0" FontSize="24" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock x:Name="DoneTitle" Margin="0,18,0,0" FontFamily="{StaticResource MonoFont}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
           <TextBlock x:Name="DoneText" Margin="0,8,0,0" FontSize="13" Foreground="{StaticResource Dim}" TextWrapping="Wrap" LineHeight="21" />
           <TextBlock x:Name="DoneError" Margin="0,10,0,0" FontSize="12" Foreground="{StaticResource Red}" TextWrapping="Wrap" />
           <UniformGrid x:Name="DoneStats" Columns="3" Margin="0,22,0,0">
-            <Border Margin="0,0,8,0" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="DETECTIONS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="DoneDetections" Text="0" Margin="0,6,0,0" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
-            <Border Margin="0,0,8,0" Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="SUSPICION" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="DoneSuspicions" Text="0" Margin="0,6,0,0" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
-            <Border Background="{StaticResource Card}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="FILES" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="DoneFiles" Text="0" Margin="0,6,0,0" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
+            <Border Margin="0,0,8,0" Background="{StaticResource GlassFill}" BorderBrush="{StaticResource GlassLine}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="DETECTIONS" FontFamily="{StaticResource MonoFont}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="DoneDetections" Text="0" Margin="0,6,0,0" FontFamily="{StaticResource MonoFont}" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
+            <Border Margin="0,0,8,0" Background="{StaticResource GlassFill}" BorderBrush="{StaticResource GlassLine}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="SUSPICION" FontFamily="{StaticResource MonoFont}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="DoneSuspicions" Text="0" Margin="0,6,0,0" FontFamily="{StaticResource MonoFont}" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
+            <Border Background="{StaticResource GlassFill}" BorderBrush="{StaticResource GlassLine}" BorderThickness="1" CornerRadius="10" Padding="14,12"><StackPanel><TextBlock Text="FILES" FontFamily="{StaticResource MonoFont}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Faint}" /><TextBlock x:Name="DoneFiles" Text="0" Margin="0,6,0,0" FontFamily="{StaticResource MonoFont}" FontSize="22" FontWeight="SemiBold" /></StackPanel></Border>
           </UniformGrid>
           <StackPanel Orientation="Horizontal" Margin="0,24,0,0">
             <Button x:Name="RetryButton" Style="{StaticResource PrimaryButton}" Content="Try sending again" Visibility="Collapsed" Click="Retry_Click" />
@@ -152,7 +155,19 @@
         </StackPanel>
       </Grid>
 
-      <TextBlock Grid.Row="3" Margin="36,12,36,18" FontSize="11" Foreground="{StaticResource Faint}" x:Name="Footer" TextWrapping="Wrap" />
+      <TextBlock Grid.Row="3" Margin="36,12,36,18" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="{StaticResource Faint}" x:Name="Footer" TextWrapping="Wrap" />
+      <Rectangle x:Name="ScanLine" Grid.RowSpan="4" Height="90" VerticalAlignment="Top" IsHitTestVisible="False">
+        <Rectangle.Fill>
+          <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#0022C55E" Offset="0" />
+            <GradientStop Color="#1222C55E" Offset="0.85" />
+            <GradientStop Color="#0022C55E" Offset="1" />
+          </LinearGradientBrush>
+        </Rectangle.Fill>
+        <Rectangle.RenderTransform>
+          <TranslateTransform x:Name="ScanLineMove" Y="-90" />
+        </Rectangle.RenderTransform>
+      </Rectangle>
     </Grid>
   </Border>
 </Window>

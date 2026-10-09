@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Threading;
 namespace LegacyX.Checker.Scanning;
 
@@ -21,6 +22,17 @@ public sealed class ScanContext
     public int Suspicions { get { lock (_lock) return _findings.Count(f => f.Confidence == Finding.Suspicion); } }
     public IReadOnlyList<Finding> Findings { get { lock (_lock) return _findings.ToList(); } }
     public string Status { get; set; } = "";
+    /// <summary>The folder being read right now (shortened), for the live line on the screen.</summary>
+    public volatile string CurrentPath = "";
+    private readonly ConcurrentQueue<string> _log = new();
+    /// <summary>The last lines of what the scan did, like a terminal.</summary>
+    public IReadOnlyList<string> RecentLog(int count) => _log.TakeLast(count).ToList();
+
+    public void Log(string line)
+    {
+        _log.Enqueue(line);
+        while (_log.Count > 200 && _log.TryDequeue(out _)) { }
+    }
 
     public void CountFile() => Interlocked.Increment(ref _files);
 
@@ -37,6 +49,7 @@ public sealed class ScanContext
             if (_findings.Count >= MaxFindings) return;
             if (!_seen.Add($"{shortened.Kind}|{shortened.Name}|{shortened.Path}")) return;
             _findings.Add(shortened);
+            Log($"{(shortened.Confidence == Finding.Detection ? "[!!]" : "[ ? ]")} {shortened.Name}");
         }
     }
 }

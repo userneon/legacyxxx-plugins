@@ -26,12 +26,14 @@ public static class FileScanner
         foreach (var drive in DriveInfo.GetDrives())
         {
             if (drive.DriveType != DriveType.Fixed || !drive.IsReady) continue;
+            context.Log($"[ .. ] files: reading drive {drive.Name}");
             var pending = new Stack<string>();
             pending.Push(drive.RootDirectory.FullName);
             while (pending.Count > 0)
             {
                 cancel.ThrowIfCancellationRequested();
                 var directory = pending.Pop();
+                context.CurrentPath = directory;
                 try
                 {
                     foreach (var file in Directory.EnumerateFiles(directory)) CheckFile(context, file);

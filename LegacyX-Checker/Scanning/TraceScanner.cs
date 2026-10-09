@@ -10,6 +10,7 @@ public static class TraceScanner
     {
         ScanPrefetch(context);
         ScanRecent(context);
+        context.Log("[ ok ] traces: prefetch and recent files read");
     }
 
     private static void ScanPrefetch(ScanContext context)

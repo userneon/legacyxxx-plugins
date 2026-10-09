@@ -31,6 +31,7 @@ public static class SteamScanner
             if (string.IsNullOrWhiteSpace(steamPath)) { context.Cs2 = new Cs2Info { Installed = false }; return; }
             ReadAccounts(context, steamPath);
             ReadCs2(context, steamPath);
+            context.Log($"[ ok ] steam: {context.SteamAccounts.Count} account(s), cs2 {(context.Cs2?.Installed == true ? "installed" : "not installed")}");
         }
         catch
         {

@@ -15,6 +15,23 @@
     <SolidColorBrush x:Key="Red" Color="#EF4444" />
     <SolidColorBrush x:Key="Green" Color="#22C55E" />
     <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
+
+    <!-- Glass: panels are a thin veil of white over the blurred window behind them -->
+    <SolidColorBrush x:Key="GlassFill" Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="GlassLine" Color="#26FFFFFF" />
+    <SolidColorBrush x:Key="TerminalGreen" Color="#22C55E" />
+
+    <!-- A faint grid behind everything, like graph paper on a dark screen -->
+    <DrawingBrush x:Key="GridBrush" TileMode="Tile" Viewport="0,0,28,28" ViewportUnits="Absolute" Viewbox="0,0,28,28" ViewboxUnits="Absolute">
+      <DrawingBrush.Drawing>
+        <DrawingGroup>
+          <GeometryDrawing Brush="Transparent"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,28,28" /></GeometryDrawing.Geometry></GeometryDrawing>
+          <GeometryDrawing><GeometryDrawing.Pen><Pen Brush="#0BFFFFFF" Thickness="1" /></GeometryDrawing.Pen><GeometryDrawing.Geometry><LineGeometry StartPoint="0,0" EndPoint="28,0" /></GeometryDrawing.Geometry></GeometryDrawing>
+          <GeometryDrawing><GeometryDrawing.Pen><Pen Brush="#0BFFFFFF" Thickness="1" /></GeometryDrawing.Pen><GeometryDrawing.Geometry><LineGeometry StartPoint="0,0" EndPoint="0,28" /></GeometryDrawing.Geometry></GeometryDrawing>
+        </DrawingGroup>
+      </DrawingBrush.Drawing>
+    </DrawingBrush>
 
     <!-- Buttons: they fade on hover and give a little on press -->
     <Style x:Key="PrimaryButton" TargetType="Button">
@@ -128,11 +145,11 @@
 
     <!-- The code field: its outline brightens smoothly when you click into it -->
     <Style TargetType="TextBox">
-      <Setter Property="Background" Value="#0F0F0F" />
+      <Setter Property="Background" Value="#33000000" />
       <Setter Property="Foreground" Value="#FAFAFA" />
       <Setter Property="CaretBrush" Value="#FAFAFA" />
       <Setter Property="SelectionBrush" Value="#525252" />
-      <Setter Property="BorderBrush" Value="#333333" />
+      <Setter Property="BorderBrush" Value="#33FFFFFF" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Padding" Value="14,10" />
       <Setter Property="FontSize" Value="14" />
@@ -142,7 +159,7 @@
           <ControlTemplate TargetType="TextBox">
             <Grid>
               <Border x:Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" />
-              <Border x:Name="Ring" BorderBrush="#FAFAFA" BorderThickness="1" CornerRadius="8" Opacity="0" IsHitTestVisible="False" />
+              <Border x:Name="Ring" BorderBrush="#22C55E" BorderThickness="1" CornerRadius="8" Opacity="0" IsHitTestVisible="False" />
               <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" />
             </Grid>
             <ControlTemplate.Triggers>
