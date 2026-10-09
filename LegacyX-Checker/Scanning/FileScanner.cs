@@ -74,6 +74,16 @@ public static class FileScanner
         {
             context.Add(new Finding(name, "file", Finding.Suspicion, path, $"Name matches \"{hit}\""));
         }
+        // What the program is, whatever it is called.
+        try
+        {
+            var length = new FileInfo(path).Length;
+            if (ContentAnalyzer.IsCandidate(path, length)) ContentAnalyzer.Analyze(context, path);
+        }
+        catch
+        {
+            // Skip a file that cannot be read.
+        }
         if (!context.Rules.HasHashes) return;
         var extension = Path.GetExtension(path);
         if (!Programs.Contains(extension, StringComparer.OrdinalIgnoreCase)) return;

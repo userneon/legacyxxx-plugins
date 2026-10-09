@@ -11,6 +11,12 @@ public sealed class Rules
     [JsonPropertyName("processKeywords")] public List<string> ProcessKeywords { get; set; } = new();
     [JsonPropertyName("knownFileNames")] public List<string> KnownFileNames { get; set; } = new();
     [JsonPropertyName("sha256")] public List<string> Sha256 { get; set; } = new();
+    /// <summary>Names a program mentions when it is about CS2: the game's program and its libraries.</summary>
+    [JsonPropertyName("gameMarkers")] public List<string> GameMarkers { get; set; } = new();
+    /// <summary>Names of the values a CS2 cheat reads out of the game (they come from public offset lists).</summary>
+    [JsonPropertyName("offsetMarkers")] public List<string> OffsetMarkers { get; set; } = new();
+    /// <summary>Section names that program protectors (VMProtect, Themida …) leave in a program.</summary>
+    [JsonPropertyName("protectorSections")] public List<string> ProtectorSections { get; set; } = new();
 
     private HashSet<string>? _hashes;
     private HashSet<string>? _fileNames;

@@ -31,9 +31,18 @@ builds get warnings and false alarms. Sign it, and submit it to Microsoft Defend
 | Scanner | Looks at | Finds |
 | --- | --- | --- |
 | `FileScanner` | file names on every fixed drive; for programs, a SHA-256 when `rules.json` has hashes | name hit = suspicion, known file name or hash = detection |
+| `ContentAnalyzer` | what an unsigned program (.exe, .dll, .sys) *is*, not its name: whether it reads another program's memory (from its import table, or its text if it is a .NET program), and whether it names CS2 or carries CS2 offsets; protector sections (VMProtect, Themida …) | memory access + two or more CS2 offsets = detection; memory access + names CS2 = suspicion; protected and unsigned = suspicion |
 | `ProcessScanner` | running programs: name and window title | name hit = suspicion |
 | `TraceScanner` | Prefetch (what ran recently, needs administrator) and the Recent list | name hit = suspicion; Prefetch off or empty = suspicion of tampering |
 | `SteamScanner` | `Steam\config\loginusers.vdf` | Steam IDs, so the site can say whether the player who was asked is on this PC |
+
+### How the content check decides
+
+Signed programs and everything under the Windows folder are skipped. For an unsigned program the checker reads only its headers and
+import table first (cheap). Only a program that opens other processes (`OpenProcess` with `ReadProcessMemory`, `WriteProcessMemory`,
+`CreateRemoteThread` …) is read further, up to 64 MB, looking for the words in `rules.json`: `gameMarkers` (cs2.exe, client.dll …)
+and `offsetMarkers` (dwEntityList, dwLocalPlayerPawn … the names a CS2 cheat reads). Debuggers, Cheat Engine, trainers and some
+overlays also read memory, so a hit is a reason to look, not a verdict. Edit the three lists in `rules.json` as new cheats appear.
 
 ## What it sends
 
