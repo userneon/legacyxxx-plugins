@@ -93,6 +93,20 @@ signed; it is not a Windows program (a .jar, .py, .lua, .ahk or a config); it re
 imported memory functions); it loads the real code from the internet later; or its CS2 names are encrypted. The content check is a net for the common
 cases, not a guarantee.
 
+## As an installer (.msi)
+
+`..\LegacyX-Checker-Installer` builds `LegacyX-Checker.msi` (WiX 4, fetched by the build):
+
+```
+cd LegacyX-Checker-Installer
+.\build-msi.ps1
+```
+
+The result is `LegacyX-Checker-Installer\bin\Release\LegacyX-Checker.msi` (the script prints its SHA-256). It installs for the current user only
+(`%LOCALAPPDATA%\LegacyX-Checker`, no administrator), starts the checker when it finishes, and the checker uninstalls it (`msiexec /x`) and sweeps
+what is left once the result is sent. There is no code inside the installer: the player types the code. The rules are inside the program.
+A new installer needs the same `UpgradeCode` (`Package.wxs`) and a higher `Version` to replace an older one.
+
 ## One check, one program
 
 A check's code works once, and so does the program that carries it: after the result has been **sent** and the window is closed, the program deletes

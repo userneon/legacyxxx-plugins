@@ -103,13 +103,37 @@ public partial class App : Application
             var files = $"\"{exe}\" \"{rules}\" \"{CheckFilePath}\" \"{UsedFlagPath}\" {string.Join(" ", zips)}";
             // Wait for this program to end, delete (bypassing the Recycle Bin), try once more in case a file was still locked, and
             // remove the folder it was unpacked into if nothing else is left in it.
-            var command = $"/c ping 127.0.0.1 -n 4 > nul & del /f /q {files} & ping 127.0.0.1 -n 3 > nul & del /f /q {files} & rmdir \"{folder}\"";
+            // Installed from the .msi: let Windows uninstall it first (so it also leaves "Installed apps"), then sweep what is left.
+            var uninstall = InstalledProductCode() is { } product ? $"start /wait \"\" msiexec /x {product} /qn & " : "";
+            var command = $"/c ping 127.0.0.1 -n 4 > nul & {uninstall}del /f /q {files} & ping 127.0.0.1 -n 3 > nul & del /f /q {files} & rmdir \"{folder}\"";
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", command) { CreateNoWindow = true, UseShellExecute = false, WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden });
         }
         catch
         {
             // It stays on the PC; nothing else is affected.
         }
+    }
+
+    /// <summary>The product code of the per-user .msi install this program runs from, or null when it was not installed that way.</summary>
+    private static string? InstalledProductCode()
+    {
+        try
+        {
+            var installed = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LegacyX-Checker");
+            if (!AppContext.BaseDirectory.TrimEnd('\\').Equals(installed, StringComparison.OrdinalIgnoreCase)) return null;
+            using var uninstall = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall");
+            if (uninstall is null) return null;
+            foreach (var name in uninstall.GetSubKeyNames())
+            {
+                using var entry = uninstall.OpenSubKey(name);
+                if (entry?.GetValue("DisplayName") as string == "LEGACY-X Checker" && name.StartsWith("{") && name.EndsWith("}")) return name;
+            }
+        }
+        catch
+        {
+            // Not installed that way: the plain delete below still runs.
+        }
+        return null;
     }
 
     /// <summary>Written next to the program (and in the user's AppData) once the result is sent: a copy of the program that is still there refuses to run.</summary>

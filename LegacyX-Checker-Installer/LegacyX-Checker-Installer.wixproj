@@ -1,0 +1,8 @@
+<Project Sdk="WixToolset.Sdk/4.0.5">
+  <PropertyGroup>
+    <OutputName>LegacyX-Checker</OutputName>
+    <OutputType>Package</OutputType>
+    <!-- The published single-file program; build-msi.ps1 sets it. -->
+    <DefineConstants>ExePath=$(ExePath)</DefineConstants>
+  </PropertyGroup>
+</Project>
