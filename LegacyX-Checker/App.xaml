@@ -3,32 +3,44 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
+    <!-- The site's own palette: near-black, flat outlines, white as the one accent, red and green only for status. -->
     <SolidColorBrush x:Key="Bg" Color="#0A0A0A" />
     <SolidColorBrush x:Key="Card" Color="#141414" />
     <SolidColorBrush x:Key="Raised" Color="#1A1A1A" />
     <SolidColorBrush x:Key="Line" Color="#262626" />
+    <SolidColorBrush x:Key="LineStrong" Color="#3A3A3A" />
     <SolidColorBrush x:Key="Text" Color="#FAFAFA" />
     <SolidColorBrush x:Key="Dim" Color="#A3A3A3" />
     <SolidColorBrush x:Key="Faint" Color="#737373" />
     <SolidColorBrush x:Key="Red" Color="#EF4444" />
     <SolidColorBrush x:Key="Green" Color="#22C55E" />
+    <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
 
+    <!-- Buttons -->
     <Style x:Key="PrimaryButton" TargetType="Button">
       <Setter Property="Foreground" Value="#0A0A0A" />
       <Setter Property="Background" Value="#FAFAFA" />
       <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="Height" Value="40" />
+      <Setter Property="MinWidth" Value="110" />
       <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="Box" Background="{TemplateBinding Background}" CornerRadius="8" Padding="18,0">
+            <Border x:Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="18,0">
               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
             <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Box" Property="Opacity" Value="0.88" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="Box" Property="Opacity" Value="0.75" />
+              </Trigger>
               <Trigger Property="IsEnabled" Value="False">
-                <Setter TargetName="Box" Property="Opacity" Value="0.4" />
+                <Setter TargetName="Box" Property="Opacity" Value="0.35" />
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -39,21 +51,115 @@
     <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
       <Setter Property="Foreground" Value="#FAFAFA" />
       <Setter Property="Background" Value="#1A1A1A" />
-    </Style>
-
-    <Style TargetType="TextBox">
-      <Setter Property="Background" Value="#1A1A1A" />
-      <Setter Property="Foreground" Value="#FAFAFA" />
-      <Setter Property="CaretBrush" Value="#FAFAFA" />
       <Setter Property="BorderBrush" Value="#333333" />
       <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="Padding" Value="12,9" />
-      <Setter Property="FontSize" Value="14" />
     </Style>
 
+    <!-- The small buttons in the title bar -->
+    <Style x:Key="TitleButton" TargetType="Button">
+      <Setter Property="Width" Value="46" />
+      <Setter Property="Height" Value="48" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#A3A3A3" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Box" Background="{TemplateBinding Background}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Box" Property="Background" Value="#1F1F1F" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- The code field -->
+    <Style TargetType="TextBox">
+      <Setter Property="Background" Value="#0F0F0F" />
+      <Setter Property="Foreground" Value="#FAFAFA" />
+      <Setter Property="CaretBrush" Value="#FAFAFA" />
+      <Setter Property="SelectionBrush" Value="#525252" />
+      <Setter Property="BorderBrush" Value="#333333" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border x:Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+              <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="Box" Property="BorderBrush" Value="#FAFAFA" />
+              </Trigger>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Box" Property="BorderBrush" Value="#525252" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- A check box that looks like the rest of the site -->
     <Style TargetType="CheckBox">
       <Setter Property="Foreground" Value="#FAFAFA" />
       <Setter Property="FontSize" Value="13" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="CheckBox">
+            <StackPanel Orientation="Horizontal" Background="Transparent">
+              <Border x:Name="Box" Width="20" Height="20" CornerRadius="6" Background="#0F0F0F" BorderBrush="#4A4A4A" BorderThickness="1" VerticalAlignment="Center">
+                <Path x:Name="Tick" Data="M4,10 L8,14 L16,5" Stroke="#0A0A0A" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Visibility="Collapsed" Margin="0,0,0,0" />
+              </Border>
+              <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Box" Property="Background" Value="#FAFAFA" />
+                <Setter TargetName="Box" Property="BorderBrush" Value="#FAFAFA" />
+                <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+              </Trigger>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Box" Property="BorderBrush" Value="#FAFAFA" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Thin scroll bar -->
+    <Style TargetType="ScrollBar">
+      <Setter Property="Width" Value="6" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ScrollBar">
+            <Track x:Name="PART_Track" IsDirectionReversed="True">
+              <Track.Thumb>
+                <Thumb>
+                  <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                      <Border Background="#3A3A3A" CornerRadius="3" />
+                    </ControlTemplate>
+                  </Thumb.Template>
+                </Thumb>
+              </Track.Thumb>
+            </Track>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
     </Style>
   </Application.Resources>
 </Application>

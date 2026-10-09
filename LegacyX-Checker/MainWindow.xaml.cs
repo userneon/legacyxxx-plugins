@@ -1,11 +1,14 @@
-using System.Threading;
-using System.Threading.Tasks;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Animation;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Threading;
 using LegacyX.Checker.Scanning;
 
@@ -19,31 +22,98 @@ public partial class MainWindow : Window
     private ScanContext? _context;
     private CheckReport? _report;
     private string _code = "";
+    private string? _reportPath;
     private Stopwatch _clock = new();
+    private bool _formatting;
+
+    private static readonly SolidColorBrush White = new(Color.FromRgb(0xFA, 0xFA, 0xFA));
+    private static readonly SolidColorBrush Dark = new(Color.FromRgb(0x0A, 0x0A, 0x0A));
+    private static readonly SolidColorBrush Line = new(Color.FromRgb(0x3A, 0x3A, 0x3A));
+    private static readonly SolidColorBrush Dim = new(Color.FromRgb(0x73, 0x73, 0x73));
+    private static readonly SolidColorBrush Green = new(Color.FromRgb(0x22, 0xC5, 0x5E));
+    private static readonly SolidColorBrush Red = new(Color.FromRgb(0xEF, 0x44, 0x44));
 
     public MainWindow()
     {
         InitializeComponent();
-        Footer.Text = $"LEGACY-X Checker {App.Version}. Nothing is installed and nothing is changed on this PC.";
+        Footer.Text = $"LEGACY-X Checker {App.Version}. It installs nothing and changes nothing on this PC.";
         WhatItDoes.Text =
-            "• Looks at file names on your drives and compares them with a list of known cheats.\n" +
-            "• Looks at the programs running now, and at what ran recently (Windows Prefetch and the Recent list).\n" +
-            "• Reads which Steam accounts have signed in on this PC.";
+            "• File and folder names on your drives, compared with a list of known cheats.\n" +
+            "• The programs running right now, and what ran recently (Windows Prefetch and the Recent list).\n" +
+            "• Which Steam accounts have signed in on this PC.";
         WhatIsSent.Text =
-            "• The names of anything that looks like a cheat, and a shortened path (your user name is hidden).\n" +
+            "• The names of anything that looks like a cheat, with a shortened path (your user name is hidden).\n" +
             "• The Steam IDs found on this PC, how many files were looked at, and how long it took.\n" +
-            "• A short summary also saved on your Desktop as a text file, so you can read exactly what was found.";
-        NotSent.Text = "Never sent: the contents of your files, screenshots, passwords, browser data or anything you type.";
+            "• The same list is saved on your Desktop, so you can read exactly what was found.";
+        NotSent.Text = "The contents of your files, screenshots, passwords, browser data, or anything you type.";
         _timer.Tick += (_, _) => UpdateProgress();
-        CodeBox.Focus();
+        SetStep(1);
+        Loaded += (_, _) => CodeBox.Focus();
     }
 
-    private void ShowPanel(UIElement panel)
+    // Windows 11: round the window's corners like every other app.
+    [DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        try
+        {
+            var preference = 2; // DWMWCP_ROUND
+            DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, 33, ref preference, sizeof(int));
+        }
+        catch
+        {
+            // Older Windows keeps square corners.
+        }
+    }
+
+    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    // --- Steps and panels ---
+
+    private void SetStep(int step)
+    {
+        var dots = new[] { Dot1, Dot2, Dot3, Dot4 };
+        var numbers = new[] { Num1, Num2, Num3, Num4 };
+        var labels = new[] { Lbl1, Lbl2, Lbl3, Lbl4 };
+        var bars = new[] { Bar1, Bar2, Bar3 };
+        for (var index = 0; index < 4; index += 1)
+        {
+            var done = index + 1 < step;
+            var current = index + 1 == step;
+            dots[index].Background = done || current ? White : Brushes.Transparent;
+            dots[index].BorderBrush = done || current ? White : Line;
+            numbers[index].Foreground = done || current ? Dark : Dim;
+            numbers[index].Text = done ? "✓" : (index + 1).ToString();
+            labels[index].Foreground = current ? White : Dim;
+            labels[index].FontWeight = current ? FontWeights.SemiBold : FontWeights.Normal;
+        }
+        for (var index = 0; index < 3; index += 1) bars[index].Background = index + 1 < step ? White : Line;
+    }
+
+    private void ShowPanel(UIElement panel, int step)
     {
         foreach (var candidate in new UIElement[] { CodePanel, ConsentPanel, ScanPanel, DonePanel }) candidate.Visibility = candidate == panel ? Visibility.Visible : Visibility.Collapsed;
+        SetStep(step);
     }
 
     // --- 1. The code ---
+
+    private void CodeBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (_formatting) return;
+        // K7F29QX4 becomes K7F2-9QX4 as it is typed or pasted.
+        var clean = new string(CodeBox.Text.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+        if (clean.Length > 8) clean = clean[..8];
+        var formatted = clean.Length > 4 ? clean[..4] + "-" + clean[4..] : clean;
+        if (formatted == CodeBox.Text) return;
+        _formatting = true;
+        CodeBox.Text = formatted;
+        CodeBox.CaretIndex = formatted.Length;
+        _formatting = false;
+    }
 
     private void CodeBox_KeyDown(object sender, KeyEventArgs e)
     {
@@ -61,11 +131,12 @@ public partial class MainWindow : Window
         }
         _code = typed;
         CheckCodeButton.IsEnabled = false;
+        CheckCodeButton.Content = "Checking…";
         try
         {
             var info = await _api.GetCodeAsync(_code);
             RequestedBy.Text = $"{info.RequestedBy} of LEGACY-X asked you to run this check.";
-            ShowPanel(ConsentPanel);
+            ShowPanel(ConsentPanel, 2);
         }
         catch (CheckApiException problem)
         {
@@ -74,6 +145,7 @@ public partial class MainWindow : Window
         finally
         {
             CheckCodeButton.IsEnabled = true;
+            CheckCodeButton.Content = "Continue";
         }
     }
 
@@ -91,22 +163,25 @@ public partial class MainWindow : Window
         _context = new ScanContext(Rules.Load());
         _cancel = new CancellationTokenSource();
         _clock = Stopwatch.StartNew();
-        ShowPanel(ScanPanel);
+        ShowPanel(ScanPanel, 3);
+        LatestText.Text = "Nothing yet.";
+        // A bar that slides across while the scan runs (the total number of files is not known in advance).
+        Bar.BeginAnimation(MarginProperty, new ThicknessAnimation(new Thickness(-180, 0, 0, 0), new Thickness(660, 0, 0, 0), TimeSpan.FromSeconds(1.4)) { RepeatBehavior = RepeatBehavior.Forever });
         _timer.Start();
         var cancel = _cancel.Token;
+        var context = _context;
         var stopped = false;
         try
         {
             await Task.Run(() =>
             {
-                var context = _context;
-                context.Status = "Steam accounts…";
+                context.Status = "Looking at Steam accounts…";
                 SteamScanner.Scan(context);
-                context.Status = "Running programs…";
+                context.Status = "Looking at running programs…";
                 ProcessScanner.Scan(context);
-                context.Status = "What ran recently…";
+                context.Status = "Looking at what ran recently…";
                 TraceScanner.Scan(context);
-                context.Status = "Files…";
+                context.Status = "Looking at files…";
                 FileScanner.Scan(context, cancel);
             }, cancel);
         }
@@ -116,21 +191,22 @@ public partial class MainWindow : Window
         }
         _timer.Stop();
         _clock.Stop();
+        Bar.BeginAnimation(MarginProperty, null);
         UpdateProgress();
         if (stopped)
         {
-            ShowDone("Scan stopped.", "Nothing was sent. You can close this window.", false);
+            ShowDone(Outcome.Neutral, "Scan stopped", "Nothing was sent. You can close this window.", false);
             return;
         }
         _report = new CheckReport
         {
             Consent = true,
-            SteamIds = _context.SteamIds.ToList(),
-            FilesScanned = _context.FilesScanned,
+            SteamIds = context.SteamIds.ToList(),
+            FilesScanned = context.FilesScanned,
             DurationSeconds = (int)_clock.Elapsed.TotalSeconds,
-            Findings = _context.Findings.ToList(),
+            Findings = context.Findings.ToList(),
         };
-        SaveToDesktop(_report);
+        _reportPath = SaveToDesktop(_report);
         await SendAsync();
     }
 
@@ -139,9 +215,12 @@ public partial class MainWindow : Window
         if (_context is null) return;
         FilesText.Text = _context.FilesScanned.ToString("N0");
         DetectionsText.Text = _context.Detections.ToString();
+        DetectionsText.Foreground = _context.Detections > 0 ? Red : White;
         SuspicionsText.Text = _context.Suspicions.ToString();
         ElapsedText.Text = _clock.Elapsed.ToString(@"mm\:ss");
         ScanStatus.Text = _context.Status;
+        var latest = _context.Findings.TakeLast(3).Select(finding => $"{(finding.Confidence == Finding.Detection ? "●" : "○")}  {finding.Name}").ToList();
+        if (latest.Count > 0) LatestText.Text = string.Join("\n", latest);
     }
 
     private void Stop_Click(object sender, RoutedEventArgs e) => _cancel?.Cancel();
@@ -156,15 +235,16 @@ public partial class MainWindow : Window
             await _api.SendReportAsync(_code, _report);
             var found = _report.Findings.Count;
             ShowDone(
-                "The result was sent.",
+                found == 0 ? Outcome.Good : Outcome.Warning,
+                "The result was sent",
                 found == 0
                     ? "Nothing suspicious was found. The staff member will read the result. You can close this window."
-                    : $"{found} {(found == 1 ? "thing was" : "things were")} found. A result is not a verdict: the staff member reads it and decides. A copy is on your Desktop.",
+                    : $"{found} {(found == 1 ? "thing was" : "things were")} found. A result is not a verdict: the staff member reads it and decides.",
                 false);
         }
         catch (CheckApiException problem)
         {
-            ShowDone("The result was not sent.", "", true, problem.Message);
+            ShowDone(Outcome.Bad, "The result was not sent", "Your report is saved on your Desktop. Try again, or give it to the staff member.", true, problem.Message);
         }
     }
 
@@ -175,17 +255,46 @@ public partial class MainWindow : Window
         RetryButton.IsEnabled = true;
     }
 
-    private void ShowDone(string title, string text, bool canRetry, string error = "")
+    private void OpenReport_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_reportPath is not null) Process.Start(new ProcessStartInfo(_reportPath) { UseShellExecute = true });
+        }
+        catch
+        {
+            // No program to open a text file: the file is still on the Desktop.
+        }
+    }
+
+    private enum Outcome { Good, Warning, Bad, Neutral }
+
+    private void ShowDone(Outcome outcome, string title, string text, bool canRetry, string error = "")
     {
         DoneTitle.Text = title;
         DoneText.Text = text;
         DoneError.Text = error;
+        // A tick when all is well, an exclamation mark when something was found or went wrong.
+        var good = outcome == Outcome.Good;
+        DoneIcon.Data = Geometry.Parse(good ? "M0,11 L9,20 L24,1" : outcome == Outcome.Neutral ? "M0,0 L16,0" : "M0,0 L0,16 M0,22 L0,22.5");
+        var color = outcome switch { Outcome.Good => Green, Outcome.Warning => White, Outcome.Bad => Red, _ => Dim };
+        DoneIcon.Stroke = color;
+        DoneBadge.BorderBrush = color;
+        DoneStats.Visibility = _report is null ? Visibility.Collapsed : Visibility.Visible;
+        if (_report is not null)
+        {
+            DoneDetections.Text = _report.Findings.Count(finding => finding.Confidence == Finding.Detection).ToString();
+            DoneSuspicions.Text = _report.Findings.Count(finding => finding.Confidence == Finding.Suspicion).ToString();
+            DoneFiles.Text = _report.FilesScanned.ToString("N0");
+        }
         RetryButton.Visibility = canRetry ? Visibility.Visible : Visibility.Collapsed;
-        ShowPanel(DonePanel);
+        OpenReportButton.Visibility = _reportPath is null ? Visibility.Collapsed : Visibility.Visible;
+        RetryButton.Margin = new Thickness(0, 0, 10, 0);
+        ShowPanel(DonePanel, 4);
     }
 
-    /// <summary>The player can read exactly what was found: the same list that goes to the server.</summary>
-    private static void SaveToDesktop(CheckReport report)
+    /// <summary>The player can read exactly what was found: the same list that goes to the server. Returns where it was saved.</summary>
+    private static string? SaveToDesktop(CheckReport report)
     {
         try
         {
@@ -201,11 +310,14 @@ public partial class MainWindow : Window
                 if (finding.Path is not null) builder.AppendLine($"    {finding.Path}");
                 if (finding.Note is not null) builder.AppendLine($"    {finding.Note}");
             }
-            File.WriteAllText(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "LegacyX-Checker-report.txt"), builder.ToString());
+            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "LegacyX-Checker-report.txt");
+            File.WriteAllText(path, builder.ToString());
+            return path;
         }
         catch
         {
             // The Desktop can be read-only; the result is still sent.
+            return null;
         }
     }
 }
