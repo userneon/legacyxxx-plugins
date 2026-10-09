@@ -324,6 +324,7 @@ public partial class MainWindow : Window
         {
             await _api.SendReportAsync(_code, _report);
             App.DeleteCheckFile();
+            App.MarkUsed();
             _sent = true;
             var found = _report.Findings.Count;
             ShowDone(

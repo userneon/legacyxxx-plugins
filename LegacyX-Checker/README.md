@@ -96,9 +96,14 @@ cases, not a guarantee.
 ## One check, one program
 
 A check's code works once, and so does the program that carries it: after the result has been **sent** and the window is closed, the program deletes
-itself (`LegacyX-Checker.exe`, `rules.json`, `check.json`) a few seconds later through a hidden `cmd` command. The report on the Desktop stays.
-If sending failed, nothing is deleted so the player can try again. It only deletes a program named `LegacyX-Checker.exe`, so `dotnet run`
-never removes anything. The downloaded zip itself stays where the player saved it.
+itself a few seconds later through a hidden `cmd` command (permanent delete, no Recycle Bin, a second try if a file was locked): `LegacyX-Checker.exe`,
+`rules.json`, `check.json`, the unpacked folder if it is then empty, and any `LegacyX-Checker*.zip` on the Desktop, in Downloads, next to the program
+and inside its folder. The report on the Desktop stays. If sending failed, nothing is deleted so the player can try again. It only acts on a program
+named `LegacyX-Checker.exe`, so `dotnet run` never removes anything.
+
+If a copy is still on the PC afterwards (deletion blocked, antivirus, someone copied it back), it does not work: sending leaves a `used.flag` next to
+the program and one in `%LOCALAPPDATA%\LegacyX-Checker`, and a program that finds one shows "already been used", tries to delete itself again and quits.
+The server also accepts every code once, so a leftover program has nothing to send to.
 
 ## Settings
 
