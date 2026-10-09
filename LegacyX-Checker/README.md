@@ -44,7 +44,7 @@ other field. File contents, screenshots, passwords, browser data and keystrokes 
 
 ## Settings
 
-`checker.json` next to the program: `{ "apiUrl": "https://legacyx.cc" }` points it at a test server.
+`checker.json` next to the program: `{ "apiUrl": "https://api.legacyx.cc" }` (the default) points it at another server, for example a test one. Use the **API** address, not the website's.
 
 ## Not done yet
 

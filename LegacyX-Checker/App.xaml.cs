@@ -6,7 +6,7 @@ public partial class App : Application
 {
     public const string Version = "1.0.0";
 
-    /// <summary>The website the code is checked against. Change it in checker.json next to the program ({ "apiUrl": "..." }) for a test server.</summary>
+    /// <summary>The API the code is checked against (legacyx.cc itself is the website, not the API). Change it in checker.json next to the program ({ "apiUrl": "..." }) for a test server.</summary>
     public static string ApiUrl()
     {
         try
@@ -22,6 +22,6 @@ public partial class App : Application
         {
             // A broken file means the normal address.
         }
-        return "https://legacyx.cc";
+        return "https://api.legacyx.cc";
     }
 }

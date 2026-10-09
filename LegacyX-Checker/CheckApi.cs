@@ -24,6 +24,10 @@ public sealed class CheckApi
         _http.DefaultRequestHeaders.UserAgent.ParseAdd($"LegacyX-Checker/{App.Version}");
     }
 
+    /// <summary>A server that answered with an error is not the same as one that cannot be reached; say which, with the status number.</summary>
+    private static string Describe(HttpRequestException problem, string noConnection) =>
+        problem.StatusCode is { } status ? $"The server answered with an error ({(int)status}). Try again in a minute, and tell staff if it keeps happening." : noConnection;
+
     private static string Path(string code) => $"api/v1/checks/code/{Uri.EscapeDataString(code)}";
 
     public async Task<CodeInfo> GetCodeAsync(string code, CancellationToken cancel = default)
@@ -36,9 +40,9 @@ public sealed class CheckApi
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<CodeInfo>(Json, cancel) ?? throw new CheckApiException("The server sent an answer this program does not understand.");
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException problem)
         {
-            throw new CheckApiException("Could not reach legacyx.cc. Check your internet connection.");
+            throw new CheckApiException(Describe(problem, "Could not reach the LEGACY-X server. Check your internet connection."));
         }
         catch (TaskCanceledException) when (!cancel.IsCancellationRequested)
         {
@@ -55,9 +59,9 @@ public sealed class CheckApi
             if (response.StatusCode == HttpStatusCode.Conflict) throw new CheckApiException("This code was already used.");
             response.EnsureSuccessStatusCode();
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException problem)
         {
-            throw new CheckApiException("Could not send the result. Check your internet connection. Your report is saved on your Desktop.");
+            throw new CheckApiException(Describe(problem, "Could not send the result. Check your internet connection.") + " Your report is saved on your Desktop.");
         }
     }
 }
