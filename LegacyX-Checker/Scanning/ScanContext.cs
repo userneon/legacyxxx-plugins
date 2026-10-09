@@ -1,3 +1,4 @@
+using System.Threading;
 namespace LegacyX.Checker.Scanning;
 
 /// <summary>What the scanners share: the rules, what has been found, and a way to tell the window how it is going.</summary>
