@@ -36,7 +36,9 @@ public static class FileScanner
                 context.CurrentPath = directory;
                 try
                 {
-                    foreach (var file in Directory.EnumerateFiles(directory)) CheckFile(context, file);
+                    var files = Directory.EnumerateFiles(directory).ToList();
+                    foreach (var file in files) CheckFile(context, file);
+                    FolderInspector.CheckContents(context, directory, files);
                     foreach (var child in Directory.EnumerateDirectories(directory))
                     {
                         if (Skip(child)) continue;
@@ -58,8 +60,14 @@ public static class FileScanner
     private static void CheckFolder(ScanContext context, string path)
     {
         var name = Path.GetFileName(path);
+        var known = Rules.Match(context.Rules.CheatNames, name);
+        if (known is not null)
+        {
+            FolderInspector.CheckNamedFolder(context, path, name, known, known: true);
+            return;
+        }
         var hit = Rules.Match(context.Rules.NameKeywords, name);
-        if (hit is not null) context.Add(new Finding(name, "file", Finding.Suspicion, path, $"Folder name matches \"{hit}\""));
+        if (hit is not null) FolderInspector.CheckNamedFolder(context, path, name, hit, known: false);
     }
 
     private static void CheckFile(ScanContext context, string path)

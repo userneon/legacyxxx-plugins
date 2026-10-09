@@ -8,6 +8,10 @@ namespace LegacyX.Checker;
 public sealed class Rules
 {
     [JsonPropertyName("nameKeywords")] public List<string> NameKeywords { get; set; } = new();
+    /// <summary>Names of known cheats. A folder with one of these in its name is the cheat if it is empty or holds a program.</summary>
+    [JsonPropertyName("cheatNames")] public List<string> CheatNames { get; set; } = new();
+    /// <summary>Words that describe what a cheat does; two different ones in a folder's files are worth a look.</summary>
+    [JsonPropertyName("featureWords")] public List<string> FeatureWords { get; set; } = new();
     [JsonPropertyName("processKeywords")] public List<string> ProcessKeywords { get; set; } = new();
     [JsonPropertyName("knownFileNames")] public List<string> KnownFileNames { get; set; } = new();
     [JsonPropertyName("sha256")] public List<string> Sha256 { get; set; } = new();

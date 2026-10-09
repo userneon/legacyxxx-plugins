@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "note": "What the checker looks for. Staff fill this in from verified samples; nothing here is a verdict. A name hit is only a suspicion. A hash or exact file name hit is a detection. The content rules look INSIDE unsigned programs: one that reads another program's memory and carries CS2 offsets is a detection, one that only names CS2 is a suspicion.",
   "nameKeywords": [
     "aimbot",
@@ -7,7 +7,31 @@
     "wallhack",
     "spinbot",
     "antiaim",
-    "norecoil"
+    "norecoil",
+    "cheat"
+  ],
+  "cheatNames": [
+    "undetek",
+    "neverlose",
+    "gamesense",
+    "onetap",
+    "aimware",
+    "nixware"
+  ],
+  "featureWords": [
+    "aimbot",
+    "triggerbot",
+    "wallhack",
+    "spinbot",
+    "antiaim",
+    "norecoil",
+    "bunnyhop",
+    "bhop",
+    "silentaim",
+    "aimfov",
+    "espbox",
+    "chams",
+    "skinchanger"
   ],
   "processKeywords": [
     "aimbot",
