@@ -17,7 +17,7 @@ namespace LegacyX.Checker;
 public partial class MainWindow : Window
 {
     private readonly CheckApi _api = new(App.ApiUrl());
-    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(400) };
+    private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(120) };
     private CancellationTokenSource? _cancel;
     private ScanContext? _context;
     private CheckReport? _report;
@@ -48,7 +48,7 @@ public partial class MainWindow : Window
         NotSent.Text = "The contents of your files, screenshots, passwords, browser data, or anything you type.";
         _timer.Tick += (_, _) => UpdateProgress();
         SetStep(1);
-        Loaded += (_, _) => CodeBox.Focus();
+        Loaded += (_, _) => { FadeIn(CodePanel, 10); CodeBox.Focus(); };
     }
 
     // Windows 11: round the window's corners like every other app.
@@ -67,6 +67,32 @@ public partial class MainWindow : Window
         {
             // Older Windows keeps square corners.
         }
+    }
+
+    /// <summary>A panel eases in: it fades up and slides a few pixels, instead of snapping into place.</summary>
+    private static void FadeIn(UIElement element, double fromY = 14)
+    {
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var move = new TranslateTransform(0, fromY);
+        element.RenderTransform = move;
+        element.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(280)) { EasingFunction = ease });
+        move.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(fromY, 0, TimeSpan.FromMilliseconds(340)) { EasingFunction = ease });
+    }
+
+    /// <summary>A number that counts up to its value instead of appearing at once.</summary>
+    private static void CountUp(System.Windows.Controls.TextBlock block, long target, bool grouped = false)
+    {
+        if (target <= 0) { block.Text = "0"; return; }
+        var clock = Stopwatch.StartNew();
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        timer.Tick += (_, _) =>
+        {
+            var progress = Math.Min(1.0, clock.Elapsed.TotalMilliseconds / 800);
+            var value = (long)Math.Round(target * (1 - Math.Pow(1 - progress, 3)));
+            block.Text = grouped ? value.ToString("N0") : value.ToString();
+            if (progress >= 1) timer.Stop();
+        };
+        timer.Start();
     }
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
@@ -97,6 +123,7 @@ public partial class MainWindow : Window
     {
         foreach (var candidate in new UIElement[] { CodePanel, ConsentPanel, ScanPanel, DonePanel }) candidate.Visibility = candidate == panel ? Visibility.Visible : Visibility.Collapsed;
         SetStep(step);
+        FadeIn(panel);
     }
 
     // --- 1. The code ---
@@ -166,15 +193,17 @@ public partial class MainWindow : Window
         ShowPanel(ScanPanel, 3);
         LatestText.Text = "Nothing yet.";
         // A bar that slides across while the scan runs (the total number of files is not known in advance).
-        Bar.BeginAnimation(MarginProperty, new ThicknessAnimation(new Thickness(-180, 0, 0, 0), new Thickness(660, 0, 0, 0), TimeSpan.FromSeconds(1.4)) { RepeatBehavior = RepeatBehavior.Forever });
+        Bar.BeginAnimation(MarginProperty, new ThicknessAnimation(new Thickness(-180, 0, 0, 0), new Thickness(660, 0, 0, 0), TimeSpan.FromSeconds(1.6)) { RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } });
         _timer.Start();
         var cancel = _cancel.Token;
         var context = _context;
         var stopped = false;
         try
         {
-            await Task.Run(() =>
+            // A thread of its own at a lower priority, so the window stays smooth while thousands of files are read.
+            await Task.Factory.StartNew(() =>
             {
+                Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
                 context.Status = "Looking at Steam accounts…";
                 SteamScanner.Scan(context);
                 context.Status = "Looking at running programs…";
@@ -183,7 +212,7 @@ public partial class MainWindow : Window
                 TraceScanner.Scan(context);
                 context.Status = "Looking at files…";
                 FileScanner.Scan(context, cancel);
-            }, cancel);
+            }, cancel, TaskCreationOptions.LongRunning, TaskScheduler.Default);
         }
         catch (OperationCanceledException)
         {
@@ -283,9 +312,9 @@ public partial class MainWindow : Window
         DoneStats.Visibility = _report is null ? Visibility.Collapsed : Visibility.Visible;
         if (_report is not null)
         {
-            DoneDetections.Text = _report.Findings.Count(finding => finding.Confidence == Finding.Detection).ToString();
-            DoneSuspicions.Text = _report.Findings.Count(finding => finding.Confidence == Finding.Suspicion).ToString();
-            DoneFiles.Text = _report.FilesScanned.ToString("N0");
+            CountUp(DoneDetections, _report.Findings.Count(finding => finding.Confidence == Finding.Detection));
+            CountUp(DoneSuspicions, _report.Findings.Count(finding => finding.Confidence == Finding.Suspicion));
+            CountUp(DoneFiles, _report.FilesScanned, true);
         }
         RetryButton.Visibility = canRetry ? Visibility.Visible : Visibility.Collapsed;
         OpenReportButton.Visibility = _reportPath is null ? Visibility.Collapsed : Visibility.Visible;

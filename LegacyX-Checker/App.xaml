@@ -16,7 +16,7 @@
     <SolidColorBrush x:Key="Green" Color="#22C55E" />
     <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
 
-    <!-- Buttons -->
+    <!-- Buttons: they fade on hover and give a little on press -->
     <Style x:Key="PrimaryButton" TargetType="Button">
       <Setter Property="Foreground" Value="#0A0A0A" />
       <Setter Property="Background" Value="#FAFAFA" />
@@ -29,23 +29,56 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="18,0">
+            <Border x:Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="18,0" RenderTransformOrigin="0.5,0.5">
+              <Border.RenderTransform>
+                <ScaleTransform x:Name="Press" ScaleX="1" ScaleY="1" />
+              </Border.RenderTransform>
               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Box" Property="Opacity" Value="0.88" />
+                <Trigger.EnterActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="Box" Storyboard.TargetProperty="Opacity" To="0.86" Duration="0:0:0.12" />
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="Box" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.2" />
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.ExitActions>
               </Trigger>
               <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="Box" Property="Opacity" Value="0.75" />
-              </Trigger>
-              <Trigger Property="IsEnabled" Value="False">
-                <Setter TargetName="Box" Property="Opacity" Value="0.35" />
+                <Trigger.EnterActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleX" To="0.97" Duration="0:0:0.08" />
+                      <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleY" To="0.97" Duration="0:0:0.08" />
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.16" />
+                      <DoubleAnimation Storyboard.TargetName="Press" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.16" />
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.ExitActions>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
+      <Style.Triggers>
+        <Trigger Property="IsEnabled" Value="False">
+          <Setter Property="Opacity" Value="0.4" />
+        </Trigger>
+      </Style.Triggers>
     </Style>
 
     <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
@@ -66,12 +99,26 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="Box" Background="{TemplateBinding Background}">
+            <Grid Background="Transparent">
+              <Border x:Name="Hover" Background="#1F1F1F" Opacity="0" />
               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </Border>
+            </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Box" Property="Background" Value="#1F1F1F" />
+                <Trigger.EnterActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12" />
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="Hover" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.22" />
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.ExitActions>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -79,7 +126,7 @@
       </Setter>
     </Style>
 
-    <!-- The code field -->
+    <!-- The code field: its outline brightens smoothly when you click into it -->
     <Style TargetType="TextBox">
       <Setter Property="Background" Value="#0F0F0F" />
       <Setter Property="Foreground" Value="#FAFAFA" />
@@ -93,15 +140,27 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="TextBox">
-            <Border x:Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+            <Grid>
+              <Border x:Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" />
+              <Border x:Name="Ring" BorderBrush="#FAFAFA" BorderThickness="1" CornerRadius="8" Opacity="0" IsHitTestVisible="False" />
               <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" />
-            </Border>
+            </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="IsKeyboardFocused" Value="True">
-                <Setter TargetName="Box" Property="BorderBrush" Value="#FAFAFA" />
-              </Trigger>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Box" Property="BorderBrush" Value="#525252" />
+                <Trigger.EnterActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="Ring" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.15" />
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="Ring" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.22" />
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.ExitActions>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -109,7 +168,7 @@
       </Setter>
     </Style>
 
-    <!-- A check box that looks like the rest of the site -->
+    <!-- A check box that looks like the rest of the site; the tick pops in -->
     <Style TargetType="CheckBox">
       <Setter Property="Foreground" Value="#FAFAFA" />
       <Setter Property="FontSize" Value="13" />
@@ -120,15 +179,39 @@
           <ControlTemplate TargetType="CheckBox">
             <StackPanel Orientation="Horizontal" Background="Transparent">
               <Border x:Name="Box" Width="20" Height="20" CornerRadius="6" Background="#0F0F0F" BorderBrush="#4A4A4A" BorderThickness="1" VerticalAlignment="Center">
-                <Path x:Name="Tick" Data="M4,10 L8,14 L16,5" Stroke="#0A0A0A" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Visibility="Collapsed" Margin="0,0,0,0" />
+                <Grid>
+                  <Border x:Name="Fill" Background="#FAFAFA" CornerRadius="5" Opacity="0" />
+                  <Path x:Name="Tick" Data="M0,5 L4,9 L12,0" Stroke="#0A0A0A" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0" RenderTransformOrigin="0.5,0.5">
+                    <Path.RenderTransform>
+                      <ScaleTransform x:Name="TickScale" ScaleX="0.5" ScaleY="0.5" />
+                    </Path.RenderTransform>
+                  </Path>
+                </Grid>
               </Border>
               <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
             <ControlTemplate.Triggers>
               <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="Box" Property="Background" Value="#FAFAFA" />
-                <Setter TargetName="Box" Property="BorderBrush" Value="#FAFAFA" />
-                <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+                <Trigger.EnterActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="Fill" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.14" />
+                      <DoubleAnimation Storyboard.TargetName="Tick" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.14" />
+                      <DoubleAnimation Storyboard.TargetName="TickScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.2" />
+                      <DoubleAnimation Storyboard.TargetName="TickScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.2" />
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="Fill" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.14" />
+                      <DoubleAnimation Storyboard.TargetName="Tick" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.1" />
+                      <DoubleAnimation Storyboard.TargetName="TickScale" Storyboard.TargetProperty="ScaleX" To="0.5" Duration="0:0:0.14" />
+                      <DoubleAnimation Storyboard.TargetName="TickScale" Storyboard.TargetProperty="ScaleY" To="0.5" Duration="0:0:0.14" />
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.ExitActions>
               </Trigger>
               <Trigger Property="IsMouseOver" Value="True">
                 <Setter TargetName="Box" Property="BorderBrush" Value="#FAFAFA" />
