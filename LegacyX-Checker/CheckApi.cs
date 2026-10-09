@@ -15,7 +15,8 @@ public sealed class CheckApiException : Exception
 /// <summary>The three things the program asks the website: who wants this check, and here is the result.</summary>
 public sealed class CheckApi
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    // Empty fields are left out: the server refuses a field that is present but null.
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
     private readonly HttpClient _http;
 
     public CheckApi(string baseUrl)

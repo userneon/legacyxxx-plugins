@@ -231,6 +231,8 @@ public partial class MainWindow : Window
         {
             Consent = true,
             SteamIds = context.SteamIds.ToList(),
+            SteamAccounts = context.SteamAccounts.ToList(),
+            Cs2 = context.Cs2,
             FilesScanned = context.FilesScanned,
             DurationSeconds = (int)_clock.Elapsed.TotalSeconds,
             Findings = context.Findings.ToList(),
@@ -331,6 +333,13 @@ public partial class MainWindow : Window
             builder.AppendLine($"LEGACY-X Checker {App.Version} - {DateTime.Now:yyyy-MM-dd HH:mm}");
             builder.AppendLine($"Files looked at: {report.FilesScanned:N0}   Time: {report.DurationSeconds} s");
             builder.AppendLine($"Steam IDs found on this PC: {(report.SteamIds.Count == 0 ? "none" : string.Join(", ", report.SteamIds))}");
+            foreach (var account in report.SteamAccounts)
+            {
+                builder.AppendLine($"  {account.PersonaName} ({account.AccountName}) {account.SteamId}{(account.MostRecent == true ? " [last used]" : "")}");
+                builder.AppendLine($"    last sign-in: {account.LastLogin ?? "unknown"}   CS2 last played: {account.Cs2LastPlayed ?? "unknown"}   CS2 hours: {(account.Cs2Hours is null ? "unknown" : account.Cs2Hours.ToString())}");
+                if (!string.IsNullOrEmpty(account.LaunchOptions)) builder.AppendLine($"    CS2 launch options: {account.LaunchOptions}");
+            }
+            builder.AppendLine($"CS2 installed: {(report.Cs2 is null ? "unknown" : report.Cs2.Installed ? "yes" : "no")}");
             builder.AppendLine();
             if (report.Findings.Count == 0) builder.AppendLine("Nothing was found.");
             foreach (var finding in report.Findings)

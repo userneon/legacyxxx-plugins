@@ -14,6 +14,8 @@ public sealed class ScanContext
 
     public Rules Rules { get; }
     public HashSet<string> SteamIds { get; } = new();
+    public List<SteamAccount> SteamAccounts { get; } = new();
+    public Cs2Info? Cs2 { get; set; }
     public long FilesScanned => Interlocked.Read(ref _files);
     public int Detections { get { lock (_lock) return _findings.Count(f => f.Confidence == Finding.Detection); } }
     public int Suspicions { get { lock (_lock) return _findings.Count(f => f.Confidence == Finding.Suspicion); } }
