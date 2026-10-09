@@ -37,6 +37,27 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// The program is for one check: once its result has been sent it removes itself (the .exe, rules.json and check.json) a moment after
+    /// it closes. Only when it really is LegacyX-Checker.exe, so running it from the build tools never deletes anything else.
+    /// </summary>
+    public static void RemoveSelf()
+    {
+        try
+        {
+            var exe = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exe) || !System.IO.Path.GetFileName(exe).Equals("LegacyX-Checker.exe", StringComparison.OrdinalIgnoreCase)) return;
+            var rules = System.IO.Path.Combine(AppContext.BaseDirectory, "rules.json");
+            // Wait a few seconds for this program to end, then delete.
+            var command = $"/c ping 127.0.0.1 -n 4 > nul & del /f /q \"{exe}\" \"{rules}\" \"{CheckFilePath}\"";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cmd.exe", command) { CreateNoWindow = true, UseShellExecute = false, WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden });
+        }
+        catch
+        {
+            // It stays on the PC; nothing else is affected.
+        }
+    }
+
     /// <summary>The API the code is checked against (legacyx.cc itself is the website, not the API). Change it in checker.json next to the program ({ "apiUrl": "..." }) for a test server.</summary>
     public static string ApiUrl()
     {

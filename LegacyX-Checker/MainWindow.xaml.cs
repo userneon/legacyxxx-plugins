@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private string? _reportPath;
     private Stopwatch _clock = new();
     private bool _formatting;
+    private bool _sent;
 
     private static readonly SolidColorBrush White = new(Color.FromRgb(0xFA, 0xFA, 0xFA));
     private static readonly SolidColorBrush Dark = new(Color.FromRgb(0x0A, 0x0A, 0x0A));
@@ -36,7 +37,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Footer.Text = $"LEGACY-X Checker {App.Version}. It installs nothing and changes nothing on this PC.";
+        Footer.Text = $"LEGACY-X Checker {App.Version}. It installs nothing and is meant for one check: it removes itself after sending its result.";
         WhatItDoes.Text =
             "• File and folder names on your drives, compared with a list of known cheats.\n" +
             "• The programs running right now, and what ran recently (Windows Prefetch and the Recent list).\n" +
@@ -44,7 +45,8 @@ public partial class MainWindow : Window
         WhatIsSent.Text =
             "• The names of anything that looks like a cheat, with a shortened path (your user name is hidden).\n" +
             "• The Steam IDs found on this PC, how many files were looked at, and how long it took.\n" +
-            "• The same list is saved on your Desktop, so you can read exactly what was found.";
+            "• The same list is saved on your Desktop, so you can read exactly what was found.\n" +
+            "• When the result has been sent, this program deletes itself from your PC. Your Desktop report stays.";
         NotSent.Text = "The contents of your files, screenshots, passwords, browser data, or anything you type.";
         _timer.Tick += (_, _) => UpdateProgress();
         SetStep(1);
@@ -139,6 +141,13 @@ public partial class MainWindow : Window
             if (progress >= 1) timer.Stop();
         };
         timer.Start();
+    }
+
+    /// <summary>When the window closes after the result was sent, the program removes itself: it was made for this one check.</summary>
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+        if (_sent) App.RemoveSelf();
     }
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
@@ -315,6 +324,7 @@ public partial class MainWindow : Window
         {
             await _api.SendReportAsync(_code, _report);
             App.DeleteCheckFile();
+            _sent = true;
             var found = _report.Findings.Count;
             ShowDone(
                 found == 0 ? Outcome.Good : Outcome.Warning,

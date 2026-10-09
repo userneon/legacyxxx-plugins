@@ -80,6 +80,13 @@ overlays also read memory, so a hit is a reason to look, not a verdict. Edit the
 other field. File contents, screenshots, passwords, browser data and keystrokes are never read or sent. The same list is written to
 `LegacyX-Checker-report.txt` on the Desktop so the player can read it.
 
+## One check, one program
+
+A check's code works once, and so does the program that carries it: after the result has been **sent** and the window is closed, the program deletes
+itself (`LegacyX-Checker.exe`, `rules.json`, `check.json`) a few seconds later through a hidden `cmd` command. The report on the Desktop stays.
+If sending failed, nothing is deleted so the player can try again. It only deletes a program named `LegacyX-Checker.exe`, so `dotnet run`
+never removes anything. The downloaded zip itself stays where the player saved it.
+
 ## Settings
 
 `checker.json` next to the program: `{ "apiUrl": "https://api.legacyx.cc" }` (the default) points it at another server, for example a test one. Use the **API** address, not the website's.
