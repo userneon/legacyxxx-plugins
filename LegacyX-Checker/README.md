@@ -23,6 +23,15 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 `rules.json` is copied next to the program. Put it beside the `.exe` when you share the file.
 
+**Without a signature (what we do for now).** The program is not signed, so Windows shows "Windows protected your PC" on first run and some
+antivirus may flag it. To keep that as small as possible and make it safe for players:
+- Build it plain: no trimming, no packer/protector, no obfuscation (those are what antivirus dislikes). The publish command above is right.
+- Every player message includes the file's SHA-256 and how to check it (`Get-FileHash .\LegacyX-Checker.exe`), and the click path for the warning
+  (More info → Run anyway). Players who do not trust it can compare the fingerprint, or read this source.
+- Give it to a few players first. If Defender flags it, submit the file at https://www.microsoft.com/wdsi/filesubmission as a false positive.
+- Send it only from our own address (the personal download or a Discord message from staff), never from a mirror.
+Signing later removes the warning; it changes nothing in how the program works.
+
 **Sign the `.exe`** (a code-signing certificate). A scanner that reads files looks like malware to antivirus and SmartScreen; unsigned
 builds get warnings and false alarms. Sign it, and submit it to Microsoft Defender as a false positive if it is still flagged.
 
