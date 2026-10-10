@@ -245,7 +245,9 @@ public partial class MainWindow : Window
     private async void Start_Click(object sender, RoutedEventArgs e)
     {
         if (ConsentBox.IsChecked != true) return;
-        _context = new ScanContext(Rules.Load());
+        // The server tells the program what to look for (and judges what it finds); without it the plain copy inside the program is used.
+        var rules = await _api.GetRulesAsync(_code) ?? Rules.Load();
+        _context = new ScanContext(rules);
         _cancel = new CancellationTokenSource();
         _clock = Stopwatch.StartNew();
         ShowPanel(ScanPanel, 3);
@@ -296,6 +298,7 @@ public partial class MainWindow : Window
             SteamAccounts = context.SteamAccounts.ToList(),
             Cs2 = context.Cs2,
             Hwid = context.Hwid,
+            Facts = context.TopFacts(500),
             FilesScanned = context.FilesScanned,
             DurationSeconds = (int)_clock.Elapsed.TotalSeconds,
             Findings = context.Findings.ToList(),
@@ -308,9 +311,9 @@ public partial class MainWindow : Window
     {
         if (_context is null) return;
         FilesText.Text = _context.FilesScanned.ToString("N0");
-        DetectionsText.Text = _context.Detections.ToString();
-        DetectionsText.Foreground = _context.Detections > 0 ? Red : White;
-        SuspicionsText.Text = _context.Suspicions.ToString();
+        DetectionsText.Text = _context.FactCount.ToString();
+        DetectionsText.Foreground = White;
+        SuspicionsText.Text = (_context.Detections + _context.Suspicions).ToString();
         ElapsedText.Text = _clock.Elapsed.ToString(@"mm\:ss");
         ScanStatus.Text = _context.Status;
         // The last lines of what the scan did, then the folder it is reading right now.
@@ -333,13 +336,11 @@ public partial class MainWindow : Window
             App.DeleteCheckFile();
             App.MarkUsed();
             _sent = true;
-            var found = _report.Findings.Count;
+            // The program does not judge what it found: the server does, and the staff member reads the result.
             ShowDone(
-                found == 0 ? Outcome.Good : Outcome.Warning,
+                Outcome.Good,
                 "The result was sent",
-                found == 0
-                    ? "Nothing suspicious was found. The staff member will read the result. You can close this window."
-                    : $"{found} {(found == 1 ? "thing was" : "things were")} found. A result is not a verdict: the staff member reads it and decides.",
+                "The staff member reads the result and decides. A result is not a verdict. You can close this window.",
                 false);
         }
         catch (CheckApiException problem)
@@ -383,8 +384,8 @@ public partial class MainWindow : Window
         DoneStats.Visibility = _report is null ? Visibility.Collapsed : Visibility.Visible;
         if (_report is not null)
         {
-            CountUp(DoneDetections, _report.Findings.Count(finding => finding.Confidence == Finding.Detection));
-            CountUp(DoneSuspicions, _report.Findings.Count(finding => finding.Confidence == Finding.Suspicion));
+            CountUp(DoneDetections, _report.Facts.Count);
+            CountUp(DoneSuspicions, _report.Findings.Count);
             CountUp(DoneFiles, _report.FilesScanned, true);
         }
         RetryButton.Visibility = canRetry ? Visibility.Visible : Visibility.Collapsed;
@@ -410,7 +411,8 @@ public partial class MainWindow : Window
             }
             builder.AppendLine($"CS2 installed: {(report.Cs2 is null ? "unknown" : report.Cs2.Installed ? "yes" : "no")}");
             builder.AppendLine();
-            if (report.Findings.Count == 0) builder.AppendLine("Nothing was found.");
+            builder.AppendLine($"Programs noted for the server to judge: {report.Facts.Count}");
+            if (report.Findings.Count == 0) builder.AppendLine("Nothing else was noted by this program.");
             foreach (var finding in report.Findings)
             {
                 builder.AppendLine($"[{finding.Confidence.ToUpperInvariant()}] {finding.Name} ({finding.Kind})");

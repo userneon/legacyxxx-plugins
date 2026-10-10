@@ -4,68 +4,61 @@ using System.Text.Json.Serialization;
 
 namespace LegacyX.Checker;
 
-/// <summary>What to look for. Read from rules.json next to the program.</summary>
-public sealed class CheatFamily
-{
-    [JsonPropertyName("name")] public string Name { get; set; } = "";
-    [JsonPropertyName("strings")] public List<string> Strings { get; set; } = new();
-    [JsonPropertyName("minMatches")] public int MinMatches { get; set; } = 2;
-}
-
+/// <summary>
+/// What the checker is told to look for: lists of Windows functions and words. It only reports which of them a program holds. How that is judged (the
+/// points, the limits, which words belong to which cheat) is decided on the server, so none of it is in this program. The server sends the lists at the
+/// start of a scan; the copy built into the program is only a plain fallback for when it cannot be reached.
+/// </summary>
 public sealed class Rules
 {
-    [JsonPropertyName("nameKeywords")] public List<string> NameKeywords { get; set; } = new();
-    /// <summary>Names of known cheats. A folder with one of these in its name is the cheat if it is empty or holds a program.</summary>
-    [JsonPropertyName("cheatNames")] public List<string> CheatNames { get; set; } = new();
-    /// <summary>Words that describe what a cheat does; two different ones in a folder's files are worth a look.</summary>
-    [JsonPropertyName("featureWords")] public List<string> FeatureWords { get; set; } = new();
-    /// <summary>Sites that sell or hand out cheats (staff fill this in). A browser download from one of them is a suspicion.</summary>
-    [JsonPropertyName("cheatHosts")] public List<string> CheatHosts { get; set; } = new();
-    /// <summary>
-    /// Cheats staff have seen, described by what is inside them rather than by a name or a hash (both change with every build): a window title, a
-    /// config file name, the address of a loader. A program that holds at least MinMatches of a family's strings is that cheat.
-    /// </summary>
-    [JsonPropertyName("families")] public List<CheatFamily> Families { get; set; } = new();
-    [JsonPropertyName("processKeywords")] public List<string> ProcessKeywords { get; set; } = new();
+    [JsonPropertyName("version")] public int Version { get; set; }
+    /// <summary>Windows functions (lower case) to report when a program uses them.</summary>
+    [JsonPropertyName("apis")] public List<string> Apis { get; set; } = new();
+    [JsonPropertyName("gameMarkers")] public List<string> GameMarkers { get; set; } = new();
+    [JsonPropertyName("offsetMarkers")] public List<string> OffsetMarkers { get; set; } = new();
+    /// <summary>Words staff gave to recognise a cheat; the server knows which of them belong together.</summary>
+    [JsonPropertyName("familyStrings")] public List<string> FamilyStrings { get; set; } = new();
+    [JsonPropertyName("protectorSections")] public List<string> ProtectorSections { get; set; } = new();
     [JsonPropertyName("knownFileNames")] public List<string> KnownFileNames { get; set; } = new();
     [JsonPropertyName("sha256")] public List<string> Sha256 { get; set; } = new();
-    /// <summary>Names a program mentions when it is about CS2: the game's program and its libraries.</summary>
-    [JsonPropertyName("gameMarkers")] public List<string> GameMarkers { get; set; } = new();
-    /// <summary>Names of the values a CS2 cheat reads out of the game (they come from public offset lists).</summary>
-    [JsonPropertyName("offsetMarkers")] public List<string> OffsetMarkers { get; set; } = new();
-    /// <summary>Section names that program protectors (VMProtect, Themida …) leave in a program.</summary>
-    [JsonPropertyName("protectorSections")] public List<string> ProtectorSections { get; set; } = new();
+    [JsonPropertyName("cheatHosts")] public List<string> CheatHosts { get; set; } = new();
 
     private HashSet<string>? _hashes;
     private HashSet<string>? _fileNames;
+    private HashSet<string>? _apis;
 
     public bool HasHashes => Sha256.Count > 0;
     public bool IsKnownHash(string hash) => (_hashes ??= new HashSet<string>(Sha256.Select(h => h.Trim().ToLowerInvariant()))).Contains(hash.ToLowerInvariant());
     public bool IsKnownFileName(string fileName) => (_fileNames ??= new HashSet<string>(KnownFileNames.Select(n => n.Trim().ToLowerInvariant()))).Contains(fileName.ToLowerInvariant());
+    public bool IsProbeApi(string api) => (_apis ??= new HashSet<string>(Apis.Select(a => a.Trim().ToLowerInvariant()))).Contains(api.ToLowerInvariant());
 
-    /// <summary>The first keyword of <paramref name="keywords"/> found in <paramref name="text"/> (case does not matter), or null.</summary>
-    public static string? Match(IEnumerable<string> keywords, string text)
+    /// <summary>The lists the server sent.</summary>
+    public static Rules? FromServer(string json)
     {
-        foreach (var keyword in keywords)
+        try
         {
-            if (keyword.Length >= 4 && text.Contains(keyword, StringComparison.OrdinalIgnoreCase)) return keyword;
+            var rules = JsonSerializer.Deserialize<Rules>(json);
+            return rules is { Apis.Count: > 0 } ? rules : null;
         }
-        return null;
+        catch
+        {
+            return null;
+        }
     }
 
+    /// <summary>The plain fallback: rules.json next to the program if there is one, else the copy inside it.</summary>
     public static Rules Load()
     {
         try
         {
             var path = Path.Combine(AppContext.BaseDirectory, "rules.json");
-            // A rules.json next to the program wins (staff can ship newer rules); otherwise the copy built into the program.
             if (File.Exists(path)) return JsonSerializer.Deserialize<Rules>(File.ReadAllText(path)) ?? new Rules();
             using var built = typeof(Rules).Assembly.GetManifestResourceStream("rules.json");
             if (built is not null) return JsonSerializer.Deserialize<Rules>(built) ?? new Rules();
         }
         catch
         {
-            // A broken rules file must not stop the scan; it just looks for less.
+            // A broken rules file must not stop the scan; it just reports less.
         }
         return new Rules();
     }

@@ -51,6 +51,21 @@ public sealed class CheckApi
         }
     }
 
+    /// <summary>The lists to look for, from the server. Null when it cannot be reached or does not answer: the plain copy inside the program is used then.</summary>
+    public async Task<Rules?> GetRulesAsync(string code, CancellationToken cancel = default)
+    {
+        try
+        {
+            using var response = await _http.GetAsync(Path(code) + "/rules", cancel);
+            if (!response.IsSuccessStatusCode) return null;
+            return Rules.FromServer(await response.Content.ReadAsStringAsync(cancel));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public async Task SendReportAsync(string code, CheckReport report, CancellationToken cancel = default)
     {
         try

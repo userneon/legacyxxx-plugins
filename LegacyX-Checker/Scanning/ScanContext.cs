@@ -18,6 +18,7 @@ public sealed class ScanContext
     public List<SteamAccount> SteamAccounts { get; } = new();
     public Cs2Info? Cs2 { get; set; }
     public HwidInfo? Hwid { get; set; }
+    public int FactCount { get { lock (_facts) return _facts.Count; } }
     public long FilesScanned => Interlocked.Read(ref _files);
     public int Detections { get { lock (_lock) return _findings.Count(f => f.Confidence == Finding.Detection); } }
     public int Suspicions { get { lock (_lock) return _findings.Count(f => f.Confidence == Finding.Suspicion); } }
@@ -36,6 +37,20 @@ public sealed class ScanContext
     }
 
     public void CountFile() => Interlocked.Increment(ref _files);
+
+    private readonly List<ProgramFact> _facts = new();
+    public void AddFact(ProgramFact fact)
+    {
+        fact.Name = Masking.Trim(fact.Name, 120);
+        if (fact.Path is not null) fact.Path = Masking.Path(fact.Path);
+        lock (_facts) _facts.Add(fact);
+    }
+
+    /// <summary>The most telling facts, at most <paramref name="count"/> (the server takes 500).</summary>
+    public List<ProgramFact> TopFacts(int count)
+    {
+        lock (_facts) return _facts.OrderByDescending(fact => fact.Weight).Take(count).ToList();
+    }
 
     public void Add(Finding finding)
     {

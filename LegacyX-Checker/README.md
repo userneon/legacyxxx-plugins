@@ -131,30 +131,23 @@ The server also accepts every code once, so a leftover program has nothing to se
 - A signed installer.
 
 
-## How a file is judged
+## What the program decides, and what it does not
 
-A name is never a finding on its own: names are easy to change and easy to fake. An unsigned program is given points for what it does:
-reaches into another program's memory (3), pushes code into another program (3), uses kernel routines for it (3), then, if it does one of those,
-looks for programs by name (1), draws a see-through window (1), sends mouse or keyboard input (1), is packed (1), has a random-looking name such as `1780797508681` (1), sits in Downloads, Desktop, Temp or AppData (1), names `cs2.exe` and friends (2) and
-carries two or more CS2 offsets (4). A **detection** needs a CS2 target and 7 points (6 if its name or folder looks like a cheat's); a **suspicion**
-is 5 points with a CS2 target or 6 without. Signed programs, the Windows folder and the checker's own files are left alone. Running programs are judged
-the same way by their file. Prefetch and Recent only name programs, so they are not judged; the checker reports only if Prefetch is off, empty or unreadable.
-`LegacyX-Checker.exe --explain "<file>"` shows every point.
+The program does not judge. It reports **facts** about programs: which of a list of Windows functions a program uses and which words from a list it holds
+(the list the server sends at the start of a scan, `GET /api/v1/checks/code/<code>/rules`; a plain copy in `rules.json` is the fallback). The server turns
+the facts into findings (`server/legacyX/checkerJudge.ts` in the backend) with rules that never leave it: the points, the limits, which words belong to which cheat.
+Taking this program apart shows what it reports, not what counts.
+
+Only what the program can only know itself is judged here: Steam accounts and bans, Prefetch and tampering, browser downloads from listed sites, exact known names and fingerprints.
+Names of files and folders are never judged. `LegacyX-Checker.exe --explain "<file>"` shows what would be reported about one file.
 
 ## Cheats staff have seen (families)
 
-A cheat that is rebuilt often (a new name and a new hash every time) is still the same program inside: the same window title, config file names, loader address.
-Staff describe it once in `rules.json`:
-
-```json
-"families": [ { "name": "NameOfTheCheat", "strings": ["window title", "config.dat name", "loader.example.mn"], "minMatches": 2 } ]
-```
-
-A program (signed or not) that holds at least `minMatches` of the strings is a detection, whatever it is called. To pick the strings, give the checker two or more
-samples of the same cheat (use a spare PC or a VM, never run them):
+Staff keep the descriptions on the server (the backend's `CHECKER_SERVER_RULES_PATH` file, `families`). To pick the words, give the checker two or more
+samples of the same cheat (a spare PC or a VM, never run them):
 
 ```
 LegacyX-Checker.exe --common "C:\samples\build1.exe" "C:\samples\build2.exe"
 ```
 
-It writes `LegacyX-Checker-common.txt` on the Desktop: the readable text all the samples share. Choose the few that only this cheat has.
+It writes `LegacyX-Checker-common.txt` on the Desktop: the readable text all the samples share. Choose the few that only this cheat has and put them in the server's rules file.

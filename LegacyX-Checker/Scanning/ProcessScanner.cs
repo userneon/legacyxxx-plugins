@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace LegacyX.Checker.Scanning;
 
-/// <summary>Programs running right now: each one's file is looked at for what it does, the same as any program on the disk. A name or a window title alone is never a finding.</summary>
+/// <summary>Programs running right now: each one's file is looked at the same as any program on the disk, and reported as running. A name or a window title is not looked at.</summary>
 public static class ProcessScanner
 {
     public static void Scan(ScanContext context)
@@ -19,8 +19,7 @@ public static class ProcessScanner
                 if (SelfInfo.IsOwn(path)) continue;
                 var length = new System.IO.FileInfo(path).Length;
                 if (!ContentAnalyzer.IsCandidate(path, length)) continue;
-                var inspection = ContentAnalyzer.Inspect(context.Rules, path, length);
-                if (inspection.Finding is { } finding) context.Add(finding with { Kind = "process", Note = "Running now. " + finding.Note });
+                ContentAnalyzer.Analyze(context, path, length, running: true);
             }
             catch
             {
