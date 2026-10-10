@@ -4,10 +4,11 @@ Shows the LEGACY-X Workshop HUD (repository `legacyxxx-workshop`) to players. Th
 plugin creates the `custom_hud_layout` entity through **PanoramaManager** and fills it per player: texts by
 Label id, states by toggling classes. Every id is listed in the addon's `CONTRACT.md`.
 
-**Screens**: welcome card (server, player and rank in one box, centre of the screen, 7 s), the knife-round
-side vote by keyboard, 10 seconds (**A / D** move, **E** confirm; moving again takes the confirmation back; only confirmed votes
-count, a tie or none is Stay), and the menu below. The `!admin` panel is not driven yet. The `!lxhud` test, the round-start rank card, the
-match result cards, rank up / down and the "Skins updated." toast were removed.
+**Screens**: welcome card (server, player and rank in one box, centre of the screen, 7 s), the knife-round side vote, and the menu below.
+The vote runs in the 10 second freeze time after the knife round: the winners click the **Stay** or **Switch** card with the mouse
+(nothing is chosen at first, clicking the other card changes it, 10 seconds). Most clicks wins; a tie or no clicks is Stay. Stay keeps the sides,
+Switch swaps the teams, and a few seconds later the normal round starts. The `!admin` panel is not driven yet. The `!lxhud` test, the round-start
+rank card, the match result cards, rank up / down and the "Skins updated." toast were removed.
 
 Another plugin calls it through a server command: `lx_hud_knife start <2|3> | stop` (LegacyX-MatchZy, which applies the result with `lx_knife_choice <slot> stay|switch`).
 The welcome card and the menu read the API like LegacyX-Community does (`LEGACYX_API_BASE_URL`,

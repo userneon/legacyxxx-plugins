@@ -149,6 +149,8 @@ public partial class MatchZy
     {
         try
         {
+            // The knife winners' side vote starts together with the freeze time of this round.
+            if (sideVoteAwaitingRound) StartSideVote();
             HandlePostRoundStartEvent(@event);
             return HookResult.Continue;
         }

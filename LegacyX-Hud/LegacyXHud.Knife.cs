@@ -9,21 +9,19 @@ using CssTimer = CounterStrikeSharp.API.Modules.Timers.Timer;
 
 namespace LegacyXHud;
 
-// The knife-round side vote for the team that won. MatchZy starts and ends the phase (lx_hud_knife start|stop)
-// and applies the result (lx_knife_choice); this only draws the vote and counts it.
+// The knife-round side vote for the team that won. MatchZy starts the vote in the 10 second freeze time after the
+// knife round (lx_hud_knife start) and applies the result (lx_knife_choice); this only draws the vote and counts it.
 //
-// Keyboard, no mouse: A / D moves the highlight (starts on Stay), E confirms it. The choice is not locked by E:
-// A / D afterwards moves the highlight and takes the confirmation back until E is pressed again. Only confirmed
-// votes count; most votes wins, a tie or no votes is Stay. Votes are secret (nothing shows a count or a name).
+// Mouse: each winner clicks the Stay or Switch card (the layout's Buttons). Nothing is chosen at first, and clicking the
+// other card changes the vote until the time runs out. Most votes wins; a tie or no votes is Stay. Votes are secret
+// (nothing shows a count or a name).
 public sealed partial class LegacyXHud
 {
     private const int KnifeSeconds = 10;
 
     private sealed class Vote
     {
-        public int Selected;      // 0 = Stay, 1 = Switch
-        public bool Confirmed;
-        public PlayerButtons Previous;
+        public int Choice = -1;   // -1 = nothing yet, 0 = Stay, 1 = Switch
     }
 
     private readonly Dictionary<int, Vote> knifeVotes = new();
@@ -52,7 +50,7 @@ public sealed partial class LegacyXHud
     private void KnifeStart(int team)
     {
         KnifeStop();
-        var panel = EnsureKnife();
+        var panel = EnsureKnifeVote();
         if (panel is null) return;
 
         var winners = Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false } && p.TeamNum == team).ToList();
@@ -67,9 +65,9 @@ public sealed partial class LegacyXHud
         foreach (var player in winners)
         {
             if (!OpenFor(panel, player)) continue;
-            knifeVotes[player.Slot] = new Vote { Previous = player.Buttons };
+            knifeVotes[player.Slot] = new Vote();
             panel.SetVariableFor(player, "knife_count", KnifeSeconds.ToString());
-            panel.SetVariableFor(player, "knife_sub", $"Stay on {TeamName(team)} or switch to {TeamName(other)}. Most votes wins.");
+            panel.SetVariableFor(player, "knife_sub", $"Pick the side you play on. Most clicks wins; a tie or no clicks is Stay.");
             panel.SetVariableFor(player, "knife_stay_sub", $"Keep {TeamName(team)} · {(stayT ? "attack" : "defend")}");
             panel.SetVariableFor(player, "knife_switch_sub", $"Move to {TeamName(other)} · {(stayT ? "defend" : "attack")}");
             SetState(panel, player, "knife_stay_side", "side", stayT ? "side-t" : "side-ct");
@@ -82,33 +80,44 @@ public sealed partial class LegacyXHud
         Console.WriteLine($"[{ModuleName}] Knife vote for {TeamName(team)}: {knifeVotes.Count} voter(s)");
     }
 
-    /// <summary>Highlight (sel) and confirmation (mine) of the two cards for one player.</summary>
+    /// <summary>The vote of one player on the two cards: "mine" on the chosen one, "dimmed" on the other, and the status line.</summary>
     private void ShowVote(PanelHandle panel, CCSPlayerController player, Vote vote)
     {
-        panel.SetClassFor(player, "knife_stay", "sel", vote.Selected == 0);
-        panel.SetClassFor(player, "knife_switch", "sel", vote.Selected == 1);
-        panel.SetClassFor(player, "knife_stay", "mine", vote.Confirmed && vote.Selected == 0);
-        panel.SetClassFor(player, "knife_switch", "mine", vote.Confirmed && vote.Selected == 1);
+        panel.SetClassFor(player, "knife_stay", "mine", vote.Choice == 0);
+        panel.SetClassFor(player, "knife_switch", "mine", vote.Choice == 1);
+        panel.SetClassFor(player, "knife_stay", "dimmed", vote.Choice == 1);
+        panel.SetClassFor(player, "knife_switch", "dimmed", vote.Choice == 0);
+        panel.SetVariableFor(player, "knife_status", vote.Choice switch
+        {
+            0 => "Your choice: Stay · you can change it until time runs out",
+            1 => "Your choice: Switch · you can change it until time runs out",
+            _ => "Choose a side to continue",
+        });
     }
 
-    private void OnKnifeTick()
-    {
-        if (knifeVotes.Count == 0 || knife is null) return;
-        foreach (var (slot, vote) in knifeVotes)
-        {
-            var player = Utilities.GetPlayerFromSlot(slot);
-            if (player is not { IsValid: true }) continue;
-            var now = player.Buttons;
-            var pressed = now & ~vote.Previous;   // only the moment a key goes down
-            vote.Previous = now;
-            if (pressed == 0) continue;
+    private bool knifeListening;
 
-            var changed = false;
-            if ((pressed & PlayerButtons.Moveleft) != 0 && vote.Selected != 0) { vote.Selected = 0; vote.Confirmed = false; changed = true; }
-            if ((pressed & PlayerButtons.Moveright) != 0 && vote.Selected != 1) { vote.Selected = 1; vote.Confirmed = false; changed = true; }
-            if ((pressed & PlayerButtons.Use) != 0 && !vote.Confirmed) { vote.Confirmed = true; changed = true; }
-            if (changed) ShowVote(knife, player, vote);
+    private PanelHandle? EnsureKnifeVote()
+    {
+        var handle = Ensure(ref knife, knifeLayout, "lx_knife", captureInput: true);
+        if (handle is not null && !knifeListening)
+        {
+            handle.OnEvent += OnKnifeEvent;
+            knifeListening = true;
         }
+        return handle;
+    }
+
+    private void OnKnifeEvent(PanelEvent e)
+    {
+        if (e.Action != PanelAction.Button || knife is null) return;
+        var player = e.Player;
+        if (player is not { IsValid: true } || !knifeVotes.TryGetValue(player.Slot, out var vote)) return;
+        var choice = e.ElementId switch { "knife_stay" => 0, "knife_switch" => 1, _ => -1 };
+        if (choice < 0 || vote.Choice == choice) return;
+        vote.Choice = choice;
+        MenuSound(player, soundPick, LevelPick);
+        ShowVote(knife, player, vote);
     }
 
     private void KnifeSecond()
@@ -124,8 +133,8 @@ public sealed partial class LegacyXHud
         }
         if (knifeLeft > 0) return;
 
-        var stay = knifeVotes.Values.Count(v => v.Confirmed && v.Selected == 0);
-        var swap = knifeVotes.Values.Count(v => v.Confirmed && v.Selected == 1);
+        var stay = knifeVotes.Values.Count(v => v.Choice == 0);
+        var swap = knifeVotes.Values.Count(v => v.Choice == 1);
         var choice = swap > stay ? "switch" : "stay";
         var voter = knifeVotes.Keys.FirstOrDefault(-1);
         var team = knifeTeam;

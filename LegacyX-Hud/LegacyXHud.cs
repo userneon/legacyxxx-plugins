@@ -79,7 +79,6 @@ public sealed partial class LegacyXHud : BasePlugin
         // The entity system is not ready at plugin load: spawn after the first round starts.
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
         RegisterEventHandler<EventPlayerConnectFull>(OnPlayerConnectFull);
-        RegisterListener<Listeners.OnTick>(OnKnifeTick);
         menuKeys = env.GetModuleBoolean("HUD", "MENU_KEYS", true);
         menuSounds = env.GetModuleBoolean("HUD", "MENU_SOUNDS", true);
         if (float.TryParse(env.GetModule("HUD", "MENU_SOUND_VOLUME", "1"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var volume))
@@ -150,7 +149,6 @@ public sealed partial class LegacyXHud : BasePlugin
     }
 
     private PanelHandle? EnsureNotify() => Ensure(ref notify, notifyLayout, "lx_notify");
-    private PanelHandle? EnsureKnife() => Ensure(ref knife, knifeLayout, "lx_knife");
 
     /// <summary>SetVariableFor / SetClassFor do nothing for a player without a session: open the layout first.</summary>
     private static bool OpenFor(PanelHandle panel, CCSPlayerController player)

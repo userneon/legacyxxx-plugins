@@ -206,17 +206,30 @@ namespace MatchZy
             // Server.PrintToChatAll($"{chatPrefix} {ChatColors.White}{knifeWinnerName}{ChatColors.Grey} Won the knife. Waiting for them to type {ChatColors.White}.stay{ChatColors.Grey} or {ChatColors.White}.switch{ChatColors.Grey}");
         }
 
+        // After the knife round the winners vote on the side during a 10 second freeze time (LegacyX-Hud draws the Stay / Switch
+        // cards, the mouse picks, and it answers with lx_knife_choice). So there is no warmup here: the game restarts into a
+        // round with a 10 second freeze time, and the vote starts with that round (EventRoundStartHandler).
+        private bool sideVoteAwaitingRound;
+        private int liveRestartDelay = 1;
+
         private void StartAfterKnifeWarmup()
         {
-            isWarmup = true;
-            ExecWarmupCfg();
+            isWarmup = false;
             knifeWinnerName = knifeWinner == 3 ? reverseTeamSides["CT"].teamName : reverseTeamSides["TERRORIST"].teamName;
-            // LegacyX-Hud draws the side vote (A / D, E) for the winners and answers with lx_knife_choice; ignored when it is not loaded.
-            Server.ExecuteCommand($"lx_hud_knife start {knifeWinner}");
             ShowDamageInfo();
             PrintToAllChat(Localizer["matchzy.knife.sidedecisionpending", knifeWinnerName]);
-            // Server.PrintToChatAll($"{chatPrefix} {ChatColors.White}{knifeWinnerName}{ChatColors.Grey} Won the knife. Waiting for them to type {ChatColors.White}.stay{ChatColors.Grey} or {ChatColors.White}.switch{ChatColors.Grey}");
+            sideVoteAwaitingRound = true;
+            Server.ExecuteCommand("mp_freezetime 10;mp_roundtime 5;mp_roundtime_defuse 5;mp_roundtime_hostage 5;mp_restartgame 1;");
+            // If the round start event never comes, the vote still opens.
+            AddTimer(4f, StartSideVote);
             sideSelectionMessageTimer ??= AddTimer(chatTimerDelay, SendSideSelectionMessage, TimerFlags.REPEAT);
+        }
+
+        private void StartSideVote()
+        {
+            if (!sideVoteAwaitingRound || !isSideSelectionPhase) return;
+            sideVoteAwaitingRound = false;
+            Server.ExecuteCommand($"lx_hud_knife start {knifeWinner}");
         }
 
         private void SetLiveFlags()
@@ -246,6 +259,9 @@ namespace MatchZy
 
         private void StartLive()
         {
+            // A few seconds of wait after the side vote; the plain start keeps its 1 second.
+            liveRestartDelay = isSideSelectionPhase ? 3 : 1;
+            sideVoteAwaitingRound = false;
             SetupLiveFlagsAndCfg();
             StartDemoRecording();
             OnLegacyXMatchCoreLive();
@@ -1265,7 +1281,7 @@ namespace MatchZy
             {
                 Log($"[StartLive] Starting Live! Executing Live CFG from {cfgPath}");
                 Server.ExecuteCommand($"exec {cfgPath}");
-                Server.ExecuteCommand("mp_restartgame 1;mp_warmup_end;");
+                Server.ExecuteCommand($"mp_restartgame {liveRestartDelay};mp_warmup_end;");
             }
             else
             {
