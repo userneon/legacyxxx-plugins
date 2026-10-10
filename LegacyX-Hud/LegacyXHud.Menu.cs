@@ -115,13 +115,12 @@ public sealed partial class LegacyXHud
         Sv(panel, player, "menu_name", $"Welcome, {player.PlayerName}");
         var ranked = profiles.TryGetValue(player.SteamID, out var profile);
         Sc(panel, player, "menu_rankrow", "hidden", !ranked);
+        Sc(panel, player, "menu_matches_pill", "hidden", !ranked);
         if (ranked && profile is not null)
         {
             Sv(panel, player, "menu_rank", profile.RankName);
-            Sv(panel, player, "menu_exp", profile.Exp.ToString("N0"));
-            Sv(panel, player, "menu_matches", profile.Matches.ToString("N0"));
-            Sv(panel, player, "menu_next", NextLine(profile).ToUpperInvariant());
-            Sv(panel, player, "menu_togo", TogoLine(profile));
+            Sv(panel, player, "menu_sub", profile.NextMin is { } next ? $"{profile.Exp:N0} EXP  ·  {Math.Max(0, next - profile.Exp):N0} to {profile.NextName}" : $"{profile.Exp:N0} EXP  ·  top rank");
+            Sv(panel, player, "menu_matches", $"{profile.Matches:N0} matches");
             Ss(panel, player, "menu_fill", "p", ProgressClass(profile) ?? "p0");
             Ss(panel, player, "menu_emblem", "rank", $"rank-{profile.RankId}");
             Ss(panel, player, "menu_rank", "tier", TierClass(profile.RankName));
