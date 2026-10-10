@@ -20,7 +20,7 @@ public sealed partial class LegacyXHud
     private bool SkinsReady => apiBase.Length > 0 && skinSecret.Length > 0;
 
     private sealed record SkinType(string WeaponClass, int Skins);
-    private sealed record SkinItem(string Id, string Name, string Image);
+    private sealed record SkinItem(string Id, string Name);
 
     private sealed class SkinView
     {
@@ -35,6 +35,16 @@ public sealed partial class LegacyXHud
     }
 
     private readonly Dictionary<int, SkinView> skinViews = new();
+
+    // The knife pictures baked into the Workshop addon (class kn-<name>, see CONTRACT.md); the server cannot send an image.
+    private static readonly Dictionary<string, string> KnifeIcons = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Bayonet"] = "bayonet", ["Bowie Knife"] = "bowie", ["Butterfly Knife"] = "butterfly", ["Classic Knife"] = "classic",
+        ["Falchion Knife"] = "falchion", ["Flip Knife"] = "flip", ["Gut Knife"] = "gut", ["Huntsman Knife"] = "huntsman",
+        ["Karambit"] = "karambit", ["Kukri Knife"] = "kukri", ["M9 Bayonet"] = "m9-bayonet", ["Navaja Knife"] = "navaja",
+        ["Nomad Knife"] = "nomad", ["Paracord Knife"] = "paracord", ["Shadow Daggers"] = "shadow-daggers", ["Skeleton Knife"] = "skeleton",
+        ["Stiletto Knife"] = "stiletto", ["Survival Knife"] = "survival", ["Talon Knife"] = "talon", ["Ursus Knife"] = "ursus",
+    };
 
     // ---- API ------------------------------------------------------------------------------------------
 
@@ -157,8 +167,7 @@ public sealed partial class LegacyXHud
                     current.Total = json.GetProperty("total").GetInt32();
                     current.Offset = wanted;
                     current.Items = json.GetProperty("items").EnumerateArray()
-                        .Select(i => new SkinItem(i.GetProperty("id").GetString() ?? "", i.GetProperty("name").GetString() ?? "",
-                            i.TryGetProperty("image", out var image) && image.ValueKind == JsonValueKind.String ? image.GetString() ?? "" : ""))
+                        .Select(i => new SkinItem(i.GetProperty("id").GetString() ?? "", i.GetProperty("name").GetString() ?? ""))
                         .Where(i => i.Id.Length > 0).Take(SkinItemSlots).ToList();
                     SkinsStatus(menu, p, "");
                     SkinsRender(menu, p, current);
@@ -242,7 +251,9 @@ public sealed partial class LegacyXHud
                 var has = i < view.Types.Count;
                 panel.SetClassFor(player, $"sk_type{i}", "hidden", !has);
                 if (!has) continue;
-                panel.SetVariableFor(player, $"sk_type{i}_name", view.Types[i].WeaponClass);
+                var weaponClass = view.Types[i].WeaponClass;
+                panel.SetVariableFor(player, $"sk_type{i}_name", view.Slot == "knife" && weaponClass.EndsWith(" Knife", StringComparison.Ordinal) ? weaponClass[..^6] : weaponClass);
+                SetState(panel, player, $"sk_type{i}_ic", "kn", view.Slot == "knife" && KnifeIcons.TryGetValue(weaponClass, out var icon) ? "kn-" + icon : null);
                 panel.SetVariableFor(player, $"sk_type{i}_n", view.Types[i].Skins.ToString());
             }
             return;
@@ -258,10 +269,7 @@ public sealed partial class LegacyXHud
             var has = i < view.Items.Count;
             panel.SetClassFor(player, $"sk_item{i}", "hidden", !has);
             panel.SetClassFor(player, $"sk_item{i}", "sel", false);
-            if (!has) continue;
-            panel.SetVariableFor(player, $"sk_item{i}_name", view.Items[i].Name);
-            // The picture is a web address the client loads itself (the layout's Image reads {s:sk_itemN_img}).
-            panel.SetVariableFor(player, $"sk_item{i}_img", view.Items[i].Image);
+            if (has) panel.SetVariableFor(player, $"sk_item{i}_name", view.Items[i].Name);
         }
     }
 
