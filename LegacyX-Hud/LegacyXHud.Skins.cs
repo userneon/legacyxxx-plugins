@@ -20,7 +20,7 @@ public sealed partial class LegacyXHud
     private bool SkinsReady => apiBase.Length > 0 && skinSecret.Length > 0;
 
     private sealed record SkinType(string WeaponClass, int Skins);
-    private sealed record SkinItem(string Id, string Name);
+    private sealed record SkinItem(string Id, string Name, string Image);
 
     private sealed class SkinView
     {
@@ -157,7 +157,8 @@ public sealed partial class LegacyXHud
                     current.Total = json.GetProperty("total").GetInt32();
                     current.Offset = wanted;
                     current.Items = json.GetProperty("items").EnumerateArray()
-                        .Select(i => new SkinItem(i.GetProperty("id").GetString() ?? "", i.GetProperty("name").GetString() ?? ""))
+                        .Select(i => new SkinItem(i.GetProperty("id").GetString() ?? "", i.GetProperty("name").GetString() ?? "",
+                            i.TryGetProperty("image", out var image) && image.ValueKind == JsonValueKind.String ? image.GetString() ?? "" : ""))
                         .Where(i => i.Id.Length > 0).Take(SkinItemSlots).ToList();
                     SkinsStatus(menu, p, "");
                     SkinsRender(menu, p, current);
@@ -257,7 +258,10 @@ public sealed partial class LegacyXHud
             var has = i < view.Items.Count;
             panel.SetClassFor(player, $"sk_item{i}", "hidden", !has);
             panel.SetClassFor(player, $"sk_item{i}", "sel", false);
-            if (has) panel.SetVariableFor(player, $"sk_item{i}_name", view.Items[i].Name);
+            if (!has) continue;
+            panel.SetVariableFor(player, $"sk_item{i}_name", view.Items[i].Name);
+            // The picture is a web address the client loads itself (the layout's Image reads {s:sk_itemN_img}).
+            panel.SetVariableFor(player, $"sk_item{i}_img", view.Items[i].Image);
         }
     }
 
