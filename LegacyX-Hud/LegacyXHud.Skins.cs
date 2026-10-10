@@ -320,7 +320,8 @@ public sealed partial class LegacyXHud
             panel.SetVariableFor(player, $"sk_item{i}_name", item.Name);
             // The picture is the one CS2 already has for that skin or agent; the addon's stylesheet maps this class to it (no class = name only).
             var pic = view.Slot == "agent" ? (item.Defindex is { } defindex ? $"ag-{defindex}" : null)
-                : model is not null && item.PaintId is { } paintId ? $"sp-{model}-{paintId}" : null;
+                // A knife without a paint is the plain one (class sp-<model>-0, the game's picture of the unpainted knife).
+                : model is not null && (item.PaintId ?? (view.Slot == "knife" ? 0 : (int?)null)) is { } paintId ? $"sp-{model}-{paintId}" : null;
             SetState(panel, player, $"sk_item{i}_pic", "sp", pic);
         }
     }
