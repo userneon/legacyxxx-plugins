@@ -34,6 +34,18 @@ public sealed class Cs2Info
 }
 
 /// <summary>Exactly what is sent to the server (POST /api/v1/checks/code/:code/report). The server refuses anything else.</summary>
+public sealed class HwidPart
+{
+    [JsonPropertyName("kind")] public string Kind { get; set; } = "";
+    [JsonPropertyName("hash")] public string Hash { get; set; } = "";
+}
+
+public sealed class HwidInfo
+{
+    [JsonPropertyName("version")] public int Version { get; set; } = 1;
+    [JsonPropertyName("parts")] public List<HwidPart> Parts { get; set; } = new();
+}
+
 public sealed class CheckReport
 {
     [JsonPropertyName("consent")] public bool Consent { get; set; }
@@ -41,6 +53,7 @@ public sealed class CheckReport
     [JsonPropertyName("steamIds")] public List<string> SteamIds { get; set; } = new();
     [JsonPropertyName("steamAccounts")] public List<SteamAccount> SteamAccounts { get; set; } = new();
     [JsonPropertyName("cs2")] public Cs2Info? Cs2 { get; set; }
+    [JsonPropertyName("hwid")] public HwidInfo? Hwid { get; set; }
     [JsonPropertyName("filesScanned")] public long FilesScanned { get; set; }
     [JsonPropertyName("durationSeconds")] public int DurationSeconds { get; set; }
     [JsonPropertyName("findings")] public List<Finding> Findings { get; set; } = new();

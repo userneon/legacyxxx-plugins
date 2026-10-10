@@ -42,10 +42,12 @@ public partial class MainWindow : Window
             "• The programs on your drives: what each one does (unsigned ones are read to see whether they reach into another program, such as a game).\n" +
             "• The programs running right now, and what ran recently (Windows Prefetch and the Recent list).\n" +
             "• The download list of your browsers (Chrome, Edge, Brave, Opera, Vivaldi): the file name and the site it came from, to see what was saved and deleted.\n" +
-            "• Which Steam accounts have signed in on this PC.";
+            "• Which Steam accounts have signed in on this PC.\n" +
+            "• A fingerprint of this PC's hardware (motherboard, processor, disks): each serial number is scrambled on your PC and only the scrambled value is sent, never the number.";
         WhatIsSent.Text =
             "• The names of anything that looks like a cheat, with a shortened path (your user name is hidden).\n" +
             "• The Steam IDs found on this PC, how many files were looked at, and how long it took.\n" +
+            "• The hardware fingerprint, kept by LEGACY-X staff with your account so they can tell whether another account played on the same PC.\n" +
             "• The same list is saved on your Desktop, so you can read exactly what was found.\n" +
             "• When the result has been sent, this program deletes itself from your PC. Your Desktop report stays.";
         NotSent.Text = "The contents of your files, the pages you visited, your browser history, passwords and cookies, screenshots, or anything you type.";
@@ -268,6 +270,8 @@ public partial class MainWindow : Window
                 TraceScanner.Scan(context);
                 context.Status = "Looking at browser downloads…";
                 BrowserScanner.Scan(context);
+                context.Status = "Reading this PC's hardware…";
+                try { context.Hwid = HwidCollector.Collect(); } catch { /* the fingerprint is optional */ }
                 context.Status = "Looking at files…";
                 FileScanner.Scan(context, cancel);
             }, cancel, TaskCreationOptions.LongRunning, TaskScheduler.Default);
@@ -291,6 +295,7 @@ public partial class MainWindow : Window
             SteamIds = context.SteamIds.ToList(),
             SteamAccounts = context.SteamAccounts.ToList(),
             Cs2 = context.Cs2,
+            Hwid = context.Hwid,
             FilesScanned = context.FilesScanned,
             DurationSeconds = (int)_clock.Elapsed.TotalSeconds,
             Findings = context.Findings.ToList(),
