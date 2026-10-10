@@ -59,6 +59,7 @@ public static class FolderInspector
             // Not allowed in: the name alone is what we have.
         }
 
+        files.RemoveAll(file => SelfInfo.IsOwn(file));
         if (!known)
         {
             context.Add(new Finding(name, "file", Finding.Suspicion, path, $"Folder name matches \"{hit}\""));
@@ -96,6 +97,7 @@ public static class FolderInspector
     /// </summary>
     public static void CheckContents(ScanContext context, string directory, IReadOnlyList<string> files)
     {
+        files = files.Where(file => !SelfInfo.IsOwn(file)).ToList();
         var texts = files.Where(file => TextKinds.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)).Take(30).ToList();
         if (texts.Count == 0) return;
         var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
@@ -105,7 +107,8 @@ public static class FolderInspector
         foreach (var file in files) AddFeatures(context.Rules, Path.GetFileName(file), features);
         foreach (var file in texts)
         {
-            if (ReadSmallText(file) is { } text) AddFeatures(context.Rules, text, features);
+            // A list of cheat words (a copy of the checker's rules) names them without being one.
+            if (ReadSmallText(file) is { } text && !text.Contains("\"offsetMarkers\"", StringComparison.Ordinal)) AddFeatures(context.Rules, text, features);
         }
         if (features.Count < 2) return;
 
@@ -116,7 +119,8 @@ public static class FolderInspector
             .FirstOrDefault(item => item.pe is { IsSigned: false });
         var folderName = Path.GetFileName(directory.TrimEnd('\\'));
         var list = string.Join(", ", features.Take(4));
-        if (unsigned.file is not null)
+        // A program next to a couple of cheat words is a detection only with three or more; fewer is a suspicion for a person to look at.
+        if (unsigned.file is not null && features.Count >= 3)
         {
             context.Add(new Finding(folderName, "file", Finding.Detection, directory, $"Unsigned program ({Path.GetFileName(unsigned.file)}) next to files that talk about {list}"));
         }

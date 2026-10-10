@@ -160,6 +160,7 @@ public static class FileScanner
     private static void CheckFile(ScanContext context, string path, long length)
     {
         context.CountFile();
+        if (SelfInfo.IsOwn(path, length)) return;
         var name = Path.GetFileName(path);
         if (context.Rules.IsKnownFileName(name))
         {
