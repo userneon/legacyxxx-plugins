@@ -1060,9 +1060,17 @@ public partial class AdminPlus
             return;
         }
 
-        Server.ExecuteCommand("mp_restartgame 1");
-
         string executorName = GetExecutorNameCommand(caller);
+        // With LegacyX-MatchZy loaded, !rr is not a round restart: it ends the match and sends the server straight back to warmup
+        // (MatchZy's css_restart). Without it there is no match to end, so the round restarts as before.
+        if (ConVar.Find("matchzy_smoke_color_enabled") != null)
+        {
+            Server.ExecuteCommand("css_restart");
+            PlayerExtensions.PrintToAll($"{executorName} sent the server back to warmup.");
+            return;
+        }
+
+        Server.ExecuteCommand("mp_restartgame 1");
         PlayerExtensions.PrintToAll(Localizer["Round.Restarted", executorName]);
     }
 
