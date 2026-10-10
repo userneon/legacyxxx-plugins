@@ -16,9 +16,10 @@ The rank and match cards read the API like LegacyX-Community does (`LEGACYX_API_
 turns the round-start rank card off.
 
 **Menu** (`!menu`, or hold E in warmup / before the round, hold R to close): Welcome, Skins (knives, gloves, guns, agents) and
-Settings. Clicks play CS2's own UI sounds (`buttonclick`, `menu_accept`, `menu_back`, `itemtile_click_02`) on the player's
-client; `LEGACYX_HUD_MENU_SOUNDS=false` turns them off, `LEGACYX_HUD_MENU_SOUND_CLICK` / `_OPEN` / `_BACK` / `_PICK` change a
-sound (a `sounds/...vsnd_c` path from the game, empty = silent). `LEGACYX_HUD_MENU_KEYS=false` turns the E / R keys off.
+Settings. Clicks, opening, closing and picking a skin play soft CS2 UI sounds (`itemtile_rollover_09`, `menu_focus`,
+`cards_rollover_01`, `itemtile_click_02`) quietly on the player's client with `playvol`. `LEGACYX_HUD_MENU_SOUND_VOLUME` (0 to 1,
+default 1) scales them, `LEGACYX_HUD_MENU_SOUNDS=false` turns them off, `LEGACYX_HUD_MENU_SOUND_CLICK` / `_OPEN` / `_BACK` /
+`_PICK` change a sound (a `sounds/...vsnd_c` path from the game, empty = silent). `LEGACYX_HUD_MENU_KEYS=false` turns the E / R keys off.
 
 ## Needs
 

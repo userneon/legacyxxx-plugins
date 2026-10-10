@@ -285,7 +285,7 @@ public sealed partial class LegacyXHud
                     if (current.Slots[i] == tile) current.Slots[i] = newTile;
                 current.Picked = newTile;
                 SkinsRender(menu, p, current);
-                MenuSound(p, soundPick);
+                MenuSound(p, soundPick, LevelPick);
                 // Same as typing !rs: SkinBridge reads the loadout from the API and applies it.
                 p.ExecuteClientCommandFromServer("css_rs");
             });

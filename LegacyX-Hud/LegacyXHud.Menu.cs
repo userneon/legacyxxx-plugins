@@ -14,19 +14,23 @@ public sealed partial class LegacyXHud
 {
     private static readonly string[] MenuPages = { "welcome", "skins", "settings" };
 
-    // CS2's own UI sounds, played on the player's client with `play`. Empty = silent (LEGACYX_HUD_MENU_SOUNDS=false turns all off).
+    // CS2's own UI sounds, played quietly on the player's client with `playvol` (soft ticks, not the loud button clicks).
+    // Each has its own gentle level; LEGACYX_HUD_MENU_SOUND_VOLUME (0 to 1, default 1) scales them all, and
+    // LEGACYX_HUD_MENU_SOUNDS=false turns them off. A sound is a `sounds/...vsnd_c` path from the game; empty = silent.
     private bool menuSounds = true;
-    private string soundClick = "sounds/ui/buttonclick.vsnd_c";
-    private string soundOpen = "sounds/ui/menu_accept.vsnd_c";
-    private string soundBack = "sounds/ui/menu_back.vsnd_c";
+    private float soundVolume = 1f;
+    private string soundClick = "sounds/ui/panorama/itemtile_rollover_09.vsnd_c";
+    private string soundOpen = "sounds/ui/menu_focus.vsnd_c";
+    private string soundBack = "sounds/ui/panorama/cards_rollover_01.vsnd_c";
     private string soundPick = "sounds/ui/panorama/itemtile_click_02.vsnd_c";
+    private const float LevelClick = 0.35f, LevelOpen = 0.4f, LevelBack = 0.35f, LevelPick = 0.5f;
 
-    private void MenuSound(CCSPlayerController player, string sound)
+    private void MenuSound(CCSPlayerController player, string sound, float level)
     {
         if (!menuSounds || sound.Length == 0 || player is not { IsValid: true, IsBot: false }) return;
-        player.ExecuteClientCommand($"play {sound}");
+        var volume = Math.Clamp(level * soundVolume, 0f, 1f);
+        player.ExecuteClientCommand($"playvol {sound} {volume.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}");
     }
-    private bool menuListening;
 
     private PanelHandle? EnsureMenu()
     {
@@ -61,7 +65,7 @@ public sealed partial class LegacyXHud
         }
         if (!OpenFor(panel, player)) return;
         menuOpen.Add(player.Slot);
-        MenuSound(player, soundOpen);
+        MenuSound(player, soundOpen, LevelOpen);
         SetState(panel, player, "menu_hold_fill", "p", "p0");
 
         var name = serverName.Length > 0 ? serverName : (ConVar.Find("hostname")?.StringValue ?? "LEGACY-X");
@@ -102,7 +106,7 @@ public sealed partial class LegacyXHud
     private void CloseMenu(PanelHandle panel, CCSPlayerController player)
     {
         skinViews.Remove(player.Slot);
-        if (menuOpen.Remove(player.Slot)) MenuSound(player, soundBack);
+        if (menuOpen.Remove(player.Slot)) MenuSound(player, soundBack, LevelBack);
         panel.SetClassFor(player, "menu", "shown", false);
         panel.SetClassFor(player, "menu_dim", "shown", false);
         panel.Close(player);
@@ -119,7 +123,7 @@ public sealed partial class LegacyXHud
             return;
         }
         if (e.Action != PanelAction.Button) return;
-        if (e.ElementId != "menu_close") MenuSound(player, soundClick);
+        if (e.ElementId != "menu_close") MenuSound(player, soundClick, LevelClick);
         switch (e.ElementId)
         {
             case "menu_close":
