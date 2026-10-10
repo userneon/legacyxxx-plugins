@@ -1,6 +1,6 @@
 # LEGACY-X Spectator Comms
 
-`LegacyXSpectatorComms.dll` enforces the LEGACY-X anti-ghosting communication policy. It has two complementary layers. First, it reapplies the competitive CS2 voice baseline `sv_alltalk 0`, `sv_full_alltalk 0` and `sv_deadtalk 0` at load and each round start. Second, it intercepts ordinary `say` and `say_team` text, suppresses the default broadcast, and routes it only to the sender's allowed channel.
+`LegacyXSpectatorComms.dll` enforces the LEGACY-X anti-ghosting communication policy. It has two complementary layers. First, it reapplies `sv_deadtalk 1` (living players hear their dead teammates, owner request) at load and each round start; `sv_alltalk` and `sv_full_alltalk` belong to LegacyX-MatchZy, which sets them per phase. Second, it intercepts ordinary `say` and `say_team` text, suppresses the default broadcast, and routes it only to the sender's allowed channel.
 
 | Sender state | Can receive voice/text | Cannot receive voice/text |
 |---|---|---|
@@ -8,7 +8,7 @@
 | Alive Terrorist | Alive Terrorists | Spectators, dead players, Counter-Terrorists |
 | Alive Counter-Terrorist | Alive Counter-Terrorists | Spectators, dead players, Terrorists |
 
-> **Important:** `sv_deadtalk 0` prevents dead players from speaking to living players, while living players hear only living players under the documented setting. The server configuration therefore covers the competitive voice baseline; the plugin provides the stricter recipient-aware text routing. [1]
+> **Important:** `sv_deadtalk 1` lets dead players speak to living teammates (it does not open the enemy team); the stricter anti-ghosting `sv_deadtalk 0` was turned off on request. The plugin still provides the stricter recipient-aware text routing. [1]
 
 ## MatchZy and AFK boundary
 

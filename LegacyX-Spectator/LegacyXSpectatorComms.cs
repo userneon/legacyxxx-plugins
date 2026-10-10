@@ -75,7 +75,8 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
         if (!Config.Enabled || !Config.EnforceCompetitiveVoiceCvars) return;
         // sv_alltalk / sv_full_alltalk belong to LegacyX-MatchZy now (everyone talks in warmup, the knife vote and the
         // halftime swap, teams only in the knife round and the live match); setting them here every round would undo that.
-        Server.ExecuteCommand("sv_deadtalk 0");
+        // Owner request: living players hear their dead teammates (sv_deadtalk 1); enemies stay unheard.
+        Server.ExecuteCommand("sv_deadtalk 1");
     }
 
     private bool CanReceive(CCSPlayerController? recipient, ChatChannel senderChannel)
