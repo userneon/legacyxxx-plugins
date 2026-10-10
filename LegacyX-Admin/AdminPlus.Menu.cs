@@ -2,6 +2,7 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API.ValveConstants.Protobuf;
@@ -38,6 +39,7 @@ public partial class AdminPlus
 
     public void RegisterMenuCommands()
     {
+        RegisterHudBridge();
         AddCommand("admin", Localizer["Menu.AdminDesc"], AdminMenu);
         AddCommand("css_admin", "Open admin menu from console", AdminMenu);
         AddCommand("css_adminmenu", "Open admin menu from console", AdminMenu);
@@ -63,6 +65,13 @@ public partial class AdminPlus
         if (caller == null || !caller.IsValid || !RequireCommandStamina(caller, "admin"))
         {
             caller?.Print(Localizer["NoPermission"]);
+            return;
+        }
+
+        // With LegacyX-Hud loaded the panel in the game's own UI replaces the chat menu.
+        if (ConVar.Find("lx_hud_admin_ready") != null)
+        {
+            Server.ExecuteCommand($"lx_hud_admin open {caller.Slot}");
             return;
         }
 

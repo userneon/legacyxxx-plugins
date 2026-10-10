@@ -16,7 +16,7 @@ namespace LegacyXHud;
 /// CONTRACT.md of the addon).
 ///
 /// Screens: legacyx_notify (welcome card), legacyx_menu (!menu) and legacyx_knife (side vote by keyboard).
-/// The !admin panel (legacyx_admin) is not driven yet.
+/// legacyx_admin is the staff panel LegacyX-Admin's !admin opens.
 ///
 /// Other plugins reach it through a server command, so nothing is shared between plugin contexts:
 ///   lx_hud_knife start &lt;team 2|3&gt; | stop              the knife-round side vote of that team
@@ -64,6 +64,7 @@ public sealed partial class LegacyXHud : BasePlugin
         notifyLayout = env.Get("LEGACYX_HUD_NOTIFY_LAYOUT", notifyLayout);
         knifeLayout = env.Get("LEGACYX_HUD_KNIFE_LAYOUT", knifeLayout);
         menuLayout = env.Get("LEGACYX_HUD_MENU_LAYOUT", menuLayout);
+        adminLayout = env.Get("LEGACYX_HUD_ADMIN_LAYOUT", adminLayout);
         // The name players know this server by (LEGACYX_<port>_SERVER_NAME or LEGACYX_SERVER_NAME), shown on the welcome card.
         serverName = env.Get("LEGACYX_SERVER_NAME", "").Trim();
         // Same API access the Community plugin uses for the rank card and the Tab icons.
@@ -102,7 +103,8 @@ public sealed partial class LegacyXHud : BasePlugin
         notify?.Dispose();
         knife?.Dispose();
         menu?.Dispose();
-        notify = knife = menu = null;
+        admin?.Dispose();
+        notify = knife = menu = admin = null;
         if (enabled) Panorama.Shutdown();
     }
 

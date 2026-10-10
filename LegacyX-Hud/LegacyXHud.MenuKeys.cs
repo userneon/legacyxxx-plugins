@@ -70,7 +70,8 @@ public sealed partial class LegacyXHud
             var buttons = player.Buttons;
             var use = (buttons & PlayerButtons.Use) != 0;
             var reload = (buttons & PlayerButtons.Reload) != 0;
-            var isOpen = menuOpen.Contains(player.Slot);
+            var adminOpen = adminViews.ContainsKey(player.Slot);
+            var isOpen = menuOpen.Contains(player.Slot) || adminOpen;
 
             UpdateHint(player, hold, isOpen ? 2 : allowed && !knifeVotes.ContainsKey(player.Slot) ? 1 : 0);
 
@@ -102,7 +103,8 @@ public sealed partial class LegacyXHud
             {
                 hold.Close = 0;
                 hold.NeedRelease = true;
-                if (menu is not null) CloseMenu(menu, player);
+                if (adminOpen) CloseAdmin(player);
+                else if (menu is not null) CloseMenu(menu, player);
                 continue;
             }
             DrawHold(player, hold);
@@ -112,6 +114,15 @@ public sealed partial class LegacyXHud
     /// <summary>The bar next to "Hold R to close", in steps of 5 %.</summary>
     private void DrawHold(CCSPlayerController player, Hold hold)
     {
+        if (adminViews.ContainsKey(player.Slot))
+        {
+            if (admin is null) return;
+            var adminStep = (int)Math.Round(Math.Clamp(hold.Close / HoldCloseSeconds, 0f, 1f) * 20);
+            if (adminStep == hold.ShownStep) return;
+            hold.ShownStep = adminStep;
+            As(player, "adm_hold_fill", "p", "p" + adminStep * 5);
+            return;
+        }
         if (menu is null) return;
         var progress = Math.Clamp(hold.Close / HoldCloseSeconds, 0f, 1f);
         var stepNow = (int)Math.Round(progress * 20);

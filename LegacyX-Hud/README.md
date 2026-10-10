@@ -7,12 +7,19 @@ Label id, states by toggling classes. Every id is listed in the addon's `CONTRAC
 **Screens**: welcome card (server, player and rank in one box, centre of the screen, 7 s), the knife-round side vote, and the menu below.
 The vote runs in the 10 second freeze time after the knife round: the winners click the **Stay** or **Switch** card with the mouse
 (nothing is chosen at first, clicking the other card changes it, 10 seconds). Most clicks wins; a tie or no clicks is Stay. Stay keeps the sides,
-Switch swaps the teams, and a few seconds later the normal round starts. The `!admin` panel is not driven yet. The `!lxhud` test, the round-start
+Switch swaps the teams, and a few seconds later the normal round starts. The `!lxhud` test, the round-start
 rank card, the match result cards, rank up / down and the "Skins updated." toast were removed.
 
 Another plugin calls it through a server command: `lx_hud_knife start <2|3> | stop` (LegacyX-MatchZy, which applies the result with `lx_knife_choice <slot> stay|switch`).
 The welcome card and the menu read the API like LegacyX-Community does (`LEGACYX_API_BASE_URL`,
 `LEGACYX_COMMUNITY_PLUGIN_ID/TOKEN`); without them the rank part stays empty.
+
+**Admin panel** (staff, `!admin`): when this plugin is loaded, LegacyX-Admin opens the panel instead of its chat menu (`lx_hud_admin open <slot>`; it
+looks for the `lx_hud_admin_ready` sentinel). Players page: the list, a player's SteamID, IP (only for staff who may ban), penalties, and Kick, Ban…, Slay,
+Respawn, Mute, Gag, Silence, Move team. Server page: change map, back to warmup (second click within 10 seconds), clean weapons, restart round. The Ban…
+step picks Ban or IP ban, a length and a reason; mute, gag and silence ask for a length. Every button goes back to LegacyX-Admin as
+`lx_admin_do <actorSlot> <action> …`, which checks that staff member's own rights, so the greyed-out buttons are only a hint. Hold R closes it.
+Bans, Logins and Staff pages come later.
 
 **Menu** (`!menu`, or hold E in warmup / before the round, hold R to close): Welcome, Skins (knives, gloves, guns, agents) and
 Settings. Clicks, opening, closing and picking a skin play soft CS2 UI sounds (`itemtile_rollover_09`, `menu_focus`,
