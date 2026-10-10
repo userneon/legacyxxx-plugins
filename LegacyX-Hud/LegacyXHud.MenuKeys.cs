@@ -22,7 +22,7 @@ public sealed partial class LegacyXHud
         public float Close;         // seconds R has been held while the menu is open
         public bool NeedRelease;    // a hold fired: wait for the key to go up
         public int ShownStep = -1;  // last progress step drawn (0..20)
-        public bool HintOn;         // the "Hold E to open menu" hint is showing
+        public int HintMode;        // 0 = hint hidden, 1 = "Hold E to open menu", 2 = "Hold R to close menu"
         public int HintStep = -1;   // last hint fill step drawn (0..20)
     }
 
@@ -72,7 +72,7 @@ public sealed partial class LegacyXHud
             var reload = (buttons & PlayerButtons.Reload) != 0;
             var isOpen = menuOpen.Contains(player.Slot);
 
-            UpdateHint(player, hold, allowed && !isOpen && !knifeVotes.ContainsKey(player.Slot));
+            UpdateHint(player, hold, isOpen ? 2 : allowed && !knifeVotes.ContainsKey(player.Slot) ? 1 : 0);
 
             if (hold.NeedRelease)
             {
@@ -121,28 +121,33 @@ public sealed partial class LegacyXHud
     }
 
     /// <summary>
-    /// "Hold E to open menu" at the top right while the menu can be opened, with a bar that fills as E is held. Only
-    /// writes to the client when the shown state or the 5 % step changes.
+    /// The hint at the top right: "Hold E to open menu" while the menu can be opened (mode 1), "Hold R to close menu" while
+    /// it is open (mode 2), each with a bar that fills as the key is held. Only writes to the client when the mode or the
+    /// 5 % step changes.
     /// </summary>
-    private void UpdateHint(CCSPlayerController player, Hold hold, bool wanted)
+    private void UpdateHint(CCSPlayerController player, Hold hold, int mode)
     {
         var panel = notify;
         if (panel is null) return;
-        if (!wanted)
+        if (mode == 0)
         {
-            if (!hold.HintOn) return;
-            hold.HintOn = false;
+            if (hold.HintMode == 0) return;
+            hold.HintMode = 0;
             if (panel.IsOpenFor(player)) panel.SetClassFor(player, "hint", "open", false);
             return;
         }
-        if (!hold.HintOn)
+        if (hold.HintMode != mode)
         {
             if (!OpenFor(panel, player)) return;
-            hold.HintOn = true;
+            var wasHidden = hold.HintMode == 0;
+            hold.HintMode = mode;
             hold.HintStep = -1;
-            panel.SetClassFor(player, "hint", "open", true);
+            panel.SetVariableFor(player, "hint_key", mode == 1 ? "E" : "R");
+            panel.SetVariableFor(player, "hint_text", mode == 1 ? "Hold E to open menu" : "Hold R to close menu");
+            if (wasHidden) panel.SetClassFor(player, "hint", "open", true);
         }
-        var stepNow = (int)Math.Round(Math.Clamp(hold.Open / HoldOpenSeconds, 0f, 1f) * 20);
+        var progress = mode == 1 ? hold.Open / HoldOpenSeconds : hold.Close / HoldCloseSeconds;
+        var stepNow = (int)Math.Round(Math.Clamp(progress, 0f, 1f) * 20);
         if (stepNow == hold.HintStep) return;
         hold.HintStep = stepNow;
         SetState(panel, player, "hint_fill", "p", "p" + stepNow * 5);
