@@ -13,6 +13,19 @@ namespace LegacyXHud;
 public sealed partial class LegacyXHud
 {
     private static readonly string[] MenuPages = { "welcome", "skins", "settings" };
+
+    // CS2's own UI sounds, played on the player's client with `play`. Empty = silent (LEGACYX_HUD_MENU_SOUNDS=false turns all off).
+    private bool menuSounds = true;
+    private string soundClick = "sounds/ui/buttonclick.vsnd_c";
+    private string soundOpen = "sounds/ui/menu_accept.vsnd_c";
+    private string soundBack = "sounds/ui/menu_back.vsnd_c";
+    private string soundPick = "sounds/ui/panorama/itemtile_click_02.vsnd_c";
+
+    private void MenuSound(CCSPlayerController player, string sound)
+    {
+        if (!menuSounds || sound.Length == 0 || player is not { IsValid: true, IsBot: false }) return;
+        player.ExecuteClientCommand($"play {sound}");
+    }
     private bool menuListening;
 
     private PanelHandle? EnsureMenu()
@@ -48,6 +61,7 @@ public sealed partial class LegacyXHud
         }
         if (!OpenFor(panel, player)) return;
         menuOpen.Add(player.Slot);
+        MenuSound(player, soundOpen);
         SetState(panel, player, "menu_hold_fill", "p", "p0");
 
         var name = serverName.Length > 0 ? serverName : (ConVar.Find("hostname")?.StringValue ?? "LEGACY-X");
@@ -88,7 +102,7 @@ public sealed partial class LegacyXHud
     private void CloseMenu(PanelHandle panel, CCSPlayerController player)
     {
         skinViews.Remove(player.Slot);
-        menuOpen.Remove(player.Slot);
+        if (menuOpen.Remove(player.Slot)) MenuSound(player, soundBack);
         panel.SetClassFor(player, "menu", "shown", false);
         panel.SetClassFor(player, "menu_dim", "shown", false);
         panel.Close(player);
@@ -105,6 +119,7 @@ public sealed partial class LegacyXHud
             return;
         }
         if (e.Action != PanelAction.Button) return;
+        if (e.ElementId != "menu_close") MenuSound(player, soundClick);
         switch (e.ElementId)
         {
             case "menu_close":

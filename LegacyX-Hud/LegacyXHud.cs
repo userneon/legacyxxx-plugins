@@ -88,6 +88,11 @@ public sealed partial class LegacyXHud : BasePlugin
         RegisterEventHandler<EventCsWinPanelMatch>(OnMatchEnd);
         RegisterListener<Listeners.OnTick>(OnKnifeTick);
         menuKeys = env.GetModuleBoolean("HUD", "MENU_KEYS", true);
+        menuSounds = env.GetModuleBoolean("HUD", "MENU_SOUNDS", true);
+        soundClick = env.GetModule("HUD", "MENU_SOUND_CLICK", soundClick);
+        soundOpen = env.GetModule("HUD", "MENU_SOUND_OPEN", soundOpen);
+        soundBack = env.GetModule("HUD", "MENU_SOUND_BACK", soundBack);
+        soundPick = env.GetModule("HUD", "MENU_SOUND_PICK", soundPick);
         if (menuKeys)
         {
             RegisterListener<Listeners.OnTick>(OnMenuKeysTick);

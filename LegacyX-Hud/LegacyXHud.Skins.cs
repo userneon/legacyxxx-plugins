@@ -255,6 +255,7 @@ public sealed partial class LegacyXHud
                 // Knives and gloves are one pick per slot, so the list can say what is on; guns and agents are many.
                 if (current is not null && current.Slot is "knife" or "glove") current.Equipped = label;
                 menu.SetClassFor(p, $"sk_item{index}", "sel", true);
+                MenuSound(p, soundPick);
                 // Same as typing !rs: SkinBridge reads the loadout from the API and applies it.
                 p.ExecuteClientCommandFromServer("css_rs");
             });

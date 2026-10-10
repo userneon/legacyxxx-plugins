@@ -15,6 +15,11 @@ The rank and match cards read the API like LegacyX-Community does (`LEGACYX_API_
 `LEGACYX_COMMUNITY_PLUGIN_ID/TOKEN`); without them only the banner, toast and knife vote work. `LEGACYX_HUD_RANK_CARD=false`
 turns the round-start rank card off.
 
+**Menu** (`!menu`, or hold E in warmup / before the round, hold R to close): Welcome, Skins (knives, gloves, guns, agents) and
+Settings. Clicks play CS2's own UI sounds (`buttonclick`, `menu_accept`, `menu_back`, `itemtile_click_02`) on the player's
+client; `LEGACYX_HUD_MENU_SOUNDS=false` turns them off, `LEGACYX_HUD_MENU_SOUND_CLICK` / `_OPEN` / `_BACK` / `_PICK` change a
+sound (a `sounds/...vsnd_c` path from the game, empty = silent). `LEGACYX_HUD_MENU_KEYS=false` turns the E / R keys off.
+
 ## Needs
 
 * CounterStrikeSharp 1.0.374 or newer (the `custom_hud_layout` API).
