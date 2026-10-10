@@ -66,6 +66,30 @@ public static class ContentAnalyzer
         if (inspection.Finding is not null) context.Add(inspection.Finding);
     }
 
+    /// <summary>Digits only, a long run of hex, or letters and digits jumbled together: not a name a person would give a program.</summary>
+    public static bool LooksRandom(string stem)
+    {
+        if (stem.Length < 6 || stem.Any(character => !char.IsLetterOrDigit(character))) return false;
+        var digits = stem.Count(char.IsDigit);
+        if (digits == stem.Length) return true;
+        if (stem.Length >= 10 && stem.All(Uri.IsHexDigit)) return true;
+        var letters = stem.Count(char.IsLetter);
+        return stem.Length >= 8 && digits >= 3 && letters >= 3 && digits * 100 / stem.Length >= 30;
+    }
+
+    private static bool RunsFromUserFolder(string path)
+    {
+        string[] roots =
+        {
+            System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"),
+            Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            System.IO.Path.GetTempPath(),
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        };
+        return roots.Any(root => !string.IsNullOrEmpty(root) && path.StartsWith(root, StringComparison.OrdinalIgnoreCase));
+    }
+
     private static bool Has(HashSet<string> names, string[] group) => group.Any(names.Contains);
 
     /// <summary>
@@ -122,6 +146,9 @@ public static class ContentAnalyzer
             if (Has(names, OverlayApis)) result.Signals.Add(("can draw a see-through window over the screen", 1));
             if (Has(names, InputApis)) result.Signals.Add(("can send mouse or keyboard input", 1));
             if (result.Protector is not null) result.Signals.Add(($"is packed with a protector ({result.Protector})", 1));
+            // Cheats are given random names so no list of names can catch them: a name made of digits or random letters is itself a sign.
+            if (LooksRandom(Path.GetFileNameWithoutExtension(path))) result.Signals.Add(("has a random-looking name", 1));
+            if (RunsFromUserFolder(path)) result.Signals.Add(("sits in Downloads, Desktop, Temp or AppData", 1));
         }
         var hint = new[] { name, Path.GetFileName(Path.GetDirectoryName(path) ?? ""), Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(path) ?? "") ?? "") }
             .Select(part => Rules.Match(rules.CheatNames, part) ?? Rules.Match(rules.NameKeywords, part)).FirstOrDefault(match => match is not null);
