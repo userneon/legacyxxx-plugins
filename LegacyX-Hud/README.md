@@ -4,16 +4,14 @@ Shows the LEGACY-X Workshop HUD (repository `legacyxxx-workshop`) to players. Th
 plugin creates the `custom_hud_layout` entity through **PanoramaManager** and fills it per player: texts by
 Label id, states by toggling classes. Every id is listed in the addon's `CONTRACT.md`.
 
-**Screens** (0.2.0): welcome card (server, player and rank in one box, centre of the screen, 7 s), `!lxhud` test, rank card at round start, result card of every counted match
-(then a compact card until the next live round), rank up / down, the "Skins updated." toast, and the knife-round
+**Screens**: welcome card (server, player and rank in one box, centre of the screen, 7 s), the knife-round
 side vote by keyboard, 10 seconds (**A / D** move, **E** confirm; moving again takes the confirmation back; only confirmed votes
-count, a tie or none is Stay). The `!admin` panel is not driven yet.
+count, a tie or none is Stay), and the menu below. The `!admin` panel is not driven yet. The `!lxhud` test, the round-start rank card, the
+match result cards, rank up / down and the "Skins updated." toast were removed.
 
-Other plugins call it through server commands: `lx_hud_toast <steamId64> <ok|info> <text>` (LegacyX-WeaponPaints),
-`lx_hud_knife start <2|3> | stop` (LegacyX-MatchZy, which applies the result with `lx_knife_choice <slot> stay|switch`).
-The rank and match cards read the API like LegacyX-Community does (`LEGACYX_API_BASE_URL`,
-`LEGACYX_COMMUNITY_PLUGIN_ID/TOKEN`); without them only the banner, toast and knife vote work. `LEGACYX_HUD_RANK_CARD=false`
-turns the round-start rank card off.
+Another plugin calls it through a server command: `lx_hud_knife start <2|3> | stop` (LegacyX-MatchZy, which applies the result with `lx_knife_choice <slot> stay|switch`).
+The welcome card and the menu read the API like LegacyX-Community does (`LEGACYX_API_BASE_URL`,
+`LEGACYX_COMMUNITY_PLUGIN_ID/TOKEN`); without them the rank part stays empty.
 
 **Menu** (`!menu`, or hold E in warmup / before the round, hold R to close): Welcome, Skins (knives, gloves, guns, agents) and
 Settings. Clicks, opening, closing and picking a skin play soft CS2 UI sounds (`itemtile_rollover_09`, `menu_focus`,

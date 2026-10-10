@@ -15,11 +15,10 @@ namespace LegacyXHud;
 /// fills them per player: texts by variable name (= the Label id), states by toggling classes (see
 /// CONTRACT.md of the addon).
 ///
-/// Screens: legacyx_notify (welcome, toast, rank card, rank up / down), legacyx_match (result of a ranked
-/// match), legacyx_knife (side vote by keyboard). The !admin panel (legacyx_admin) is not driven yet.
+/// Screens: legacyx_notify (welcome card), legacyx_menu (!menu) and legacyx_knife (side vote by keyboard).
+/// The !admin panel (legacyx_admin) is not driven yet.
 ///
-/// Other plugins reach it through two server commands, so nothing is shared between plugin contexts:
-///   lx_hud_toast &lt;steamId64&gt; &lt;ok|info&gt; &lt;text…&gt;     one line under the top bar
+/// Other plugins reach it through a server command, so nothing is shared between plugin contexts:
 ///   lx_hud_knife start &lt;team 2|3&gt; | stop              the knife-round side vote of that team
 /// </summary>
 public sealed partial class LegacyXHud : BasePlugin
@@ -42,13 +41,10 @@ public sealed partial class LegacyXHud : BasePlugin
 
     private bool enabled;
     private string notifyLayout = LayoutDir + "legacyx_notify.vxml_c";
-    private string matchLayout = LayoutDir + "legacyx_match.vxml_c";
     private string knifeLayout = LayoutDir + "legacyx_knife.vxml_c";
     private string menuLayout = LayoutDir + "legacyx_menu.vxml_c";
-    private bool rankCardEnabled = true;
     private string serverName = "";
     private PanelHandle? notify;
-    private PanelHandle? match;
     private PanelHandle? knife;
     private PanelHandle? menu;
 
@@ -66,10 +62,8 @@ public sealed partial class LegacyXHud : BasePlugin
             return;
         }
         notifyLayout = env.Get("LEGACYX_HUD_NOTIFY_LAYOUT", notifyLayout);
-        matchLayout = env.Get("LEGACYX_HUD_MATCH_LAYOUT", matchLayout);
         knifeLayout = env.Get("LEGACYX_HUD_KNIFE_LAYOUT", knifeLayout);
         menuLayout = env.Get("LEGACYX_HUD_MENU_LAYOUT", menuLayout);
-        rankCardEnabled = env.GetModuleBoolean("HUD", "RANK_CARD", true);
         // The name players know this server by (LEGACYX_<port>_SERVER_NAME or LEGACYX_SERVER_NAME), shown on the welcome card.
         serverName = env.Get("LEGACYX_SERVER_NAME", "").Trim();
         // Same API access the Community plugin uses for the rank card and the Tab icons.
@@ -85,7 +79,6 @@ public sealed partial class LegacyXHud : BasePlugin
         // The entity system is not ready at plugin load: spawn after the first round starts.
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
         RegisterEventHandler<EventPlayerConnectFull>(OnPlayerConnectFull);
-        RegisterEventHandler<EventCsWinPanelMatch>(OnMatchEnd);
         RegisterListener<Listeners.OnTick>(OnKnifeTick);
         menuKeys = env.GetModuleBoolean("HUD", "MENU_KEYS", true);
         menuSounds = env.GetModuleBoolean("HUD", "MENU_SOUNDS", true);
@@ -100,18 +93,17 @@ public sealed partial class LegacyXHud : BasePlugin
             RegisterListener<Listeners.OnTick>(OnMenuKeysTick);
             RegisterEventHandler<EventRoundFreezeEnd>(OnRoundFreezeEnd);
         }
-        Console.WriteLine($"[{ModuleName}] Ready. Layouts {notifyLayout}, {matchLayout}, {knifeLayout}");
+        Console.WriteLine($"[{ModuleName}] Ready. Layouts {notifyLayout}, {knifeLayout}, {menuLayout}");
         if (string.IsNullOrEmpty(apiBase) || string.IsNullOrEmpty(pluginSecret))
-            Console.WriteLine($"[{ModuleName}] No API address or plugin token: rank and match cards stay off.");
+            Console.WriteLine($"[{ModuleName}] No API address or plugin token: the rank on the welcome card and the menu stays off.");
     }
 
     public override void Unload(bool hotReload)
     {
         notify?.Dispose();
-        match?.Dispose();
         knife?.Dispose();
         menu?.Dispose();
-        notify = match = knife = menu = null;
+        notify = knife = menu = null;
         if (enabled) Panorama.Shutdown();
     }
 
@@ -120,8 +112,6 @@ public sealed partial class LegacyXHud : BasePlugin
         Console.WriteLine($"[{ModuleName}] round_start, notify entity {(notify is null ? "not spawned yet" : "already spawned")}");
         EnsureNotify();
         if (IsWarmup()) return HookResult.Continue;
-        CloseMatchCompactCards();
-        if (rankCardEnabled) ShowRankCards();
         return HookResult.Continue;
     }
 
@@ -143,26 +133,6 @@ public sealed partial class LegacyXHud : BasePlugin
         return HookResult.Continue;
     }
 
-    [ConsoleCommand("css_lxhud", "Show the LEGACY-X HUD test announcement to yourself")]
-    public void OnLxHud(CCSPlayerController? player, CommandInfo command)
-    {
-        if (!enabled || player is not { IsValid: true }) return;
-        Announce(player, "LEGACY-X HUD test", "If you can read this, the Workshop addon and the plugin work together.");
-    }
-
-    /// <summary>Server console / other plugins: lx_hud_toast &lt;steamId64&gt; &lt;ok|info&gt; &lt;text…&gt;</summary>
-    [ConsoleCommand("lx_hud_toast", "One line under the top bar for a player: lx_hud_toast <steamId64> <ok|info> <text>")]
-    public void OnToastCommand(CCSPlayerController? caller, CommandInfo command)
-    {
-        if (!enabled || caller != null || command.ArgCount < 4) return;
-        if (!ulong.TryParse(command.GetArg(1), out var steamId)) return;
-        var player = Utilities.GetPlayerFromSteamId(steamId);
-        if (player is not { IsValid: true, IsBot: false }) return;
-        var ok = command.GetArg(2).Equals("ok", StringComparison.OrdinalIgnoreCase);
-        var text = string.Join(' ', Enumerable.Range(3, command.ArgCount - 3).Select(command.GetArg)).Trim();
-        if (text.Length > 0) Toast(player, text, ok);
-    }
-
     private PanelHandle? Ensure(ref PanelHandle? handle, string layout, string rootId, bool captureInput = false)
     {
         if (handle is not null) return handle;
@@ -180,7 +150,6 @@ public sealed partial class LegacyXHud : BasePlugin
     }
 
     private PanelHandle? EnsureNotify() => Ensure(ref notify, notifyLayout, "lx_notify");
-    private PanelHandle? EnsureMatch() => Ensure(ref match, matchLayout, "lx_match");
     private PanelHandle? EnsureKnife() => Ensure(ref knife, knifeLayout, "lx_knife");
 
     /// <summary>SetVariableFor / SetClassFor do nothing for a player without a session: open the layout first.</summary>
@@ -235,9 +204,9 @@ public sealed partial class LegacyXHud : BasePlugin
         });
     }
 
-    // ---- legacyx_notify: announcement, toast ------------------------------------------------------------
+    // ---- legacyx_notify: announcement, welcome card ----------------------------------------------------------------
 
-    /// <summary>legacyx_notify "ann": sets the two texts for this player, drops the banner in, then away.</summary>
+    /// <summary>legacyx_notify "ann": sets the two texts for this player, drops the banner in, then away (knife vote).</summary>
     private void Announce(CCSPlayerController player, string title, string body)
     {
         var panel = EnsureNotify();
@@ -288,16 +257,5 @@ public sealed partial class LegacyXHud : BasePlugin
             SetState(panel, player, "wc_rank", "tier", TierClass(profile.RankName));
         }
         Flash(panel, player, "wc", 7f);
-    }
-
-    /// <summary>legacyx_notify "toast": one short line.</summary>
-    private void Toast(CCSPlayerController player, string text, bool ok)
-    {
-        var panel = EnsureNotify();
-        if (panel is null || !OpenFor(panel, player)) return;
-        panel.SetVariableFor(player, "toast_text", text);
-        SetState(panel, player, "toast_icon", "icon", ok ? "ic-check" : "ic-circle-alert");
-        panel.SetClassFor(player, "toast", "ok", ok);
-        Flash(panel, player, "toast", 3.5f);
     }
 }

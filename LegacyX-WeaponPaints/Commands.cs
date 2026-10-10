@@ -64,8 +64,6 @@ public partial class WeaponPaints
 				{
 					player.Print(Localizer["wp_command_refresh_done"]);
 				}
-				// The same line on screen through LegacyX-Hud (the toast of legacyx_notify); nothing happens when it is not loaded.
-				Server.ExecuteCommand($"lx_hud_toast {player.SteamID} ok Skins updated.");
 				return;
 			}
 			if (!string.IsNullOrEmpty(Localizer["wp_command_cooldown"]))
@@ -246,7 +244,6 @@ public partial class WeaponPaints
 				{
 					targetPlayer.Print(Localizer["wp_command_refresh_done"]);
 				}
-				Server.ExecuteCommand($"lx_hud_toast {targetPlayer.SteamID} ok Skins updated.");
 
 				Console.WriteLine($"[WeaponPaints] Skins refreshed for {targetPlayer.PlayerName}");
 			}
