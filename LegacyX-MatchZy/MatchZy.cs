@@ -254,6 +254,14 @@ namespace MatchZy
 
             AddCommandListener("jointeam", (player, info) =>
             {
+                // Once the knife round or the match has started, a player on a team cannot walk into spectators.
+                if (matchStarted && player != null && player.IsValid && !player.IsBot
+                    && int.TryParse(info.ArgByIndex(1), out int toTeam) && toTeam == (int)CsTeam.Spectator
+                    && player.TeamNum is (int)CsTeam.Terrorist or (int)CsTeam.CounterTerrorist)
+                {
+                    player.PrintToChat(" You cannot switch to spectators during the match.");
+                    return HookResult.Stop;
+                }
                 if ((isMatchSetup || isVeto) && player != null && player.IsValid) {
                     if (int.TryParse(info.ArgByIndex(1), out int joiningTeam)) {
                         int playerTeam = (int)GetPlayerTeam(player);
@@ -263,6 +271,14 @@ namespace MatchZy
                     }
                 }
                 return HookResult.Continue;
+            });
+
+            AddCommandListener("spectate", (player, info) =>
+            {
+                if (!matchStarted || player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+                if (player.TeamNum is not ((int)CsTeam.Terrorist or (int)CsTeam.CounterTerrorist)) return HookResult.Continue;
+                player.PrintToChat(" You cannot switch to spectators during the match.");
+                return HookResult.Stop;
             });
 
             AddCommandListener("noclip", OnConsoleNoClip); // Override noclip
