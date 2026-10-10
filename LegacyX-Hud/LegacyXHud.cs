@@ -76,6 +76,9 @@ public sealed partial class LegacyXHud : BasePlugin
         apiBase = env.Get("LEGACYX_API_BASE_URL", "").TrimEnd('/');
         pluginId = env.GetModule("COMMUNITY", "PLUGIN_ID", "legacyx-community");
         pluginSecret = env.GetModule("COMMUNITY", "PLUGIN_TOKEN", "");
+        // The Skins tab of the menu reads and saves the loadout with SkinBridge's own token (skinchanger:read and :write).
+        skinPluginId = env.GetModule("SKINBRIDGE", "PLUGIN_ID", skinPluginId);
+        skinSecret = env.GetModule("SKINBRIDGE", "PLUGIN_TOKEN", "");
 
         Panorama.Init(this);
 

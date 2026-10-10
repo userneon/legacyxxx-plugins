@@ -63,6 +63,7 @@ public sealed partial class LegacyXHud
 
     private void CloseMenu(PanelHandle panel, CCSPlayerController player)
     {
+        skinViews.Remove(player.Slot);
         panel.SetClassFor(player, "menu", "shown", false);
         panel.SetClassFor(player, "menu_dim", "shown", false);
         panel.Close(player);
@@ -89,9 +90,13 @@ public sealed partial class LegacyXHud
                 break;
             case "menu_tab_skins":
                 ShowMenuPage(panel, player, "skins");
+                SkinsOpen(panel, player);
                 break;
             case "menu_tab_settings":
                 ShowMenuPage(panel, player, "settings");
+                break;
+            default:
+                SkinsClick(panel, player, e.ElementId);
                 break;
         }
     }
