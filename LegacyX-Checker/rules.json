@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "note": "What the checker looks for. Staff fill this in from verified samples; nothing here is a verdict. A name is never a finding: nameKeywords and cheatNames only lower the bar a little for a program in a folder named like that. A known file name or hash is a detection. Everything else is judged by what an unsigned program does (points for reaching into another program's memory, injecting code, looking for programs, drawing overlays, naming cs2.exe and the CS2 offsets); a detection needs a CS2 target and 7 points.",
   "nameKeywords": [
     "aimbot",
@@ -79,5 +79,6 @@
     ".MPRESS1",
     "UPX0",
     "UPX1"
-  ]
+  ],
+  "cheatHosts": []
 }
