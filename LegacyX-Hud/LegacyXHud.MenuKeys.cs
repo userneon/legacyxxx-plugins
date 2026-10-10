@@ -1,5 +1,6 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Utils;
 
 namespace LegacyXHud;
@@ -24,11 +25,42 @@ public sealed partial class LegacyXHud
     }
 
     private readonly Dictionary<int, Hold> holds = new();
+    private CCSGameRulesProxy? rulesProxy;
+
+    /// <summary>
+    /// The menu is for the time before a round: warmup, or the freeze time at the start of a round. Once the round is
+    /// live E and R are the game's again, so the menu closes by itself and will not open.
+    /// </summary>
+    private bool MenuAllowed()
+    {
+        if (rulesProxy is not { IsValid: true }) rulesProxy = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault();
+        var rules = rulesProxy?.GameRules;
+        return rules is not null && (rules.WarmupPeriod || rules.FreezePeriod);
+    }
+
+    private HookResult OnRoundFreezeEnd(EventRoundFreezeEnd e, GameEventInfo info)
+    {
+        CloseMenuForAll();
+        return HookResult.Continue;
+    }
+
+    private void CloseMenuForAll()
+    {
+        if (menu is null) return;
+        foreach (var slot in menuOpen.ToList())
+        {
+            var player = Utilities.GetPlayerFromSlot(slot);
+            if (player is { IsValid: true }) CloseMenu(menu, player);
+            else menuOpen.Remove(slot);
+        }
+    }
 
     private void OnMenuKeysTick()
     {
         if (!menuKeys) return;
         var step = Server.TickInterval;
+        var allowed = MenuAllowed();
+        if (!allowed && menuOpen.Count > 0) CloseMenuForAll();
         foreach (var player in Utilities.GetPlayers())
         {
             if (player is not { IsValid: true, IsBot: false }) continue;
@@ -47,7 +79,7 @@ public sealed partial class LegacyXHud
             if (!isOpen)
             {
                 // The knife-round vote already uses E; do not open a menu over it.
-                if (!use || knifeVotes.ContainsKey(player.Slot)) { hold.Open = 0; continue; }
+                if (!allowed || !use || knifeVotes.ContainsKey(player.Slot)) { hold.Open = 0; continue; }
                 hold.Open += step;
                 if (hold.Open < HoldOpenSeconds) continue;
                 hold.Open = 0;

@@ -33,6 +33,11 @@ public sealed partial class LegacyXHud
 
     private void OpenMenu(CCSPlayerController player)
     {
+        if (menuKeys && !MenuAllowed())
+        {
+            player.PrintToChat(" The menu opens in warmup and before the round starts.");
+            return;
+        }
         var panel = EnsureMenu();
         if (panel is null)
         {
