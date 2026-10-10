@@ -120,6 +120,9 @@ public sealed partial class LegacyXHud : BasePlugin
         if (player is null || !player.IsValid || player.IsBot) return HookResult.Continue;
         var slot = player.Slot;
         var steamId = player.SteamID;
+        // A new player in an old slot starts with a clean hint state.
+        holds.Remove(slot);
+        foreach (var key in applied.Keys.Where(k => k.Slot == slot && k.PanelId == "hint_fill").ToList()) applied.Remove(key);
         _ = LoadProfileAsync(steamId);
         // A few seconds: the client must finish loading the map and the addon before it can draw the panel.
         AddTimer(5f, () =>

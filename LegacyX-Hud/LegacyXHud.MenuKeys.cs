@@ -22,6 +22,8 @@ public sealed partial class LegacyXHud
         public float Close;         // seconds R has been held while the menu is open
         public bool NeedRelease;    // a hold fired: wait for the key to go up
         public int ShownStep = -1;  // last progress step drawn (0..20)
+        public bool HintOn;         // the "Hold E to open menu" hint is showing
+        public int HintStep = -1;   // last hint fill step drawn (0..20)
     }
 
     private readonly Dictionary<int, Hold> holds = new();
@@ -70,6 +72,8 @@ public sealed partial class LegacyXHud
             var reload = (buttons & PlayerButtons.Reload) != 0;
             var isOpen = menuOpen.Contains(player.Slot);
 
+            UpdateHint(player, hold, allowed && !isOpen && !knifeVotes.ContainsKey(player.Slot));
+
             if (hold.NeedRelease)
             {
                 if (!use && !reload) hold.NeedRelease = false;
@@ -114,5 +118,33 @@ public sealed partial class LegacyXHud
         if (stepNow == hold.ShownStep) return;
         hold.ShownStep = stepNow;
         SetState(menu, player, "menu_hold_fill", "p", "p" + stepNow * 5);
+    }
+
+    /// <summary>
+    /// "Hold E to open menu" at the top right while the menu can be opened, with a bar that fills as E is held. Only
+    /// writes to the client when the shown state or the 5 % step changes.
+    /// </summary>
+    private void UpdateHint(CCSPlayerController player, Hold hold, bool wanted)
+    {
+        var panel = notify;
+        if (panel is null) return;
+        if (!wanted)
+        {
+            if (!hold.HintOn) return;
+            hold.HintOn = false;
+            if (panel.IsOpenFor(player)) panel.SetClassFor(player, "hint", "open", false);
+            return;
+        }
+        if (!hold.HintOn)
+        {
+            if (!OpenFor(panel, player)) return;
+            hold.HintOn = true;
+            hold.HintStep = -1;
+            panel.SetClassFor(player, "hint", "open", true);
+        }
+        var stepNow = (int)Math.Round(Math.Clamp(hold.Open / HoldOpenSeconds, 0f, 1f) * 20);
+        if (stepNow == hold.HintStep) return;
+        hold.HintStep = stepNow;
+        SetState(panel, player, "hint_fill", "p", "p" + stepNow * 5);
     }
 }
