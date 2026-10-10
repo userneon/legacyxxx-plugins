@@ -19,7 +19,9 @@ looks for the `lx_hud_admin_ready` sentinel). Players page: the list, a player's
 Respawn, Mute, Gag, Silence, Move team. Server page: change map, back to warmup (second click within 10 seconds), clean weapons, restart round. The Ban…
 step picks Ban or IP ban, a length and a reason; mute, gag and silence ask for a length. Every button goes back to LegacyX-Admin as
 `lx_admin_do <actorSlot> <action> …`, which checks that staff member's own rights, so the greyed-out buttons are only a hint. Hold R closes it.
-Bans, Logins and Staff pages come later.
+Bans (who issued and who lifted a ban, filters, "Lift this ban" through `!unban`), Logins (the latest server logins) and Staff (read only) read
+the API with this plugin's game server token (`admin:read`, `/api/v1/plugin/admin/bans | logins | staff`); when the API cannot be reached they say so. IP bans
+are kept by the game servers, so they are not in the Bans list.
 
 **Menu** (`!menu`, or hold E in warmup / before the round, hold R to close): Welcome, Skins (knives, gloves, guns, agents) and
 Settings. Clicks, opening, closing and picking a skin play soft CS2 UI sounds (`itemtile_rollover_09`, `menu_focus`,

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
@@ -37,7 +38,18 @@ public sealed partial class LegacyXHud
 
     private sealed class AdminView
     {
-        public bool ServerTab;
+        public int Tab;                    // 0 players, 1 server, 2 bans, 3 logins, 4 staff
+        public bool ServerTab => Tab == 1;
+        public string BanFilter = "active";
+        public int BanOffset;
+        public List<JsonElement> BanItems = new();
+        public bool BanMore;
+        public int BanSelected = -1;
+        public string LoginFilter = "all";
+        public int LoginOffset;
+        public List<JsonElement> LoginItems = new();
+        public bool LoginMore;
+        public int LoginSelected = -1;
         public readonly int[] Rows = new int[AdminRows];
         public int RowCount;
         public int Selected = -1;          // slot of the picked player
@@ -170,7 +182,7 @@ public sealed partial class LegacyXHud
         {
             var actor = Utilities.GetPlayerFromSlot(slot);
             if (actor is not { IsValid: true }) { adminViews.Remove(slot); adminSent.Remove(slot); continue; }
-            if (view.ServerTab) continue;
+            if (view.Tab != 0) continue;
             DrawAdminPlayers(actor, view);
         }
         if (adminViews.Count == 0) { adminRefresh?.Kill(); adminRefresh = null; }
@@ -178,12 +190,29 @@ public sealed partial class LegacyXHud
 
     // ---- drawing -------------------------------------------------------------------------------------------------
 
+    private static readonly string[] AdminTabs = { "players", "server", "bans", "logins", "staff" };
+
     private void DrawAdminPage(CCSPlayerController actor, AdminView view)
     {
-        Ac(actor, "adm_page_players", "hidden", view.ServerTab);
-        Ac(actor, "adm_page_server", "hidden", !view.ServerTab);
-        Ac(actor, "adm_tab_players", "active", !view.ServerTab);
-        Ac(actor, "adm_tab_server", "active", view.ServerTab);
+        for (var i = 0; i < AdminTabs.Length; i++)
+        {
+            Ac(actor, $"adm_page_{AdminTabs[i]}", "hidden", i != view.Tab);
+            Ac(actor, $"adm_tab_{AdminTabs[i]}", "active", i == view.Tab);
+        }
+    }
+
+    private void ShowAdminTab(CCSPlayerController actor, AdminView view, int tab)
+    {
+        view.Tab = tab;
+        DrawAdminPage(actor, view);
+        switch (tab)
+        {
+            case 0: DrawAdminPlayers(actor, view); break;
+            case 1: DrawAdminServer(actor, view); break;
+            case 2: LoadBans(actor, view); break;
+            case 3: LoadLogins(actor, view); break;
+            case 4: LoadStaff(actor, view); break;
+        }
     }
 
     private static string TeamLabel(CCSPlayerController p) => p.TeamNum == 2 ? "T" : p.TeamNum == 3 ? "CT" : "SPEC";
@@ -371,9 +400,13 @@ public sealed partial class LegacyXHud
         switch (id)
         {
             case "adm_close": CloseAdmin(actor); return;
-            case "adm_tab_players": view.ServerTab = false; DrawAdminPage(actor, view); DrawAdminPlayers(actor, view); return;
-            case "adm_tab_server": view.ServerTab = true; DrawAdminPage(actor, view); DrawAdminServer(actor, view); return;
+            case "adm_tab_players": ShowAdminTab(actor, view, 0); return;
+            case "adm_tab_server": ShowAdminTab(actor, view, 1); return;
+            case "adm_tab_bans": ShowAdminTab(actor, view, 2); return;
+            case "adm_tab_logins": ShowAdminTab(actor, view, 3); return;
+            case "adm_tab_staff": ShowAdminTab(actor, view, 4); return;
         }
+        if (view.Tab >= 2 && OnAdminDataClick(actor, view, id)) return;
         if (id.StartsWith("pl_row", StringComparison.Ordinal) && int.TryParse(id[6..], out var row) && row >= 0 && row < view.RowCount)
         {
             view.Selected = view.Rows[row];

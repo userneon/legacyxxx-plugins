@@ -17,7 +17,7 @@ namespace AdminPlus;
 public partial class AdminPlus
 {
     /// <summary>Commands the panel may run for an actor through RunServerCmd (which checks that actor's access to each).</summary>
-    private static readonly string[] HudCommands = { "css_slay", "css_respawn", "css_team", "css_clean", "css_rr", "css_map", "css_unmute", "css_ungag", "css_unsilence" };
+    private static readonly string[] HudCommands = { "css_slay", "css_respawn", "css_team", "css_clean", "css_rr", "css_map", "css_unmute", "css_ungag", "css_unsilence", "css_unban" };
 
     private void RegisterHudBridge()
     {
