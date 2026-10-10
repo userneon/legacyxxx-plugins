@@ -54,7 +54,7 @@ public sealed partial class LegacyXHud : BasePlugin
 
     public override string ModuleAuthor => "LEGACY-X";
     public override string ModuleName => "LEGACY-X Hud";
-    public override string ModuleVersion => "0.2.0-legacyx.1";
+    public override string ModuleVersion => "0.3.0-legacyx.1";
 
     public override void Load(bool hotReload)
     {
