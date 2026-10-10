@@ -240,6 +240,7 @@ public sealed partial class LegacyXHud
         }
         view.Busy = true;
         var item = view.Items[view.Selected];
+        var team = view.Team;       // the tab the pick was made on: it is saved for that team only
         var steamId = player.SteamID;
         var playerSlot = player.Slot;
         SkinsStatus(panel, player, "Saving ...");
@@ -250,7 +251,7 @@ public sealed partial class LegacyXHud
             var saved = false;
             try
             {
-                var json = JsonSerializer.Serialize(new { steam_id = steamId.ToString(), catalog_item_id = item.Id });
+                var json = JsonSerializer.Serialize(new { steam_id = steamId.ToString(), catalog_item_id = item.Id, team });
                 var (status, body) = await SkinsApiAsync(HttpMethod.Post, "/api/v1/plugin/menu/skins/equip", json);
                 if (status == 200 && body is { } ok)
                 {
