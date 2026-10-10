@@ -28,6 +28,11 @@ public sealed partial class LegacyXHud
     public void OnMenuCommand(CCSPlayerController? player, CommandInfo command)
     {
         if (!enabled || player is not { IsValid: true, IsBot: false }) return;
+        OpenMenu(player);
+    }
+
+    private void OpenMenu(CCSPlayerController player)
+    {
         var panel = EnsureMenu();
         if (panel is null)
         {
@@ -35,6 +40,8 @@ public sealed partial class LegacyXHud
             return;
         }
         if (!OpenFor(panel, player)) return;
+        menuOpen.Add(player.Slot);
+        SetState(panel, player, "menu_hold_fill", "p", "p0");
 
         panel.SetVariableFor(player, "menu_footer", serverName.Length > 0 ? serverName : "LEGACY-X");
         panel.SetVariableFor(player, "menu_name", player.PlayerName);
@@ -64,6 +71,7 @@ public sealed partial class LegacyXHud
     private void CloseMenu(PanelHandle panel, CCSPlayerController player)
     {
         skinViews.Remove(player.Slot);
+        menuOpen.Remove(player.Slot);
         panel.SetClassFor(player, "menu", "shown", false);
         panel.SetClassFor(player, "menu_dim", "shown", false);
         panel.Close(player);

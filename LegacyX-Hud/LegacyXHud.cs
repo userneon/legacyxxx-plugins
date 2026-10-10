@@ -87,6 +87,8 @@ public sealed partial class LegacyXHud : BasePlugin
         RegisterEventHandler<EventPlayerConnectFull>(OnPlayerConnectFull);
         RegisterEventHandler<EventCsWinPanelMatch>(OnMatchEnd);
         RegisterListener<Listeners.OnTick>(OnKnifeTick);
+        menuKeys = env.GetModuleBoolean("HUD", "MENU_KEYS", true);
+        if (menuKeys) RegisterListener<Listeners.OnTick>(OnMenuKeysTick);
         Console.WriteLine($"[{ModuleName}] Ready. Layouts {notifyLayout}, {matchLayout}, {knifeLayout}");
         if (string.IsNullOrEmpty(apiBase) || string.IsNullOrEmpty(pluginSecret))
             Console.WriteLine($"[{ModuleName}] No API address or plugin token: rank and match cards stay off.");
