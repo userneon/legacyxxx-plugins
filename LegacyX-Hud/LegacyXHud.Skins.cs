@@ -12,7 +12,7 @@ namespace LegacyXHud;
 // Reading and saving use SkinBridge's credentials (LEGACYX_SKINBRIDGE_*), which already carry skinchanger:read and :write.
 public sealed partial class LegacyXHud
 {
-    private const int SkinTypeSlots = 24;
+    private const int SkinTypeSlots = 25;
     private const int SkinItemSlots = 12;
 
     private string skinPluginId = "legacyx-skinbridge";

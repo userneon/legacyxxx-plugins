@@ -1,4 +1,6 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
 using PanoramaManager;
@@ -48,17 +50,27 @@ public sealed partial class LegacyXHud
         menuOpen.Add(player.Slot);
         SetState(panel, player, "menu_hold_fill", "p", "p0");
 
-        panel.SetVariableFor(player, "menu_footer", serverName.Length > 0 ? serverName : "LEGACY-X");
-        panel.SetVariableFor(player, "menu_name", player.PlayerName);
+        var name = serverName.Length > 0 ? serverName : (ConVar.Find("hostname")?.StringValue ?? "LEGACY-X");
+        panel.SetVariableFor(player, "menu_footer", name.ToUpperInvariant());
+        panel.SetVariableFor(player, "menu_name", $"Welcome, {player.PlayerName}");
         var ranked = profiles.TryGetValue(player.SteamID, out var profile);
         panel.SetClassFor(player, "menu_rankrow", "hidden", !ranked);
         if (ranked && profile is not null)
         {
             panel.SetVariableFor(player, "menu_rank", profile.RankName);
-            panel.SetVariableFor(player, "menu_exp", $"{profile.Exp:N0} EXP");
+            panel.SetVariableFor(player, "menu_exp", profile.Exp.ToString("N0"));
+            panel.SetVariableFor(player, "menu_matches", profile.Matches.ToString("N0"));
+            panel.SetVariableFor(player, "menu_next", NextLine(profile).ToUpperInvariant());
+            panel.SetVariableFor(player, "menu_togo", TogoLine(profile));
+            SetState(panel, player, "menu_fill", "p", ProgressClass(profile) ?? "p0");
             SetState(panel, player, "menu_emblem", "rank", $"rank-{profile.RankId}");
             SetState(panel, player, "menu_rank", "tier", TierClass(profile.RankName));
         }
+        // The server box reads this server itself: its name, the map and who is on it.
+        var humans = Utilities.GetPlayers().Count(p => p is { IsValid: true, IsBot: false });
+        panel.SetVariableFor(player, "menu_srv_name", name);
+        panel.SetVariableFor(player, "menu_srv_map", Server.MapName);
+        panel.SetVariableFor(player, "menu_srv_players", $"{humans} / {Server.MaxPlayers} players");
         ShowMenuPage(panel, player, "welcome");
         panel.SetClassFor(player, "menu_dim", "shown", true);
         panel.SetClassFor(player, "menu", "shown", true);
@@ -97,6 +109,10 @@ public sealed partial class LegacyXHud
         {
             case "menu_close":
                 CloseMenu(panel, player);
+                break;
+            case "menu_pick":
+                ShowMenuPage(panel, player, "skins");
+                SkinsOpen(panel, player);
                 break;
             case "menu_tab_welcome":
                 ShowMenuPage(panel, player, "welcome");
