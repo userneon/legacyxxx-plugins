@@ -32,6 +32,8 @@ public sealed partial class LegacyXHud
         player.ExecuteClientCommand($"playvol {sound} {volume.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}");
     }
 
+    private bool menuListening;
+
     private PanelHandle? EnsureMenu()
     {
         var handle = Ensure(ref menu, menuLayout, "lx_menu", captureInput: true);
