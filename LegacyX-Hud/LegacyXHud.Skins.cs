@@ -20,7 +20,7 @@ public sealed partial class LegacyXHud
     private bool SkinsReady => apiBase.Length > 0 && skinSecret.Length > 0;
 
     private sealed record SkinType(string WeaponClass, int Skins);
-    private sealed record SkinItem(string Id, string Name);
+    private sealed record SkinItem(string Id, string Name, int? PaintId);
 
     private sealed class SkinView
     {
@@ -35,6 +35,13 @@ public sealed partial class LegacyXHud
     }
 
     private readonly Dictionary<int, SkinView> skinViews = new();
+
+    // The glove models of the skin pictures (class sp-<model>-<paint id>); knives use the names below.
+    private static readonly Dictionary<string, string> GloveModels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Bloodhound Gloves"] = "bloodhound", ["Broken Fang Gloves"] = "brokenfang", ["Driver Gloves"] = "driver", ["Hand Wraps"] = "handwraps",
+        ["Hydra Gloves"] = "hydra", ["Moto Gloves"] = "moto", ["Specialist Gloves"] = "specialist", ["Sport Gloves"] = "sport",
+    };
 
     // The knife pictures baked into the Workshop addon (class kn-<name>, see CONTRACT.md); the server cannot send an image.
     private static readonly Dictionary<string, string> KnifeIcons = new(StringComparer.OrdinalIgnoreCase)
@@ -167,7 +174,8 @@ public sealed partial class LegacyXHud
                     current.Total = json.GetProperty("total").GetInt32();
                     current.Offset = wanted;
                     current.Items = json.GetProperty("items").EnumerateArray()
-                        .Select(i => new SkinItem(i.GetProperty("id").GetString() ?? "", i.GetProperty("name").GetString() ?? ""))
+                        .Select(i => new SkinItem(i.GetProperty("id").GetString() ?? "", i.GetProperty("name").GetString() ?? "",
+                            i.TryGetProperty("paintId", out var paint) && paint.ValueKind == JsonValueKind.Number ? paint.GetInt32() : null))
                         .Where(i => i.Id.Length > 0).Take(SkinItemSlots).ToList();
                     SkinsStatus(menu, p, "");
                     SkinsRender(menu, p, current);
@@ -234,6 +242,13 @@ public sealed partial class LegacyXHud
         });
     }
 
+    private static string? SkinModel(string? weaponClass)
+    {
+        if (weaponClass is null) return null;
+        if (KnifeIcons.TryGetValue(weaponClass, out var knife)) return knife;
+        return GloveModels.TryGetValue(weaponClass, out var glove) ? glove : null;
+    }
+
     // ---- drawing ----------------------------------------------------------------------------------------
 
     private void SkinsRender(PanelHandle panel, CCSPlayerController player, SkinView view)
@@ -269,7 +284,11 @@ public sealed partial class LegacyXHud
             var has = i < view.Items.Count;
             panel.SetClassFor(player, $"sk_item{i}", "hidden", !has);
             panel.SetClassFor(player, $"sk_item{i}", "sel", false);
-            if (has) panel.SetVariableFor(player, $"sk_item{i}_name", view.Items[i].Name);
+            if (!has) continue;
+            panel.SetVariableFor(player, $"sk_item{i}_name", view.Items[i].Name);
+            // The picture is the one CS2 already has for that skin; the addon's stylesheet maps this class to it (no class = name only).
+            var model = SkinModel(view.WeaponClass);
+            SetState(panel, player, $"sk_item{i}_pic", "sp", model is not null && view.Items[i].PaintId is { } paintId ? $"sp-{model}-{paintId}" : null);
         }
     }
 
