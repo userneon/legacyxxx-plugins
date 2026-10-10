@@ -73,8 +73,8 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
     private void ApplyVoiceBaseline()
     {
         if (!Config.Enabled || !Config.EnforceCompetitiveVoiceCvars) return;
-        Server.ExecuteCommand("sv_alltalk 0");
-        Server.ExecuteCommand("sv_full_alltalk 0");
+        // sv_alltalk / sv_full_alltalk belong to LegacyX-MatchZy now (everyone talks in warmup, the knife vote and the
+        // halftime swap, teams only in the knife round and the live match); setting them here every round would undo that.
         Server.ExecuteCommand("sv_deadtalk 0");
     }
 
