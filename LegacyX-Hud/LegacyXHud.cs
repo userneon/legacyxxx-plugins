@@ -88,6 +88,8 @@ public sealed partial class LegacyXHud : BasePlugin
         RegisterEventHandler<EventCsWinPanelMatch>(OnMatchEnd);
         RegisterListener<Listeners.OnTick>(OnKnifeTick);
         menuKeys = env.GetModuleBoolean("HUD", "MENU_KEYS", true);
+        firstJoinMenu = env.GetModuleBoolean("HUD", "FIRST_JOIN_MENU", true);
+        FirstJoinStart();
         menuSounds = env.GetModuleBoolean("HUD", "MENU_SOUNDS", true);
         if (float.TryParse(env.GetModule("HUD", "MENU_SOUND_VOLUME", "1"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var volume))
             soundVolume = Math.Clamp(volume, 0f, 1f);
@@ -137,6 +139,8 @@ public sealed partial class LegacyXHud : BasePlugin
         {
             var joined = Utilities.GetPlayerFromSlot(slot);
             if (joined is not { IsValid: true, IsBot: false }) return;
+            // A first-time player gets the menu's Welcome page (FirstJoinTick) instead of the card.
+            if (WaitForFirstWelcome(joined)) return;
             if (profiles.TryGetValue(steamId, out var known)) Welcome(joined, known);
             else _ = WelcomeAfterLookupAsync(slot, steamId);
         });
