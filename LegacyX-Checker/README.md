@@ -129,3 +129,14 @@ The server also accepts every code once, so a leftover program has nothing to se
 - Reading Amcache / ShimCache / the USN journal (deeper traces of deleted programs).
 - Checking loaded modules inside `cs2.exe`.
 - A signed installer.
+
+
+## How a file is judged
+
+A name is never a finding on its own: names are easy to change and easy to fake. An unsigned program is given points for what it does:
+reaches into another program's memory (3), pushes code into another program (3), uses kernel routines for it (3), then, if it does one of those,
+looks for programs by name (1), draws a see-through window (1), sends mouse or keyboard input (1), is packed (1), names `cs2.exe` and friends (2) and
+carries two or more CS2 offsets (4). A **detection** needs a CS2 target and 7 points (6 if its name or folder looks like a cheat's); a **suspicion**
+is 5 points with a CS2 target or 6 without. Signed programs, the Windows folder and the checker's own files are left alone. Running programs are judged
+the same way by their file. Prefetch and Recent only name programs, so they are not judged; the checker reports only if Prefetch is off, empty or unreadable.
+`LegacyX-Checker.exe --explain "<file>"` shows every point.

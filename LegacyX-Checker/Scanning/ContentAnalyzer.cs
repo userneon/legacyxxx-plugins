@@ -12,12 +12,14 @@ public static class ContentAnalyzer
 {
     private const long MaxDeepBytes = 64L * 1024 * 1024;
 
-    // Functions a program uses to read or write the memory of another program, or to push code into it.
-    private static readonly string[] MemoryApis =
-    {
-        "readprocessmemory", "writeprocessmemory", "ntreadvirtualmemory", "ntwritevirtualmemory", "virtualallocex",
-        "createremotethread", "ntcreatethreadex", "queueuserapc", "setwindowshookexa", "setwindowshookexw",
-    };
+    // What a program asks Windows for tells what it is for. One of these alone is ordinary; together they are what a game cheat needs.
+    private static readonly string[] MemoryApis = { "readprocessmemory", "writeprocessmemory", "ntreadvirtualmemory", "ntwritevirtualmemory", "zwreadvirtualmemory", "zwwritevirtualmemory", "virtualallocex", "virtualprotectex" };
+    private static readonly string[] InjectionApis = { "createremotethread", "ntcreatethreadex", "rtlcreateuserthread", "queueuserapc", "ntqueueapcthread", "ntmapviewofsection", "setwindowshookexa", "setwindowshookexw" };
+    private static readonly string[] KernelApis = { "mmcopyvirtualmemory", "kestackattachprocess", "pslookupprocessbyprocessid" };
+    private static readonly string[] OverlayApis = { "setlayeredwindowattributes", "updatelayeredwindow", "dwmextendframeintoclientarea", "d3d11createdeviceandswapchain" };
+    private static readonly string[] InputApis = { "sendinput", "mouse_event", "keybd_event", "setcursorpos" };
+    private static readonly string[] FindProgramApis = { "createtoolhelp32snapshot", "process32first", "process32firstw", "process32next", "process32nextw", "module32first", "module32firstw", "module32next", "module32nextw", "enumprocessmodules", "enumprocessmodulesex" };
+    private static readonly string[] AllApis = MemoryApis.Concat(InjectionApis).Concat(KernelApis).Concat(OverlayApis).Concat(InputApis).Concat(FindProgramApis).Concat(new[] { "openprocess" }).ToArray();
 
     private static readonly string[] Extensions = { ".exe", ".dll", ".sys" };
 
@@ -48,6 +50,11 @@ public static class ContentAnalyzer
         public bool ReadText { get; set; }
         public List<string> GameMarkers { get; } = new();
         public List<string> OffsetMarkers { get; } = new();
+        /// <summary>What the program does, each with the points it adds (the verdict comes from the total).</summary>
+        public List<(string What, int Points)> Signals { get; } = new();
+        public int Score => Signals.Sum(signal => signal.Points);
+        /// <summary>Its folder or its name looks like a cheat's: only a reason to look a little closer, never a verdict.</summary>
+        public bool Hinted { get; set; }
         public Finding? Finding { get; set; }
         /// <summary>In plain words: why this file was or was not flagged.</summary>
         public string Reason { get; set; } = "";
@@ -59,7 +66,12 @@ public static class ContentAnalyzer
         if (inspection.Finding is not null) context.Add(inspection.Finding);
     }
 
-    /// <summary>Looks at one file the way the scan does, and writes down every step. Also used by --explain on a test file.</summary>
+    private static bool Has(HashSet<string> names, string[] group) => group.Any(names.Contains);
+
+    /// <summary>
+    /// Looks at one file the way the scan does, and writes down every step. The verdict is what the program DOES (the Windows functions it uses,
+    /// whether it is signed, what it names inside) added up as points. Its name never decides: a name only lowers the bar a little.
+    /// </summary>
     public static Inspection Inspect(Rules rules, string path, long length)
     {
         var name = Path.GetFileName(path);
@@ -80,36 +92,48 @@ public static class ContentAnalyzer
         result.Managed = pe.IsManaged;
         result.Sections.AddRange(pe.SectionNames);
         result.ImportCount = pe.Imports.Count;
-        result.OpensProcesses = pe.Imports.Contains("openprocess", StringComparer.OrdinalIgnoreCase);
-        result.MemoryApis.AddRange(MemoryApis.Where(api => pe.Imports.Contains(api, StringComparer.OrdinalIgnoreCase)));
-
         result.Protector = pe.SectionNames.FirstOrDefault(section => rules.ProtectorSections.Contains(section, StringComparer.OrdinalIgnoreCase));
         if (pe.IsSigned)
         {
             result.Reason = "Not flagged: the program has a digital signature, and signed programs are left alone.";
             return result;
         }
-        if (result.Protector is not null)
-        {
-            result.Finding = new Finding(name, "file", Finding.Suspicion, path, $"Unsigned program packed with a protector (section \"{result.Protector}\")");
-        }
 
-        var usesMemory = result.OpensProcesses && result.MemoryApis.Count > 0;
-        // A .NET program names its functions in its own data, not in the import table: look at its text instead.
-        if (!usesMemory && pe.IsManaged)
+        // Which of the interesting functions it uses: from its import table, or for a .NET program from the names in its own data.
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (pe.IsManaged)
         {
-            var named = FindWords(path, MemoryApis, ignoreCase: true);
-            usesMemory = named is { Count: > 0 };
+            if (FindWords(path, AllApis, ignoreCase: true) is { } found) names.UnionWith(found);
         }
-        result.UsesMemory = usesMemory;
-        if (!usesMemory)
+        else
         {
-            result.Reason = result.Finding is not null
-                ? "Flagged only for the protector. It does not import functions for reading another program's memory (it may call Windows directly, use a driver, or load that code later)."
-                : "Not flagged: it does not import the functions a program needs to read another program's memory" + (pe.IsManaged ? " (and its .NET text does not name them either)." : ". If this is a cheat it may call Windows directly, use a driver, or load that code from somewhere else.");
+            names.UnionWith(pe.Imports.Where(import => AllApis.Contains(import, StringComparer.OrdinalIgnoreCase)));
+        }
+        result.OpensProcesses = names.Contains("openprocess");
+        result.MemoryApis.AddRange(MemoryApis.Where(names.Contains));
+
+        if (result.OpensProcesses && Has(names, MemoryApis)) result.Signals.Add(("reads or writes another program's memory", 3));
+        if (Has(names, InjectionApis)) result.Signals.Add(("can push code into another program", 3));
+        if (Has(names, KernelApis)) result.Signals.Add(("uses kernel routines to reach another program's memory", 3));
+        result.UsesMemory = result.Signals.Count > 0;
+        if (result.UsesMemory)
+        {
+            if (Has(names, FindProgramApis)) result.Signals.Add(("looks for another program by name", 1));
+            if (Has(names, OverlayApis)) result.Signals.Add(("can draw a see-through window over the screen", 1));
+            if (Has(names, InputApis)) result.Signals.Add(("can send mouse or keyboard input", 1));
+            if (result.Protector is not null) result.Signals.Add(($"is packed with a protector ({result.Protector})", 1));
+        }
+        var hint = new[] { name, Path.GetFileName(Path.GetDirectoryName(path) ?? ""), Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(path) ?? "") ?? "") }
+            .Select(part => Rules.Match(rules.CheatNames, part) ?? Rules.Match(rules.NameKeywords, part)).FirstOrDefault(match => match is not null);
+        result.Hinted = hint is not null;
+
+        if (!result.UsesMemory)
+        {
+            result.Reason = "Not flagged: it does not reach into another program's memory. If this is a cheat it may call Windows directly, use a driver, or load that code from somewhere else.";
             return result;
         }
 
+        // It can reach into other programs: does it aim at CS2?
         var game = FindWords(path, rules.GameMarkers, ignoreCase: true);
         var offsets = FindWords(path, rules.OffsetMarkers, ignoreCase: false);
         if (game is null || offsets is null)
@@ -120,19 +144,26 @@ public static class ContentAnalyzer
         result.ReadText = true;
         result.GameMarkers.AddRange(rules.GameMarkers.Where(game.Contains));
         result.OffsetMarkers.AddRange(rules.OffsetMarkers.Where(offsets.Contains));
-        if (result.OffsetMarkers.Count >= 2)
+        if (result.GameMarkers.Count > 0) result.Signals.Add(($"names {string.Join(", ", result.GameMarkers.Take(3))}", 2));
+        if (result.OffsetMarkers.Count >= 2) result.Signals.Add(($"carries CS2 offsets ({string.Join(", ", result.OffsetMarkers.Take(4))})", 4));
+
+        var aimsAtCs2 = result.GameMarkers.Count > 0 || result.OffsetMarkers.Count >= 2;
+        var detection = aimsAtCs2 && result.Score >= (result.Hinted ? 6 : 7);
+        var suspicion = result.Score >= (aimsAtCs2 ? 5 : 6) - (result.Hinted ? 1 : 0);
+        var summary = $"Unsigned program, {result.Score} points: {string.Join("; ", result.Signals.Select(signal => signal.What))}";
+        if (detection)
         {
-            result.Finding = new Finding(name, "file", Finding.Detection, path, $"Unsigned program that reads other programs' memory and carries CS2 offsets ({string.Join(", ", result.OffsetMarkers.Take(4))})");
-            result.Reason = "DETECTION: unsigned, reads other programs' memory, and carries two or more CS2 offset names.";
+            result.Finding = new Finding(name, "file", Finding.Detection, path, summary);
+            result.Reason = $"DETECTION: {result.Score} points and it aims at CS2. {string.Join("; ", result.Signals.Select(signal => $"{signal.What} (+{signal.Points})"))}.";
         }
-        else if (result.GameMarkers.Count > 0)
+        else if (suspicion)
         {
-            result.Finding = new Finding(name, "file", Finding.Suspicion, path, $"Unsigned program that reads other programs' memory and names {string.Join(", ", result.GameMarkers.Take(3))}");
-            result.Reason = "SUSPICION: unsigned, reads other programs' memory, and names CS2 (cs2.exe / client.dll …), but has fewer than two offset names.";
+            result.Finding = new Finding(name, "file", Finding.Suspicion, path, summary);
+            result.Reason = $"SUSPICION: {result.Score} points. {string.Join("; ", result.Signals.Select(signal => $"{signal.What} (+{signal.Points})"))}.";
         }
         else
         {
-            result.Reason = "Not flagged: it reads other programs' memory, but no CS2 names or offsets were found inside (they may be encrypted, or the target is not CS2).";
+            result.Reason = $"Not flagged: {result.Score} points ({string.Join("; ", result.Signals.Select(signal => signal.What))}); a verdict needs more.";
         }
         return result;
     }
@@ -153,13 +184,14 @@ public static class ContentAnalyzer
             lines.Add($"Sections: {string.Join(" ", result.Sections)}{(result.Protector is not null ? $"   <- protector: {result.Protector}" : "")}");
             lines.Add($"Imported names: {result.ImportCount}");
             lines.Add($"Opens other processes (OpenProcess): {(result.OpensProcesses ? "yes" : "no")}");
-            lines.Add($"Memory functions imported: {(result.MemoryApis.Count == 0 ? "none" : string.Join(", ", result.MemoryApis))}");
-            lines.Add($"Reads other programs' memory (by the scan's rule): {(result.UsesMemory ? "yes" : "no")}");
+            lines.Add($"Memory functions: {(result.MemoryApis.Count == 0 ? "none" : string.Join(", ", result.MemoryApis))}");
+            lines.Add($"Its name or folder looks like a cheat's (only lowers the bar): {(result.Hinted ? "yes" : "no")}");
             if (result.ReadText)
             {
                 lines.Add($"CS2 names found inside: {(result.GameMarkers.Count == 0 ? "none" : string.Join(", ", result.GameMarkers))}");
                 lines.Add($"CS2 offset names found inside: {(result.OffsetMarkers.Count == 0 ? "none" : string.Join(", ", result.OffsetMarkers))}");
             }
+            lines.Add($"Points: {result.Score}" + (result.Signals.Count == 0 ? "" : "   " + string.Join(" | ", result.Signals.Select(signal => $"{signal.What} +{signal.Points}"))));
         }
         lines.Add("");
         lines.Add(result.Reason);

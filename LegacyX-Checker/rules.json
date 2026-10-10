@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "note": "What the checker looks for. Staff fill this in from verified samples; nothing here is a verdict. A name hit is only a suspicion. A hash or exact file name hit is a detection. The content rules look INSIDE unsigned programs: one that reads another program's memory and carries CS2 offsets is a detection, one that only names CS2 is a suspicion.",
+  "note": "What the checker looks for. Staff fill this in from verified samples; nothing here is a verdict. A name is never a finding: nameKeywords and cheatNames only lower the bar a little for a program in a folder named like that. A known file name or hash is a detection. Everything else is judged by what an unsigned program does (points for reaching into another program's memory, injecting code, looking for programs, drawing overlays, naming cs2.exe and the CS2 offsets); a detection needs a CS2 target and 7 points.",
   "nameKeywords": [
     "aimbot",
     "triggerbot",

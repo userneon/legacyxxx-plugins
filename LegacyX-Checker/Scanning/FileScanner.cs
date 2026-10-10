@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 
 namespace LegacyX.Checker.Scanning;
 
-/// <summary>Walks the fixed drives and compares file names (and, for programs, a hash) with the rules. File contents are never sent.</summary>
+/// <summary>Walks the fixed drives and looks at what each program is and does. Only an exact known name or fingerprint (from staff) is judged by name. File contents are never sent.</summary>
 public static class FileScanner
 {
     private static readonly string[] Programs = { ".exe", ".dll", ".sys", ".bat", ".cmd", ".ps1", ".jar" };
@@ -131,30 +131,14 @@ public static class FileScanner
             else files.Add((entry.Path, entry.Length));
         }
         foreach (var file in files) CheckFile(context, file.Path, file.Length);
-        FolderInspector.CheckContents(context, directory, files.Select(file => file.Path).ToList());
         foreach (var (child, isLink) in folders)
         {
             if (Skip(child)) continue;
-            CheckFolder(context, child);
             // Junctions and links can loop back on themselves.
             if (isLink) continue;
             Interlocked.Increment(ref pending);
             stack.Push(child);
         }
-    }
-
-    /// <summary>A folder named like a cheat is worth a look even when the files inside have harmless names.</summary>
-    private static void CheckFolder(ScanContext context, string path)
-    {
-        var name = Path.GetFileName(path);
-        var known = Rules.Match(context.Rules.CheatNames, name);
-        if (known is not null)
-        {
-            FolderInspector.CheckNamedFolder(context, path, name, known, known: true);
-            return;
-        }
-        var hit = Rules.Match(context.Rules.NameKeywords, name);
-        if (hit is not null) FolderInspector.CheckNamedFolder(context, path, name, hit, known: false);
     }
 
     private static void CheckFile(ScanContext context, string path, long length)
@@ -167,12 +151,7 @@ public static class FileScanner
             context.Add(new Finding(name, "file", Finding.Detection, path, "A file name on the list of known cheats"));
             return;
         }
-        var hit = Rules.Match(context.Rules.NameKeywords, name);
-        if (hit is not null)
-        {
-            context.Add(new Finding(name, "file", Finding.Suspicion, path, $"Name matches \"{hit}\""));
-        }
-        // What the program is, whatever it is called.
+        // What the program is and does, whatever it is called. A name alone is never a finding.
         try
         {
             if (ContentAnalyzer.IsCandidate(path, length)) ContentAnalyzer.Analyze(context, path, length);

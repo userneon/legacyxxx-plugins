@@ -3,7 +3,7 @@ using Microsoft.Win32;
 
 namespace LegacyX.Checker.Scanning;
 
-/// <summary>What ran on this PC recently (Prefetch and the Recent list), and whether someone cleaned up after themselves.</summary>
+/// <summary>Whether Windows still keeps a record of what ran (Prefetch), and whether someone cleaned up after themselves. Names in those records are not judged.</summary>
 public static class TraceScanner
 {
     public static void Scan(ScanContext context)
@@ -31,13 +31,9 @@ public static class TraceScanner
                 context.Add(new Finding("Prefetch is empty", "tamper", Finding.Suspicion, null, "No program records at all. Either it was cleared, or this scan could not read it (run it as administrator)."));
                 return;
             }
-            foreach (var file in files)
-            {
-                context.CountFile();
-                var name = Path.GetFileNameWithoutExtension(file);
-                var hit = Rules.Match(context.Rules.NameKeywords, name);
-                if (hit is not null) context.Add(new Finding(name, "trace", Finding.Suspicion, file, $"Ran before; matches \"{hit}\""));
-            }
+            // The records only name programs that ran; a name proves nothing, so it is not judged here. A program that is still on the disk is
+            // looked at for what it does by the file scan; one that was deleted leaves only a name.
+            context.CountFile();
         }
         catch (UnauthorizedAccessException)
         {
@@ -55,13 +51,8 @@ public static class TraceScanner
         {
             var directory = Environment.GetFolderPath(Environment.SpecialFolder.Recent);
             if (!Directory.Exists(directory)) return;
-            foreach (var file in Directory.EnumerateFiles(directory, "*.lnk"))
-            {
-                context.CountFile();
-                var name = Path.GetFileNameWithoutExtension(file);
-                var hit = Rules.Match(context.Rules.NameKeywords, name);
-                if (hit is not null) context.Add(new Finding(name, "trace", Finding.Suspicion, file, $"Opened recently; matches \"{hit}\""));
-            }
+            // Recent only lists names of what was opened: not judged (see Prefetch above).
+            context.CountFile();
         }
         catch
         {
