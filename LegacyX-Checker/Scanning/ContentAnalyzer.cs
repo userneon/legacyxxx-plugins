@@ -117,6 +117,26 @@ public static class ContentAnalyzer
         result.Sections.AddRange(pe.SectionNames);
         result.ImportCount = pe.Imports.Count;
         result.Protector = pe.SectionNames.FirstOrDefault(section => rules.ProtectorSections.Contains(section, StringComparer.OrdinalIgnoreCase));
+        // A cheat staff have seen: its marks (strings) are inside, whatever the file is called and even when it is signed with a stolen certificate.
+        if (rules.Families.Count > 0)
+        {
+            var marks = rules.Families.SelectMany(family => family.Strings).Distinct().ToList();
+            var inside = marks.Count > 0 ? FindWords(path, marks.Append("LegacyX.Checker.Scanning"), ignoreCase: false) : null;
+            // The checker itself (an older build) carries the rules and so every mark.
+            if (inside is not null && !inside.Contains("LegacyX.Checker.Scanning"))
+            {
+                foreach (var family in rules.Families)
+                {
+                    var matched = family.Strings.Where(inside.Contains).ToList();
+                    if (family.Strings.Count > 0 && matched.Count >= Math.Max(1, family.MinMatches))
+                    {
+                        result.Finding = new Finding(name, "file", Finding.Detection, path, $"Matches the {family.Name} cheat ({matched.Count} of its marks)");
+                        result.Reason = $"DETECTION: it holds {matched.Count} marks of the {family.Name} cheat: {string.Join(", ", matched.Take(5))}.";
+                        return result;
+                    }
+                }
+            }
+        }
         if (pe.IsSigned)
         {
             result.Reason = "Not flagged: the program has a digital signature, and signed programs are left alone.";

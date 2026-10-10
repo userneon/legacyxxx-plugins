@@ -32,7 +32,7 @@ public static class SelfInfo
         var extension = Path.GetExtension(path);
         // What the program writes for the player: the report and the explanation on the Desktop.
         if (extension.Equals(".txt", StringComparison.OrdinalIgnoreCase)
-            && (name.Equals("LegacyX-Checker-report.txt", StringComparison.OrdinalIgnoreCase) || name.Equals("LegacyX-Checker-explain.txt", StringComparison.OrdinalIgnoreCase))) return true;
+            && (name.Equals("LegacyX-Checker-report.txt", StringComparison.OrdinalIgnoreCase) || name.Equals("LegacyX-Checker-explain.txt", StringComparison.OrdinalIgnoreCase) || name.Equals("LegacyX-Checker-common.txt", StringComparison.OrdinalIgnoreCase))) return true;
         // What sits next to the program: its rules, its code and its marks.
         var directory = Path.GetDirectoryName(path)?.TrimEnd('\\') ?? "";
         if (directory.Equals(Folder, StringComparison.OrdinalIgnoreCase)

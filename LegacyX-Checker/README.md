@@ -140,3 +140,21 @@ carries two or more CS2 offsets (4). A **detection** needs a CS2 target and 7 po
 is 5 points with a CS2 target or 6 without. Signed programs, the Windows folder and the checker's own files are left alone. Running programs are judged
 the same way by their file. Prefetch and Recent only name programs, so they are not judged; the checker reports only if Prefetch is off, empty or unreadable.
 `LegacyX-Checker.exe --explain "<file>"` shows every point.
+
+## Cheats staff have seen (families)
+
+A cheat that is rebuilt often (a new name and a new hash every time) is still the same program inside: the same window title, config file names, loader address.
+Staff describe it once in `rules.json`:
+
+```json
+"families": [ { "name": "NameOfTheCheat", "strings": ["window title", "config.dat name", "loader.example.mn"], "minMatches": 2 } ]
+```
+
+A program (signed or not) that holds at least `minMatches` of the strings is a detection, whatever it is called. To pick the strings, give the checker two or more
+samples of the same cheat (use a spare PC or a VM, never run them):
+
+```
+LegacyX-Checker.exe --common "C:\samples\build1.exe" "C:\samples\build2.exe"
+```
+
+It writes `LegacyX-Checker-common.txt` on the Desktop: the readable text all the samples share. Choose the few that only this cheat has.

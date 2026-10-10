@@ -5,6 +5,13 @@ using System.Text.Json.Serialization;
 namespace LegacyX.Checker;
 
 /// <summary>What to look for. Read from rules.json next to the program.</summary>
+public sealed class CheatFamily
+{
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("strings")] public List<string> Strings { get; set; } = new();
+    [JsonPropertyName("minMatches")] public int MinMatches { get; set; } = 2;
+}
+
 public sealed class Rules
 {
     [JsonPropertyName("nameKeywords")] public List<string> NameKeywords { get; set; } = new();
@@ -14,6 +21,11 @@ public sealed class Rules
     [JsonPropertyName("featureWords")] public List<string> FeatureWords { get; set; } = new();
     /// <summary>Sites that sell or hand out cheats (staff fill this in). A browser download from one of them is a suspicion.</summary>
     [JsonPropertyName("cheatHosts")] public List<string> CheatHosts { get; set; } = new();
+    /// <summary>
+    /// Cheats staff have seen, described by what is inside them rather than by a name or a hash (both change with every build): a window title, a
+    /// config file name, the address of a loader. A program that holds at least MinMatches of a family's strings is that cheat.
+    /// </summary>
+    [JsonPropertyName("families")] public List<CheatFamily> Families { get; set; } = new();
     [JsonPropertyName("processKeywords")] public List<string> ProcessKeywords { get; set; } = new();
     [JsonPropertyName("knownFileNames")] public List<string> KnownFileNames { get; set; } = new();
     [JsonPropertyName("sha256")] public List<string> Sha256 { get; set; } = new();

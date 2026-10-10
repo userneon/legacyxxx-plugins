@@ -14,6 +14,13 @@ public partial class App : Application
             Shutdown();
             return;
         }
+        // LegacyX-Checker.exe --common sample1.exe sample2.exe ...: the text the samples share, for picking marks of a cheat family.
+        if (e.Args.Length >= 3 && e.Args[0].Equals("--common", StringComparison.OrdinalIgnoreCase))
+        {
+            CommonStrings(e.Args.Skip(1).ToList());
+            Shutdown();
+            return;
+        }
         if (AlreadyUsed())
         {
             // The check was sent but the removal did not finish (or someone copied the program back): it does not run again.
@@ -23,6 +30,28 @@ public partial class App : Application
             return;
         }
         new MainWindow().Show();
+    }
+
+    private static void CommonStrings(List<string> files)
+    {
+        string text;
+        try
+        {
+            text = Scanning.StringTools.Common(files);
+        }
+        catch (Exception problem)
+        {
+            text = $"Could not read the samples: {problem.Message}";
+        }
+        try
+        {
+            System.IO.File.WriteAllText(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "LegacyX-Checker-common.txt"), text);
+        }
+        catch
+        {
+            // The Desktop can be read-only.
+        }
+        MessageBox.Show("The shared text of the samples was written to LegacyX-Checker-common.txt on the Desktop.", "LEGACY-X Checker: common", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private static void ExplainFile(string path)
