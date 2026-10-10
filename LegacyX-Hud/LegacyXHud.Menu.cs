@@ -32,6 +32,44 @@ public sealed partial class LegacyXHud
         player.ExecuteClientCommand($"playvol {sound} {volume.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}");
     }
 
+    // ---- sending only what changed -----------------------------------------------------------------------
+    // Every SetVariableFor / SetClassFor is a message to the player's client, and the Skins page sets hundreds of them.
+    // The menu remembers what each player's client already has and sends only the difference, so going back to a page
+    // that is already drawn costs nothing. Reset when the menu is opened (the client's state may have been dropped).
+
+    private readonly Dictionary<int, Dictionary<string, string>> menuSent = new();
+
+    private bool MenuChanged(int slot, string key, string value)
+    {
+        if (!menuSent.TryGetValue(slot, out var known)) menuSent[slot] = known = new Dictionary<string, string>();
+        if (known.TryGetValue(key, out var old) && old == value) return false;
+        known[key] = value;
+        return true;
+    }
+
+    private void Sv(PanelHandle panel, CCSPlayerController player, string name, string value)
+    {
+        if (MenuChanged(player.Slot, "v:" + name, value)) panel.SetVariableFor(player, name, value);
+    }
+
+    private void Sc(PanelHandle panel, CCSPlayerController player, string id, string cls, bool on)
+    {
+        if (MenuChanged(player.Slot, $"c:{id}:{cls}", on ? "1" : "0")) panel.SetClassFor(player, id, cls, on);
+    }
+
+    /// <summary>Like SetState (a class of a group that replaces the previous one), but only when it changed.</summary>
+    private void Ss(PanelHandle panel, CCSPlayerController player, string id, string group, string? cls)
+    {
+        if (MenuChanged(player.Slot, $"s:{id}:{group}", cls ?? "")) SetState(panel, player, id, group, cls);
+    }
+
+    private void ForgetMenuState(int slot)
+    {
+        menuSent.Remove(slot);
+        foreach (var key in applied.Keys.Where(k => k.Slot == slot && (k.PanelId.StartsWith("sk_", StringComparison.Ordinal) || k.PanelId.StartsWith("menu_", StringComparison.Ordinal))).ToList())
+            applied.Remove(key);
+    }
+
     private bool menuListening;
 
     private PanelHandle? EnsureMenu()
@@ -66,42 +104,44 @@ public sealed partial class LegacyXHud
             return;
         }
         if (!OpenFor(panel, player)) return;
+        ForgetMenuState(player.Slot);
+        SkinsWarm(player);
         menuOpen.Add(player.Slot);
         MenuSound(player, soundOpen, LevelOpen);
-        SetState(panel, player, "menu_hold_fill", "p", "p0");
+        Ss(panel, player, "menu_hold_fill", "p", "p0");
 
         var name = serverName.Length > 0 ? serverName : (ConVar.Find("hostname")?.StringValue ?? "LEGACY-X");
-        panel.SetVariableFor(player, "menu_footer", name.ToUpperInvariant());
-        panel.SetVariableFor(player, "menu_name", $"Welcome, {player.PlayerName}");
+        Sv(panel, player, "menu_footer", name.ToUpperInvariant());
+        Sv(panel, player, "menu_name", $"Welcome, {player.PlayerName}");
         var ranked = profiles.TryGetValue(player.SteamID, out var profile);
-        panel.SetClassFor(player, "menu_rankrow", "hidden", !ranked);
+        Sc(panel, player, "menu_rankrow", "hidden", !ranked);
         if (ranked && profile is not null)
         {
-            panel.SetVariableFor(player, "menu_rank", profile.RankName);
-            panel.SetVariableFor(player, "menu_exp", profile.Exp.ToString("N0"));
-            panel.SetVariableFor(player, "menu_matches", profile.Matches.ToString("N0"));
-            panel.SetVariableFor(player, "menu_next", NextLine(profile).ToUpperInvariant());
-            panel.SetVariableFor(player, "menu_togo", TogoLine(profile));
-            SetState(panel, player, "menu_fill", "p", ProgressClass(profile) ?? "p0");
-            SetState(panel, player, "menu_emblem", "rank", $"rank-{profile.RankId}");
-            SetState(panel, player, "menu_rank", "tier", TierClass(profile.RankName));
+            Sv(panel, player, "menu_rank", profile.RankName);
+            Sv(panel, player, "menu_exp", profile.Exp.ToString("N0"));
+            Sv(panel, player, "menu_matches", profile.Matches.ToString("N0"));
+            Sv(panel, player, "menu_next", NextLine(profile).ToUpperInvariant());
+            Sv(panel, player, "menu_togo", TogoLine(profile));
+            Ss(panel, player, "menu_fill", "p", ProgressClass(profile) ?? "p0");
+            Ss(panel, player, "menu_emblem", "rank", $"rank-{profile.RankId}");
+            Ss(panel, player, "menu_rank", "tier", TierClass(profile.RankName));
         }
         // The server box reads this server itself: its name, the map and who is on it.
         var humans = Utilities.GetPlayers().Count(p => p is { IsValid: true, IsBot: false });
-        panel.SetVariableFor(player, "menu_srv_name", name);
-        panel.SetVariableFor(player, "menu_srv_map", Server.MapName);
-        panel.SetVariableFor(player, "menu_srv_players", $"{humans} / {Server.MaxPlayers} players");
+        Sv(panel, player, "menu_srv_name", name);
+        Sv(panel, player, "menu_srv_map", Server.MapName);
+        Sv(panel, player, "menu_srv_players", $"{humans} / {Server.MaxPlayers} players");
         ShowMenuPage(panel, player, "welcome");
-        panel.SetClassFor(player, "menu_dim", "shown", true);
-        panel.SetClassFor(player, "menu", "shown", true);
+        Sc(panel, player, "menu_dim", "shown", true);
+        Sc(panel, player, "menu", "shown", true);
     }
 
     private void ShowMenuPage(PanelHandle panel, CCSPlayerController player, string page)
     {
         foreach (var name in MenuPages)
         {
-            panel.SetClassFor(player, $"menu_page_{name}", "hidden", name != page);
-            panel.SetClassFor(player, $"menu_tab_{name}", "active", name == page);
+            Sc(panel, player, $"menu_page_{name}", "hidden", name != page);
+            Sc(panel, player, $"menu_tab_{name}", "active", name == page);
         }
     }
 
@@ -109,8 +149,8 @@ public sealed partial class LegacyXHud
     {
         skinViews.Remove(player.Slot);
         if (menuOpen.Remove(player.Slot)) MenuSound(player, soundBack, LevelBack);
-        panel.SetClassFor(player, "menu", "shown", false);
-        panel.SetClassFor(player, "menu_dim", "shown", false);
+        Sc(panel, player, "menu", "shown", false);
+        Sc(panel, player, "menu_dim", "shown", false);
         panel.Close(player);
     }
 

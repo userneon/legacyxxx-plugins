@@ -93,10 +93,29 @@ public sealed partial class LegacyXHud
     private static int? Number(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i) ? i : null;
 
-    /// <summary>Runs an API read away from the game thread, then hands the result to <paramref name="done"/> on it, if the player is still there.</summary>
-    private void SkinsFetch(CCSPlayerController player, string path, Action<CCSPlayerController, SkinView, int, JsonElement?> done)
+    // Answers that were already fetched: the catalog (types, skins of a gun) changes rarely, a player's loadout only when they pick.
+    // A click that finds its answer here is drawn at once, without a round trip to the API.
+    private readonly Dictionary<string, (DateTime Until, JsonElement Body)> skinCache = new();
+    private static readonly TimeSpan CatalogTtl = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan LoadoutTtl = TimeSpan.FromSeconds(45);
+
+    private void ForgetLoadouts(ulong steamId)
+    {
+        foreach (var key in skinCache.Keys.Where(k => k.StartsWith($"lo:{steamId}:", StringComparison.Ordinal)).ToList()) skinCache.Remove(key);
+    }
+
+    /// <summary>
+    /// Reads from the cache, or runs an API read away from the game thread, then hands the answer to <paramref name="done"/> on the
+    /// game thread, if the player is still there.
+    /// </summary>
+    private void SkinsFetch(CCSPlayerController player, string path, string cacheKey, TimeSpan ttl, Action<CCSPlayerController, SkinView, int, JsonElement?> done)
     {
         var slot = player.Slot;
+        if (skinCache.TryGetValue(cacheKey, out var hit) && hit.Until > DateTime.UtcNow && skinViews.TryGetValue(slot, out var cachedView))
+        {
+            done(player, cachedView, 200, hit.Body);
+            return;
+        }
         _ = Task.Run(async () =>
         {
             int status = 0;
@@ -111,11 +130,36 @@ public sealed partial class LegacyXHud
             }
             Server.NextFrame(() =>
             {
+                if (status == 200 && body is { } good) skinCache[cacheKey] = (DateTime.UtcNow + ttl, good);
                 var p = Utilities.GetPlayerFromSlot(slot);
                 if (p is not { IsValid: true } || menu is null || !skinViews.TryGetValue(slot, out var view)) return;
                 done(p, view, status, body);
             });
         });
+    }
+
+    /// <summary>When the menu opens, fetch both teams' overviews in the background so the Skins tab and the team tabs draw at once.</summary>
+    private void SkinsWarm(CCSPlayerController player)
+    {
+        if (!SkinsReady) return;
+        var steamId = player.SteamID;
+        foreach (var team in new[] { "t", "ct" })
+        {
+            var key = $"lo:{steamId}:{team}";
+            if (skinCache.TryGetValue(key, out var hit) && hit.Until > DateTime.UtcNow) continue;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var (status, body) = await SkinsApiAsync(HttpMethod.Get, $"/api/v1/plugin/menu/skins/loadout?steam_id={steamId}&team={team}");
+                    if (status == 200 && body is { } good) Server.NextFrame(() => skinCache[key] = (DateTime.UtcNow + LoadoutTtl, good));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[{ModuleName}] Skins warm-up failed: {ex.Message}");
+                }
+            });
+        }
     }
 
     private static bool SkinsFailed(int status, JsonElement? body, out JsonElement json, out string message)
@@ -136,7 +180,7 @@ public sealed partial class LegacyXHud
         return view;
     }
 
-    private void SkinsStatus(PanelHandle panel, CCSPlayerController player, string text) => panel.SetVariableFor(player, "sk_status", text);
+    private void SkinsStatus(PanelHandle panel, CCSPlayerController player, string text) => Sv(panel, player, "sk_status", text);
 
     /// <summary>The Skins tab was opened, or the other team was picked: load the overview of that team.</summary>
     private void SkinsOpen(PanelHandle panel, CCSPlayerController player, string? team = null)
@@ -154,7 +198,7 @@ public sealed partial class LegacyXHud
         SkinsStatus(panel, player, "Loading ...");
         SkinsRender(panel, player, view);
         var wantedTeam = view.Team;
-        SkinsFetch(player, $"/api/v1/plugin/menu/skins/loadout?steam_id={player.SteamID}&team={wantedTeam}", (p, current, status, body) =>
+        SkinsFetch(player, $"/api/v1/plugin/menu/skins/loadout?steam_id={player.SteamID}&team={wantedTeam}", $"lo:{player.SteamID}:{wantedTeam}", LoadoutTtl, (p, current, status, body) =>
         {
             if (current.Team != wantedTeam) return;
             if (SkinsFailed(status, body, out var json, out var message))
@@ -186,7 +230,7 @@ public sealed partial class LegacyXHud
         view.Types = new();
         SkinsStatus(panel, player, "Loading ...");
         SkinsRender(panel, player, view);
-        SkinsFetch(player, $"/api/v1/plugin/menu/skins/types?steam_id={player.SteamID}&slot={tile.Slot}", (p, current, status, body) =>
+        SkinsFetch(player, $"/api/v1/plugin/menu/skins/types?steam_id={player.SteamID}&slot={tile.Slot}", $"ty:{tile.Slot}", CatalogTtl, (p, current, status, body) =>
         {
             if (current.Picked != tile) return;
             if (SkinsFailed(status, body, out var json, out var message))
@@ -210,10 +254,13 @@ public sealed partial class LegacyXHud
         view.TypeClass = tile.Slot is "knife" or "glove" ? weaponClass : null;
         view.Offset = Math.Max(0, offset);
         view.Selected = -1;
+        view.Items = new();
+        view.Total = 0;
         SkinsStatus(panel, player, "Loading ...");
+        SkinsRender(panel, player, view);       // the page switches now; the skins arrive in a moment (at once from the cache)
         var wanted = view.Offset;
         var path = $"/api/v1/plugin/menu/skins/items?steam_id={player.SteamID}&slot={tile.Slot}&weapon_class={Uri.EscapeDataString(weaponClass)}&offset={wanted}";
-        SkinsFetch(player, path, (p, current, status, body) =>
+        SkinsFetch(player, path, $"it:{tile.Slot}:{weaponClass}:{wanted}", CatalogTtl, (p, current, status, body) =>
         {
             if (current.Picked != tile || current.Mode != "items" || current.Offset != wanted) return;
             if (SkinsFailed(status, body, out var json, out var message))
@@ -280,6 +327,7 @@ public sealed partial class LegacyXHud
                 SkinsStatus(menu, p, message);
                 if (!saved || current is null) return;
                 // The overview shows the new pick at once (it is read again whenever the tab is opened).
+                ForgetLoadouts(steamId);
                 var weaponClass = current.TypeClass ?? tile.WeaponClass;
                 var newTile = tile with { Eq = new Equipped(item.Id, weaponClass, item.Name, item.PaintId, item.Defindex, item.Rarity) };
                 for (var i = 0; i < current.Slots.Length; i++)
@@ -327,11 +375,11 @@ public sealed partial class LegacyXHud
 
     private void SkinsRender(PanelHandle panel, CCSPlayerController player, SkinView view)
     {
-        panel.SetClassFor(player, "sk_team_t", "active", view.Team == "t");
-        panel.SetClassFor(player, "sk_team_ct", "active", view.Team == "ct");
-        panel.SetClassFor(player, "sk_view_loadout", "hidden", view.Mode != "loadout");
-        panel.SetClassFor(player, "sk_view_types", "hidden", view.Mode != "types");
-        panel.SetClassFor(player, "sk_view_items", "hidden", view.Mode != "items");
+        Sc(panel, player, "sk_team_t", "active", view.Team == "t");
+        Sc(panel, player, "sk_team_ct", "active", view.Team == "ct");
+        Sc(panel, player, "sk_view_loadout", "hidden", view.Mode != "loadout");
+        Sc(panel, player, "sk_view_types", "hidden", view.Mode != "types");
+        Sc(panel, player, "sk_view_items", "hidden", view.Mode != "items");
         if (view.Mode == "loadout") RenderLoadout(panel, player, view);
         else if (view.Mode == "types") RenderTypes(panel, player, view);
         else RenderItems(panel, player, view);
@@ -339,39 +387,39 @@ public sealed partial class LegacyXHud
 
     private void RenderLoadout(PanelHandle panel, CCSPlayerController player, SkinView view)
     {
-        panel.SetVariableFor(player, "sk_eq_count", $"Equipped {view.Slots.Count(t => t?.Eq is not null)}");
+        Sv(panel, player, "sk_eq_count", $"Equipped {view.Slots.Count(t => t?.Eq is not null)}");
         for (var i = 0; i < TileSlots; i++)
         {
             var tile = view.Slots[i];
-            panel.SetClassFor(player, $"sk_w{i}", "hidden", tile is null);
+            Sc(panel, player, $"sk_w{i}", "hidden", tile is null);
             if (tile is null) continue;
-            panel.SetVariableFor(player, $"sk_w{i}_name", tile.Label);
+            Sv(panel, player, $"sk_w{i}_name", tile.Label);
             var eq = tile.Eq;
-            panel.SetClassFor(player, $"sk_w{i}_ck", "hidden", eq is null);
-            SetState(panel, player, $"sk_w{i}_dot", "rc", eq?.Rarity is { } rarity ? "rc-" + rarity : null);
+            Sc(panel, player, $"sk_w{i}_ck", "hidden", eq is null);
+            Ss(panel, player, $"sk_w{i}_dot", "rc", eq?.Rarity is { } rarity ? "rc-" + rarity : null);
             string? pic;
             if (eq is not null)
                 pic = SkinPicture(tile.Slot, tile.Slot == "weapon" ? tile.Model : SkinModel(eq.WeaponClass), eq.PaintId, eq.Defindex);
             else
                 pic = tile.Slot == "weapon" && tile.Model is not null ? "gn-" + tile.Model : tile.Slot == "knife" ? "kn-karambit" : null;
-            SetState(panel, player, $"sk_w{i}_pic", "sp", pic);
+            Ss(panel, player, $"sk_w{i}_pic", "sp", pic);
         }
     }
 
     private void RenderTypes(PanelHandle panel, CCSPlayerController player, SkinView view)
     {
         var tile = view.Picked;
-        panel.SetVariableFor(player, "sk_ttitle", tile?.Slot == "glove" ? "Gloves" : "Knives");
-        panel.SetVariableFor(player, "sk_equipped", tile?.Eq is { } eq ? $"Equipped: {eq.WeaponClass} | {eq.Skin}" : "Pick a type, then a skin.");
+        Sv(panel, player, "sk_ttitle", tile?.Slot == "glove" ? "Gloves" : "Knives");
+        Sv(panel, player, "sk_equipped", tile?.Eq is { } eq ? $"Equipped: {eq.WeaponClass} | {eq.Skin}" : "Pick a type, then a skin.");
         for (var i = 0; i < SkinTypeSlots; i++)
         {
             var has = i < view.Types.Count && tile is not null;
-            panel.SetClassFor(player, $"sk_type{i}", "hidden", !has);
+            Sc(panel, player, $"sk_type{i}", "hidden", !has);
             if (!has) continue;
             var type = view.Types[i];
-            panel.SetVariableFor(player, $"sk_type{i}_name", TypeLabel(tile!, type.WeaponClass));
-            panel.SetVariableFor(player, $"sk_type{i}_n", $"{type.Skins} skins");
-            SetState(panel, player, $"sk_type{i}_ic", "kn", tile!.Slot == "knife" && KnifeIcons.TryGetValue(type.WeaponClass, out var knife) ? "kn-" + knife : null);
+            Sv(panel, player, $"sk_type{i}_name", TypeLabel(tile!, type.WeaponClass));
+            Sv(panel, player, $"sk_type{i}_n", $"{type.Skins} skins");
+            Ss(panel, player, $"sk_type{i}_ic", "kn", tile!.Slot == "knife" && KnifeIcons.TryGetValue(type.WeaponClass, out var knife) ? "kn-" + knife : null);
         }
     }
 
@@ -379,34 +427,34 @@ public sealed partial class LegacyXHud
     {
         var tile = view.Picked;
         var agent = tile?.Slot == "agent";
-        panel.SetVariableFor(player, "sk_title", PickedName(view));
-        panel.SetVariableFor(player, "sk_count", agent ? $"{view.Total} agents" : $"{view.Total} skins");
+        Sv(panel, player, "sk_title", PickedName(view));
+        Sv(panel, player, "sk_count", agent ? $"{view.Total} agents" : $"{view.Total} skins");
         var pages = Math.Max(1, (view.Total + SkinItemSlots - 1) / SkinItemSlots);
-        panel.SetVariableFor(player, "sk_page", $"{view.Offset / SkinItemSlots + 1} / {pages}");
-        panel.SetClassFor(player, "sk_prev", "disabled", view.Offset <= 0);
-        panel.SetClassFor(player, "sk_next", "disabled", view.Offset + SkinItemSlots >= view.Total);
+        Sv(panel, player, "sk_page", $"{view.Offset / SkinItemSlots + 1} / {pages}");
+        Sc(panel, player, "sk_prev", "disabled", view.Offset <= 0);
+        Sc(panel, player, "sk_next", "disabled", view.Offset + SkinItemSlots >= view.Total);
         var model = tile is null ? null : tile.Slot == "weapon" ? tile.Model : SkinModel(view.TypeClass);
         var eq = tile?.Eq;
         for (var i = 0; i < SkinItemSlots; i++)
         {
             var has = i < view.Items.Count && tile is not null;
-            panel.SetClassFor(player, $"sk_item{i}", "hidden", !has);
-            panel.SetClassFor(player, $"sk_item{i}", "sel", has && i == view.Selected);
+            Sc(panel, player, $"sk_item{i}", "hidden", !has);
+            Sc(panel, player, $"sk_item{i}", "sel", has && i == view.Selected);
             if (!has) continue;
             var item = view.Items[i];
-            panel.SetVariableFor(player, $"sk_item{i}_name", item.Name);
-            panel.SetVariableFor(player, $"sk_item{i}_rar", item.RarityName);
-            SetState(panel, player, $"sk_item{i}_ln", "rc", item.Rarity is { } rarity ? "rc-" + rarity : null);
-            SetState(panel, player, $"sk_item{i}_pic", "sp", SkinPicture(tile!.Slot, model, item.PaintId, item.Defindex));
+            Sv(panel, player, $"sk_item{i}_name", item.Name);
+            Sv(panel, player, $"sk_item{i}_rar", item.RarityName);
+            Ss(panel, player, $"sk_item{i}_ln", "rc", item.Rarity is { } rarity ? "rc-" + rarity : null);
+            Ss(panel, player, $"sk_item{i}_pic", "sp", SkinPicture(tile!.Slot, model, item.PaintId, item.Defindex));
             // "Saved": the pick the player already has on this gun / type / agent.
             var saved = eq is not null && (agent ? eq.Defindex is not null && eq.Defindex == item.Defindex
                 : eq.PaintId == item.PaintId && (view.TypeClass is null || eq.WeaponClass == view.TypeClass));
-            panel.SetClassFor(player, $"sk_item{i}_saved", "hidden", !saved);
+            Sc(panel, player, $"sk_item{i}_saved", "hidden", !saved);
         }
         var chosen = view.Selected >= 0 && view.Selected < view.Items.Count ? view.Items[view.Selected] : null;
-        panel.SetVariableFor(player, "sk_pv_name", chosen is null ? "Pick a skin" : agent ? chosen.Name : $"{(view.TypeClass is { } type ? TypeLabel(tile!, type) : tile?.Label)} | {chosen.Name}");
-        panel.SetVariableFor(player, "sk_pv_rar", chosen?.RarityName ?? "");
-        SetState(panel, player, "sk_pv_pic", "sp", chosen is null || tile is null ? null : SkinPicture(tile.Slot, model, chosen.PaintId, chosen.Defindex));
+        Sv(panel, player, "sk_pv_name", chosen is null ? "Pick a skin" : agent ? chosen.Name : $"{(view.TypeClass is { } type ? TypeLabel(tile!, type) : tile?.Label)} | {chosen.Name}");
+        Sv(panel, player, "sk_pv_rar", chosen?.RarityName ?? "");
+        Ss(panel, player, "sk_pv_pic", "sp", chosen is null || tile is null ? null : SkinPicture(tile.Slot, model, chosen.PaintId, chosen.Defindex));
     }
 
     /// <summary>Clicks of the Skins tab. Returns true when the id was one of its buttons.</summary>
