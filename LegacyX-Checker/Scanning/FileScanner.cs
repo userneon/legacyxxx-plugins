@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.IO;
+using System.IO.Enumeration;
 using System.Threading;
 using System.Security.Cryptography;
 
@@ -14,45 +16,130 @@ public static class FileScanner
     private static bool Skip(string directory)
     {
         var name = Path.GetFileName(directory);
-        return name.Equals("$Recycle.Bin", StringComparison.OrdinalIgnoreCase)
+        if (name.Equals("$Recycle.Bin", StringComparison.OrdinalIgnoreCase)
             || name.Equals("System Volume Information", StringComparison.OrdinalIgnoreCase)
             || name.Equals("WinSxS", StringComparison.OrdinalIgnoreCase)
             || name.Equals("node_modules", StringComparison.OrdinalIgnoreCase)
-            || name.Equals(".git", StringComparison.OrdinalIgnoreCase);
+            || name.Equals(".git", StringComparison.OrdinalIgnoreCase)) return true;
+        // Windows' own servicing stores: thousands of signed files and no place for a player's.
+        var parent = Path.GetFileName(Path.GetDirectoryName(directory) ?? "");
+        return (name.Equals("assembly", StringComparison.OrdinalIgnoreCase) || name.Equals("servicing", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Installer", StringComparison.OrdinalIgnoreCase) || name.Equals("DriverStore", StringComparison.OrdinalIgnoreCase))
+               && (parent.Equals("Windows", StringComparison.OrdinalIgnoreCase) || parent.Equals("System32", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>The places a player's own downloads, tools and leftovers are: read first, so the likely findings come early.</summary>
+    private static IEnumerable<string> HotFolders()
+    {
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var candidates = new[]
+        {
+            Path.Combine(profile, "Downloads"), Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), Path.Combine(local, "Temp"), roaming, local,
+            Path.Combine(Path.GetPathRoot(profile) ?? "C:\\", "Users", "Public"), Path.Combine(Path.GetPathRoot(profile) ?? "C:\\", "ProgramData"),
+        };
+        return candidates.Where(path => !string.IsNullOrEmpty(path) && Directory.Exists(path)).Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
     public static void Scan(ScanContext context, CancellationToken cancel)
     {
-        foreach (var drive in DriveInfo.GetDrives())
+        // Warm what the workers share, so they only read it.
+        context.Rules.IsKnownHash("");
+        context.Rules.IsKnownFileName("");
+        var visited = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
+        try
         {
-            if (drive.DriveType != DriveType.Fixed || !drive.IsReady) continue;
-            context.Log($"[ .. ] files: reading drive {drive.Name}");
-            var pending = new Stack<string>();
-            pending.Push(drive.RootDirectory.FullName);
-            while (pending.Count > 0)
+            context.Log("[ .. ] files: the places downloads and tools usually go");
+            Walk(context, HotFolders(), visited, cancel);
+            foreach (var drive in DriveInfo.GetDrives())
             {
-                cancel.ThrowIfCancellationRequested();
-                var directory = pending.Pop();
-                context.CurrentPath = directory;
-                try
+                if (drive.DriveType != DriveType.Fixed || !drive.IsReady) continue;
+                context.Log($"[ .. ] files: reading drive {drive.Name}");
+                Walk(context, new[] { drive.RootDirectory.FullName }, visited, cancel);
+            }
+        }
+        catch (AggregateException failure) when (failure.InnerExceptions.All(inner => inner is OperationCanceledException))
+        {
+            throw new OperationCanceledException(cancel);
+        }
+    }
+
+    /// <summary>Reads the folders under <paramref name="roots"/> on several threads at once (all but one of the CPU's cores).</summary>
+    private static void Walk(ScanContext context, IEnumerable<string> roots, ConcurrentDictionary<string, byte> visited, CancellationToken cancel)
+    {
+        var stack = new ConcurrentStack<string>();
+        var pending = 0;
+        foreach (var root in roots)
+        {
+            Interlocked.Increment(ref pending);
+            stack.Push(root);
+        }
+        if (pending == 0) return;
+        var workers = Math.Max(2, Environment.ProcessorCount - 1);
+        var tasks = new Task[workers];
+        for (var index = 0; index < workers; index++)
+        {
+            tasks[index] = Task.Factory.StartNew(() =>
+            {
+                var wait = new SpinWait();
+                while (Volatile.Read(ref pending) > 0)
                 {
-                    var files = Directory.EnumerateFiles(directory).ToList();
-                    foreach (var file in files) CheckFile(context, file);
-                    FolderInspector.CheckContents(context, directory, files);
-                    foreach (var child in Directory.EnumerateDirectories(directory))
+                    cancel.ThrowIfCancellationRequested();
+                    if (!stack.TryPop(out var directory))
                     {
-                        if (Skip(child)) continue;
-                        CheckFolder(context, child);
-                        // Junctions and links can loop back on themselves.
-                        if ((File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0) continue;
-                        pending.Push(child);
+                        wait.SpinOnce();
+                        continue;
+                    }
+                    try
+                    {
+                        if (visited.TryAdd(directory, 0)) Visit(context, directory, stack, ref pending);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch
+                    {
+                        // A folder we are not allowed into is skipped.
+                    }
+                    finally
+                    {
+                        Interlocked.Decrement(ref pending);
                     }
                 }
-                catch
-                {
-                    // A folder we are not allowed into is skipped.
-                }
-            }
+            }, cancel, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+        }
+        Task.WaitAll(tasks);
+    }
+
+    private static void Visit(ScanContext context, string directory, ConcurrentStack<string> stack, ref int pending)
+    {
+        context.CurrentPath = directory;
+        var options = new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0, RecurseSubdirectories = false, ReturnSpecialDirectories = false };
+        // The size comes with the listing, so no file is asked for twice.
+        var entries = new FileSystemEnumerable<(string Path, long Length, bool IsDirectory, bool IsLink)>(
+            directory,
+            (ref FileSystemEntry entry) => (entry.ToFullPath(), entry.IsDirectory ? 0L : entry.Length, entry.IsDirectory, (entry.Attributes & FileAttributes.ReparsePoint) != 0),
+            options);
+        var files = new List<(string Path, long Length)>();
+        var folders = new List<(string Path, bool IsLink)>();
+        foreach (var entry in entries)
+        {
+            if (entry.IsDirectory) folders.Add((entry.Path, entry.IsLink));
+            else files.Add((entry.Path, entry.Length));
+        }
+        foreach (var file in files) CheckFile(context, file.Path, file.Length);
+        FolderInspector.CheckContents(context, directory, files.Select(file => file.Path).ToList());
+        foreach (var (child, isLink) in folders)
+        {
+            if (Skip(child)) continue;
+            CheckFolder(context, child);
+            // Junctions and links can loop back on themselves.
+            if (isLink) continue;
+            Interlocked.Increment(ref pending);
+            stack.Push(child);
         }
     }
 
@@ -70,7 +157,7 @@ public static class FileScanner
         if (hit is not null) FolderInspector.CheckNamedFolder(context, path, name, hit, known: false);
     }
 
-    private static void CheckFile(ScanContext context, string path)
+    private static void CheckFile(ScanContext context, string path, long length)
     {
         context.CountFile();
         var name = Path.GetFileName(path);
@@ -87,8 +174,7 @@ public static class FileScanner
         // What the program is, whatever it is called.
         try
         {
-            var length = new FileInfo(path).Length;
-            if (ContentAnalyzer.IsCandidate(path, length)) ContentAnalyzer.Analyze(context, path);
+            if (ContentAnalyzer.IsCandidate(path, length)) ContentAnalyzer.Analyze(context, path, length);
         }
         catch
         {
@@ -99,8 +185,7 @@ public static class FileScanner
         if (!Programs.Contains(extension, StringComparer.OrdinalIgnoreCase)) return;
         try
         {
-            var info = new FileInfo(path);
-            if (info.Length == 0 || info.Length > MaxHashBytes) return;
+            if (length == 0 || length > MaxHashBytes) return;
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             var hash = Convert.ToHexString(SHA256.HashData(stream));
             if (context.Rules.IsKnownHash(hash)) context.Add(new Finding(name, "file", Finding.Detection, path, "Matches the fingerprint of a known cheat"));

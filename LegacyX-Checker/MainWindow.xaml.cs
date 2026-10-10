@@ -256,10 +256,9 @@ public partial class MainWindow : Window
         var stopped = false;
         try
         {
-            // A thread of its own at a lower priority, so the window stays smooth while thousands of files are read.
+            // A thread of its own, and the file scan uses all but one of the CPU's cores, so the window stays smooth while thousands of files are read.
             await Task.Factory.StartNew(() =>
             {
-                Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
                 context.Status = "Looking at Steam accounts…";
                 SteamScanner.Scan(context);
                 context.Status = "Looking at running programs…";

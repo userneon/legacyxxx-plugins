@@ -53,9 +53,9 @@ public static class ContentAnalyzer
         public string Reason { get; set; } = "";
     }
 
-    public static void Analyze(ScanContext context, string path)
+    public static void Analyze(ScanContext context, string path, long length)
     {
-        var inspection = Inspect(context.Rules, path, new FileInfo(path).Length);
+        var inspection = Inspect(context.Rules, path, length);
         if (inspection.Finding is not null) context.Add(inspection.Finding);
     }
 
@@ -96,11 +96,10 @@ public static class ContentAnalyzer
 
         var usesMemory = result.OpensProcesses && result.MemoryApis.Count > 0;
         // A .NET program names its functions in its own data, not in the import table: look at its text instead.
-        byte[]? text = null;
         if (!usesMemory && pe.IsManaged)
         {
-            text = ReadText(path);
-            if (text is not null) usesMemory = MemoryApis.Any(api => ContainsAscii(text, api, ignoreCase: true));
+            var named = FindWords(path, MemoryApis, ignoreCase: true);
+            usesMemory = named is { Count: > 0 };
         }
         result.UsesMemory = usesMemory;
         if (!usesMemory)
@@ -111,15 +110,16 @@ public static class ContentAnalyzer
             return result;
         }
 
-        text ??= ReadText(path);
-        if (text is null)
+        var game = FindWords(path, rules.GameMarkers, ignoreCase: true);
+        var offsets = FindWords(path, rules.OffsetMarkers, ignoreCase: false);
+        if (game is null || offsets is null)
         {
             result.Reason = "Could not read the file's contents to look for CS2 names.";
             return result;
         }
         result.ReadText = true;
-        result.GameMarkers.AddRange(rules.GameMarkers.Where(marker => ContainsAscii(text, marker, ignoreCase: true)));
-        result.OffsetMarkers.AddRange(rules.OffsetMarkers.Where(marker => ContainsAscii(text, marker, ignoreCase: false)));
+        result.GameMarkers.AddRange(rules.GameMarkers.Where(game.Contains));
+        result.OffsetMarkers.AddRange(rules.OffsetMarkers.Where(offsets.Contains));
         if (result.OffsetMarkers.Count >= 2)
         {
             result.Finding = new Finding(name, "file", Finding.Detection, path, $"Unsigned program that reads other programs' memory and carries CS2 offsets ({string.Join(", ", result.OffsetMarkers.Take(4))})");
@@ -166,38 +166,51 @@ public static class ContentAnalyzer
         return string.Join("\n", lines);
     }
 
-    private static byte[]? ReadText(string path)
+    /// <summary>
+    /// Which of the words are inside the file, as plain text or as the 2-bytes-per-letter text Windows programs also use. The file is read once,
+    /// in pieces, so a big program never has to fit in memory. Null when the file cannot be read.
+    /// </summary>
+    private static HashSet<string>? FindWords(string path, IEnumerable<string> words, bool ignoreCase)
     {
+        var patterns = new List<(byte[] Bytes, string Word)>();
+        foreach (var word in words)
+        {
+            if (word.Length < 4) continue;
+            var forms = ignoreCase ? new[] { word, word.ToLowerInvariant(), word.ToUpperInvariant() }.Distinct() : new[] { word };
+            foreach (var form in forms)
+            {
+                patterns.Add((Encoding.ASCII.GetBytes(form), word));
+                patterns.Add((Encoding.Unicode.GetBytes(form), word));
+            }
+        }
+        var found = new HashSet<string>();
+        if (patterns.Count == 0) return found;
         try
         {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            const int Piece = 4 * 1024 * 1024;
+            var overlap = patterns.Max(pattern => pattern.Bytes.Length) - 1;
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 64 * 1024, FileOptions.SequentialScan);
             if (stream.Length > MaxDeepBytes) return null;
-            var buffer = new byte[stream.Length];
-            var read = 0;
-            while (read < buffer.Length)
+            var buffer = new byte[Piece + overlap];
+            var kept = 0;
+            while (true)
             {
-                var chunk = stream.Read(buffer, read, buffer.Length - read);
-                if (chunk == 0) break;
-                read += chunk;
+                var read = stream.Read(buffer, kept, Piece);
+                if (read <= 0) break;
+                var span = buffer.AsSpan(0, kept + read);
+                foreach (var (bytes, word) in patterns)
+                {
+                    if (!found.Contains(word) && span.IndexOf(bytes) >= 0) found.Add(word);
+                }
+                // The end of this piece starts the next one, so a word cut in two is still found.
+                kept = Math.Min(overlap, span.Length);
+                span[^kept..].CopyTo(buffer);
             }
-            return buffer;
+            return found;
         }
         catch
         {
             return null;
         }
-    }
-
-    /// <summary>Is the word inside the file as plain text, or as the 2-bytes-per-letter text Windows programs also use?</summary>
-    private static bool ContainsAscii(byte[] data, string word, bool ignoreCase)
-    {
-        if (word.Length < 4) return false;
-        var forms = ignoreCase ? new[] { word, word.ToLowerInvariant(), word.ToUpperInvariant() } : new[] { word };
-        foreach (var form in forms.Distinct())
-        {
-            if (data.AsSpan().IndexOf(Encoding.ASCII.GetBytes(form)) >= 0) return true;
-            if (data.AsSpan().IndexOf(Encoding.Unicode.GetBytes(form)) >= 0) return true;
-        }
-        return false;
     }
 }
