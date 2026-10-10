@@ -21,10 +21,6 @@ Settings. Clicks, opening, closing and picking a skin play soft CS2 UI sounds (`
 default 1) scales them, `LEGACYX_HUD_MENU_SOUNDS=false` turns them off, `LEGACYX_HUD_MENU_SOUND_CLICK` / `_OPEN` / `_BACK` /
 `_PICK` change a sound (a `sounds/...vsnd_c` path from the game, empty = silent). `LEGACYX_HUD_MENU_KEYS=false` turns the E / R keys off.
 
-A player who has never joined this server is shown the menu's Welcome page once, in the middle of the screen (instead of the short
-welcome card), as soon as the menu may open: warmup or before a round. Who has been welcomed is kept in `welcomed-players.json`
-next to the plugin (per server; delete the file to show it to everyone again). `LEGACYX_HUD_FIRST_JOIN_MENU=false` turns it off.
-
 ## Needs
 
 * CounterStrikeSharp 1.0.374 or newer (the `custom_hud_layout` API).
