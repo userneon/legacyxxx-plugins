@@ -33,22 +33,24 @@ public sealed partial class LegacyXHud : BasePlugin
     // this id and its Labels read {s:<label id>}. Nothing takes the mouse and there is no menu row pool.
     // Only a player with an open session gets the entity and can be written to, so every player is
     // Open()ed on a layout before the first text or class is set.
-    private static LayoutContract Contract(string rootId) => new()
+    private static LayoutContract Contract(string rootId, bool captureInput = false) => new()
     {
         RootPanelId = rootId,
         RowCount = 0,
-        CaptureInput = false,
+        CaptureInput = captureInput,
     };
 
     private bool enabled;
     private string notifyLayout = LayoutDir + "legacyx_notify.vxml_c";
     private string matchLayout = LayoutDir + "legacyx_match.vxml_c";
     private string knifeLayout = LayoutDir + "legacyx_knife.vxml_c";
+    private string menuLayout = LayoutDir + "legacyx_menu.vxml_c";
     private bool rankCardEnabled = true;
     private string serverName = "";
     private PanelHandle? notify;
     private PanelHandle? match;
     private PanelHandle? knife;
+    private PanelHandle? menu;
 
     public override string ModuleAuthor => "LEGACY-X";
     public override string ModuleName => "LEGACY-X Hud";
@@ -66,6 +68,7 @@ public sealed partial class LegacyXHud : BasePlugin
         notifyLayout = env.Get("LEGACYX_HUD_NOTIFY_LAYOUT", notifyLayout);
         matchLayout = env.Get("LEGACYX_HUD_MATCH_LAYOUT", matchLayout);
         knifeLayout = env.Get("LEGACYX_HUD_KNIFE_LAYOUT", knifeLayout);
+        menuLayout = env.Get("LEGACYX_HUD_MENU_LAYOUT", menuLayout);
         rankCardEnabled = env.GetModuleBoolean("HUD", "RANK_CARD", true);
         // The name players know this server by (LEGACYX_<port>_SERVER_NAME or LEGACYX_SERVER_NAME), shown on the welcome card.
         serverName = env.Get("LEGACYX_SERVER_NAME", "").Trim();
@@ -91,7 +94,8 @@ public sealed partial class LegacyXHud : BasePlugin
         notify?.Dispose();
         match?.Dispose();
         knife?.Dispose();
-        notify = match = knife = null;
+        menu?.Dispose();
+        notify = match = knife = menu = null;
         if (enabled) Panorama.Shutdown();
     }
 
@@ -143,12 +147,12 @@ public sealed partial class LegacyXHud : BasePlugin
         if (text.Length > 0) Toast(player, text, ok);
     }
 
-    private PanelHandle? Ensure(ref PanelHandle? handle, string layout, string rootId)
+    private PanelHandle? Ensure(ref PanelHandle? handle, string layout, string rootId, bool captureInput = false)
     {
         if (handle is not null) return handle;
         try
         {
-            handle = Panorama.Spawn(layout, Contract(rootId));
+            handle = Panorama.Spawn(layout, Contract(rootId, captureInput));
             Console.WriteLine($"[{ModuleName}] Spawned {layout}: {(handle is null ? "null handle" : "ok")}");
         }
         catch (Exception ex)
