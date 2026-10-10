@@ -6,9 +6,10 @@ using PanoramaManager;
 
 namespace LegacyXHud;
 
-// The Skins tab of the menu: knives and gloves. The player picks a type (Karambit, Sport Gloves …), then a skin;
-// the pick is saved to the website loadout through the plugin API and applied at once through SkinBridge's !rs.
-// Everything shown comes from the API (the same catalog the website uses); nothing is listed here by hand.
+// The Skins tab of the menu: knives, gloves, guns and agents. The player picks a type (Karambit, Sport Gloves, AK-47, the
+// Terrorist agents …), then one of its skins; the pick is saved to the website loadout through the plugin API and applied
+// at once through SkinBridge's !rs. Everything shown comes from the API (the same catalog the website uses); nothing is
+// listed here by hand except the picture names the game's own files use (class names, see CONTRACT.md).
 // Reading and saving use SkinBridge's credentials (LEGACYX_SKINBRIDGE_*), which already carry skinchanger:read and :write.
 public sealed partial class LegacyXHud
 {
@@ -19,14 +20,16 @@ public sealed partial class LegacyXHud
     private string skinSecret = "";
     private bool SkinsReady => apiBase.Length > 0 && skinSecret.Length > 0;
 
-    private sealed record SkinType(string WeaponClass, int Skins);
-    private sealed record SkinItem(string Id, string Name, int? PaintId);
+    private sealed record SkinType(string WeaponClass, int Skins, string? Model);
+    private sealed record SkinItem(string Id, string Name, int? PaintId, int? Defindex);
 
     private sealed class SkinView
     {
-        public string Slot = "knife";
+        public string Slot = "knife";         // knife | glove | weapon | agent
+        public string Group = "Rifles";       // the gun group while Slot is weapon
         public List<SkinType> Types = new();
-        public string? WeaponClass;
+        public string? WeaponClass;           // the picked type; for agents the team
+        public string? Model;                 // the picked gun's model name (picture class)
         public int Offset;
         public int Total;
         public List<SkinItem> Items = new();
@@ -35,6 +38,8 @@ public sealed partial class LegacyXHud
     }
 
     private readonly Dictionary<int, SkinView> skinViews = new();
+
+    private static readonly string[] GunGroups = { "Rifles", "SMGs", "Heavy", "Pistols" };
 
     // The glove models of the skin pictures (class sp-<model>-<paint id>); knives use the names below.
     private static readonly Dictionary<string, string> GloveModels = new(StringComparer.OrdinalIgnoreCase)
@@ -76,6 +81,12 @@ public sealed partial class LegacyXHud
         return ((int)response.StatusCode, body);
     }
 
+    private static string? Text(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
+    private static int? Number(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i) ? i : null;
+
     // ---- opening and navigation -------------------------------------------------------------------------
 
     private SkinView SkinViewFor(CCSPlayerController player)
@@ -86,15 +97,18 @@ public sealed partial class LegacyXHud
 
     private void SkinsStatus(PanelHandle panel, CCSPlayerController player, string text) => panel.SetVariableFor(player, "sk_status", text);
 
-    /// <summary>The Skins tab was opened, or a slot (Knives / Gloves) was picked: list the types.</summary>
-    private void SkinsOpen(PanelHandle panel, CCSPlayerController player, string? slot = null)
+    /// <summary>The Skins tab was opened, or a slot (Knives / Gloves / Guns / Agents) or a gun group was picked: list the types.</summary>
+    private void SkinsOpen(PanelHandle panel, CCSPlayerController player, string? slot = null, string? group = null)
     {
         var view = SkinViewFor(player);
-        if (slot is not null && slot != view.Slot)
+        if ((slot is not null && slot != view.Slot) || (group is not null && group != view.Group))
         {
-            view.Slot = slot;
+            if (slot is not null) view.Slot = slot;
+            if (group is not null) view.Group = group;
             view.Types = new();
             view.WeaponClass = null;
+            view.Model = null;
+            view.Equipped = "";
         }
         if (!SkinsReady)
         {
@@ -105,16 +119,18 @@ public sealed partial class LegacyXHud
         SkinsRender(panel, player, view);
         var steamId = player.SteamID;
         var playerSlot = player.Slot;
-        var wanted = view.Slot;
+        var wantedSlot = view.Slot;
+        var wantedGroup = view.Group;
         _ = Task.Run(async () =>
         {
             try
             {
-                var (status, body) = await SkinsApiAsync(HttpMethod.Get, $"/api/v1/plugin/menu/skins/types?steam_id={steamId}&slot={wanted}");
+                var path = $"/api/v1/plugin/menu/skins/types?steam_id={steamId}&slot={wantedSlot}" + (wantedSlot == "weapon" ? $"&group={wantedGroup}" : "");
+                var (status, body) = await SkinsApiAsync(HttpMethod.Get, path);
                 Server.NextFrame(() =>
                 {
                     var p = Utilities.GetPlayerFromSlot(playerSlot);
-                    if (p is not { IsValid: true } || menu is null || !skinViews.TryGetValue(playerSlot, out var current) || current.Slot != wanted) return;
+                    if (p is not { IsValid: true } || menu is null || !skinViews.TryGetValue(playerSlot, out var current) || current.Slot != wantedSlot || current.Group != wantedGroup) return;
                     if (status == 404)
                     {
                         SkinsStatus(menu, p, "Sign in on legacyx.cc with this Steam account to pick skins.");
@@ -126,10 +142,9 @@ public sealed partial class LegacyXHud
                         return;
                     }
                     current.Types = json.GetProperty("types").EnumerateArray()
-                        .Select(t => new SkinType(t.GetProperty("weaponClass").GetString() ?? "", t.GetProperty("skins").GetInt32()))
+                        .Select(t => new SkinType(Text(t, "weaponClass") ?? "", Number(t, "skins") ?? 0, Text(t, "model")))
                         .Where(t => t.WeaponClass.Length > 0).Take(SkinTypeSlots).ToList();
-                    current.Equipped = json.TryGetProperty("equipped", out var eq) && eq.ValueKind == JsonValueKind.Object
-                        ? $"{eq.GetProperty("weaponClass").GetString()} | {eq.GetProperty("skin").GetString()}" : "";
+                    current.Equipped = Text(json, "equippedText") ?? "";
                     current.WeaponClass = null;
                     SkinsStatus(menu, p, "");
                     SkinsRender(menu, p, current);
@@ -147,14 +162,16 @@ public sealed partial class LegacyXHud
         });
     }
 
-    private void SkinsLoadItems(PanelHandle panel, CCSPlayerController player, SkinView view, string weaponClass, int offset)
+    private void SkinsLoadItems(PanelHandle panel, CCSPlayerController player, SkinView view, SkinType type, int offset)
     {
-        view.WeaponClass = weaponClass;
+        view.WeaponClass = type.WeaponClass;
+        view.Model = type.Model;
         view.Offset = Math.Max(0, offset);
         SkinsStatus(panel, player, "Loading ...");
         var steamId = player.SteamID;
         var playerSlot = player.Slot;
         var slot = view.Slot;
+        var weaponClass = type.WeaponClass;
         var wanted = view.Offset;
         _ = Task.Run(async () =>
         {
@@ -174,8 +191,7 @@ public sealed partial class LegacyXHud
                     current.Total = json.GetProperty("total").GetInt32();
                     current.Offset = wanted;
                     current.Items = json.GetProperty("items").EnumerateArray()
-                        .Select(i => new SkinItem(i.GetProperty("id").GetString() ?? "", i.GetProperty("name").GetString() ?? "",
-                            i.TryGetProperty("paintId", out var paint) && paint.ValueKind == JsonValueKind.Number ? paint.GetInt32() : null))
+                        .Select(i => new SkinItem(Text(i, "id") ?? "", Text(i, "name") ?? "", Number(i, "paintId"), Number(i, "defindex")))
                         .Where(i => i.Id.Length > 0).Take(SkinItemSlots).ToList();
                     SkinsStatus(menu, p, "");
                     SkinsRender(menu, p, current);
@@ -204,6 +220,7 @@ public sealed partial class LegacyXHud
         _ = Task.Run(async () =>
         {
             string message;
+            string label = "";
             var saved = false;
             try
             {
@@ -212,7 +229,8 @@ public sealed partial class LegacyXHud
                 if (status == 200 && body is { } ok)
                 {
                     saved = true;
-                    message = $"Equipped {ok.GetProperty("weaponClass").GetString()} | {ok.GetProperty("skin").GetString()}.";
+                    label = Text(ok, "label") ?? item.Name;
+                    message = $"Equipped {label}.";
                 }
                 else if (status == 404) message = "Sign in on legacyx.cc with this Steam account to pick skins.";
                 else if (status == 409) message = "The server does not see you yet. Try again in a few seconds.";
@@ -234,13 +252,16 @@ public sealed partial class LegacyXHud
                 if (p is not { IsValid: true } || menu is null) return;
                 SkinsStatus(menu, p, message);
                 if (!saved) return;
-                if (current is not null) current.Equipped = $"{current.WeaponClass} | {item.Name}";
+                // Knives and gloves are one pick per slot, so the list can say what is on; guns and agents are many.
+                if (current is not null && current.Slot is "knife" or "glove") current.Equipped = label;
                 menu.SetClassFor(p, $"sk_item{index}", "sel", true);
                 // Same as typing !rs: SkinBridge reads the loadout from the API and applies it.
                 p.ExecuteClientCommandFromServer("css_rs");
             });
         });
     }
+
+    // ---- drawing ----------------------------------------------------------------------------------------
 
     private static string? SkinModel(string? weaponClass)
     {
@@ -249,12 +270,18 @@ public sealed partial class LegacyXHud
         return GloveModels.TryGetValue(weaponClass, out var glove) ? glove : null;
     }
 
-    // ---- drawing ----------------------------------------------------------------------------------------
+    private static string TypeLabel(SkinView view, string weaponClass) =>
+        view.Slot == "knife" && weaponClass.EndsWith(" Knife", StringComparison.Ordinal) ? weaponClass[..^6]
+        : view.Slot == "agent" ? (weaponClass == "Terrorist" ? "Terrorists" : "Counter-Terrorists")
+        : weaponClass;
 
     private void SkinsRender(PanelHandle panel, CCSPlayerController player, SkinView view)
     {
-        panel.SetClassFor(player, "sk_slot_knife", "active", view.Slot == "knife");
-        panel.SetClassFor(player, "sk_slot_glove", "active", view.Slot == "glove");
+        foreach (var slot in new[] { "knife", "glove", "weapon", "agent" })
+            panel.SetClassFor(player, $"sk_slot_{slot}", "active", view.Slot == slot);
+        panel.SetClassFor(player, "sk_groups", "hidden", view.Slot != "weapon");
+        foreach (var group in GunGroups)
+            panel.SetClassFor(player, $"sk_grp_{group.ToLowerInvariant()}", "active", view.Group == group);
         var showItems = view.WeaponClass is not null;
         panel.SetClassFor(player, "sk_view_types", "hidden", showItems);
         panel.SetClassFor(player, "sk_view_items", "hidden", !showItems);
@@ -266,29 +293,35 @@ public sealed partial class LegacyXHud
                 var has = i < view.Types.Count;
                 panel.SetClassFor(player, $"sk_type{i}", "hidden", !has);
                 if (!has) continue;
-                var weaponClass = view.Types[i].WeaponClass;
-                panel.SetVariableFor(player, $"sk_type{i}_name", view.Slot == "knife" && weaponClass.EndsWith(" Knife", StringComparison.Ordinal) ? weaponClass[..^6] : weaponClass);
-                SetState(panel, player, $"sk_type{i}_ic", "kn", view.Slot == "knife" && KnifeIcons.TryGetValue(weaponClass, out var icon) ? "kn-" + icon : null);
-                panel.SetVariableFor(player, $"sk_type{i}_n", view.Types[i].Skins.ToString());
+                var type = view.Types[i];
+                panel.SetVariableFor(player, $"sk_type{i}_name", TypeLabel(view, type.WeaponClass));
+                panel.SetVariableFor(player, $"sk_type{i}_n", view.Slot == "agent" ? $"{type.Skins} agents" : $"{type.Skins} skins");
+                // The picture is the addon's (knife) or the game's own (gun) class; gloves and agents have none here.
+                var icon = view.Slot == "knife" && KnifeIcons.TryGetValue(type.WeaponClass, out var knife) ? "kn-" + knife
+                    : view.Slot == "weapon" && type.Model is not null ? "gn-" + type.Model : null;
+                SetState(panel, player, $"sk_type{i}_ic", "kn", icon);
             }
             return;
         }
-        panel.SetVariableFor(player, "sk_title", view.WeaponClass ?? "");
-        panel.SetVariableFor(player, "sk_count", $"{view.Total} skins");
+        panel.SetVariableFor(player, "sk_title", view.WeaponClass is null ? "" : TypeLabel(view, view.WeaponClass));
+        panel.SetVariableFor(player, "sk_count", view.Slot == "agent" ? $"{view.Total} agents" : $"{view.Total} skins");
         var pages = Math.Max(1, (view.Total + SkinItemSlots - 1) / SkinItemSlots);
         panel.SetVariableFor(player, "sk_page", $"{view.Offset / SkinItemSlots + 1} / {pages}");
         panel.SetClassFor(player, "sk_prev", "disabled", view.Offset <= 0);
         panel.SetClassFor(player, "sk_next", "disabled", view.Offset + SkinItemSlots >= view.Total);
+        var model = view.Slot == "weapon" ? view.Model : SkinModel(view.WeaponClass);
         for (var i = 0; i < SkinItemSlots; i++)
         {
             var has = i < view.Items.Count;
             panel.SetClassFor(player, $"sk_item{i}", "hidden", !has);
             panel.SetClassFor(player, $"sk_item{i}", "sel", false);
             if (!has) continue;
-            panel.SetVariableFor(player, $"sk_item{i}_name", view.Items[i].Name);
-            // The picture is the one CS2 already has for that skin; the addon's stylesheet maps this class to it (no class = name only).
-            var model = SkinModel(view.WeaponClass);
-            SetState(panel, player, $"sk_item{i}_pic", "sp", model is not null && view.Items[i].PaintId is { } paintId ? $"sp-{model}-{paintId}" : null);
+            var item = view.Items[i];
+            panel.SetVariableFor(player, $"sk_item{i}_name", item.Name);
+            // The picture is the one CS2 already has for that skin or agent; the addon's stylesheet maps this class to it (no class = name only).
+            var pic = view.Slot == "agent" ? (item.Defindex is { } defindex ? $"ag-{defindex}" : null)
+                : model is not null && item.PaintId is { } paintId ? $"sp-{model}-{paintId}" : null;
+            SetState(panel, player, $"sk_item{i}_pic", "sp", pic);
         }
     }
 
@@ -300,21 +333,31 @@ public sealed partial class LegacyXHud
         {
             case "sk_slot_knife": SkinsOpen(panel, player, "knife"); return true;
             case "sk_slot_glove": SkinsOpen(panel, player, "glove"); return true;
+            case "sk_slot_weapon": SkinsOpen(panel, player, "weapon"); return true;
+            case "sk_slot_agent": SkinsOpen(panel, player, "agent"); return true;
             case "sk_back":
                 view.WeaponClass = null;
                 SkinsStatus(panel, player, "");
                 SkinsRender(panel, player, view);
                 return true;
             case "sk_prev":
-                if (view.WeaponClass is not null && view.Offset > 0) SkinsLoadItems(panel, player, view, view.WeaponClass, view.Offset - SkinItemSlots);
+                if (view.WeaponClass is not null && view.Offset > 0 && view.Types.FirstOrDefault(t => t.WeaponClass == view.WeaponClass) is { } back)
+                    SkinsLoadItems(panel, player, view, back, view.Offset - SkinItemSlots);
                 return true;
             case "sk_next":
-                if (view.WeaponClass is not null && view.Offset + SkinItemSlots < view.Total) SkinsLoadItems(panel, player, view, view.WeaponClass, view.Offset + SkinItemSlots);
+                if (view.WeaponClass is not null && view.Offset + SkinItemSlots < view.Total && view.Types.FirstOrDefault(t => t.WeaponClass == view.WeaponClass) is { } forward)
+                    SkinsLoadItems(panel, player, view, forward, view.Offset + SkinItemSlots);
                 return true;
+        }
+        if (id.StartsWith("sk_grp_", StringComparison.Ordinal))
+        {
+            var group = GunGroups.FirstOrDefault(g => id == "sk_grp_" + g.ToLowerInvariant());
+            if (group is not null) SkinsOpen(panel, player, "weapon", group);
+            return true;
         }
         if (id.StartsWith("sk_type", StringComparison.Ordinal) && int.TryParse(id.AsSpan(7), out var type) && type >= 0 && type < view.Types.Count)
         {
-            SkinsLoadItems(panel, player, view, view.Types[type].WeaponClass, 0);
+            SkinsLoadItems(panel, player, view, view.Types[type], 0);
             return true;
         }
         if (id.StartsWith("sk_item", StringComparison.Ordinal) && int.TryParse(id.AsSpan(7), out var item))
