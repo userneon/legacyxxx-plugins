@@ -198,7 +198,11 @@ public sealed partial class LegacyXHud
                 }
                 else if (status == 404) message = "Sign in on legacyx.cc with this Steam account to pick skins.";
                 else if (status == 409) message = "The server does not see you yet. Try again in a few seconds.";
-                else message = "Could not save. Try again.";
+                else
+                {
+                    Console.WriteLine($"[{ModuleName}] Skin equip refused: HTTP {status} {body}");
+                    message = $"Could not save (error {status}). Tell staff.";
+                }
             }
             catch (Exception ex)
             {
