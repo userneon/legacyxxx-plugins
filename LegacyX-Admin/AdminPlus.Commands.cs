@@ -1052,6 +1052,8 @@ public partial class AdminPlus
         }
     }
 
+    private readonly Dictionary<ulong, DateTime> _warmupConfirm = new();
+
     private void CmdRestartRound(CCSPlayerController? caller, CommandInfo info)
     {
         if (caller != null && (!caller.IsValid || !AdminManager.PlayerHasPermissions(caller, "@css/generic")))
@@ -1065,6 +1067,18 @@ public partial class AdminPlus
         // (MatchZy's css_restart). Without it there is no match to end, so the round restarts as before.
         if (ConVar.Find("matchzy_smoke_color_enabled") != null)
         {
+            // From chat it takes the command twice within 10 seconds, so one slip does not end a match.
+            if (caller != null)
+            {
+                var now = DateTime.UtcNow;
+                if (!_warmupConfirm.TryGetValue(caller.SteamID, out var asked) || (now - asked).TotalSeconds > 10)
+                {
+                    _warmupConfirm[caller.SteamID] = now;
+                    caller.Print("This ends the match and goes back to warmup. Type the command again within 10 seconds to confirm.");
+                    return;
+                }
+                _warmupConfirm.Remove(caller.SteamID);
+            }
             Server.ExecuteCommand("css_restart");
             PlayerExtensions.PrintToAll($"{executorName} sent the server back to warmup.");
             return;
