@@ -104,7 +104,11 @@ install_metamod() {
   local name
   name="$(curl -fsSL https://mms.alliedmods.net/mmsdrop/2.0/mmsource-latest-linux)"
   [[ "$name" =~ ^mmsource-[A-Za-z0-9.+-]+-linux\.tar\.gz$ ]] || die "Unexpected Metamod file name: $name"
-  curl -fsSL "https://mms.alliedmods.net/mmsdrop/2.0/$name" | as_cs2 tar -xz -C "$CSGO_DIR"
+  # tar runs as the cs2 user: it needs to own addons/ (an earlier root run can leave it root-owned, and then tar fails with
+  # "Cannot open: File exists" / "Cannot utime" and, under set -e, nothing after it runs, patch_gameinfo included).
+  as_cs2 mkdir -p "$CSGO_DIR/addons" 2>/dev/null || mkdir -p "$CSGO_DIR/addons"
+  chown -R "$CS2_USER:$CS2_USER" "$CSGO_DIR/addons"
+  curl -fsSL "https://mms.alliedmods.net/mmsdrop/2.0/$name" | as_cs2 tar -xz --overwrite -C "$CSGO_DIR"
   patch_gameinfo
 }
  
@@ -382,6 +386,9 @@ cmd_update() {
     if systemctl is-active --quiet "cs2@$port"; then running+=("$port"); fi
   done
   for port in "${running[@]}"; do systemctl stop "cs2@$port"; done
+  # If a step below fails, the servers that were stopped for the update start again instead of staying down.
+  restart_stopped() { local port; for port in "${running[@]}"; do systemctl start "cs2@$port" || true; done; }
+  trap restart_stopped EXIT
   update_cs2
   install_metamod
   install_counterstrikesharp
@@ -392,6 +399,7 @@ cmd_update() {
     say "No .NET SDK here and no --package: the LEGACY-X plugins are left as they are."
   fi
   fix_gamedata || true
+  trap - EXIT
   for port in "${running[@]}"; do systemctl start "cs2@$port"; done
   say "Updated. Restarted: ${running[*]:-none}"
   announce_update "$build_before" "$css_before" "${running[*]:-none}"
