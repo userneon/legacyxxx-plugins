@@ -131,6 +131,8 @@ public sealed partial class LegacyXHud
             Server.NextFrame(() =>
             {
                 if (status == 200 && body is { } good) skinCache[cacheKey] = (DateTime.UtcNow + ttl, good);
+                // Say why a page is empty: 0 = the API could not be reached, 404 = the API has no such route yet, 401 / 403 = the token.
+                else if (status != 200) Console.WriteLine($"[{ModuleName}] Skins API {path.Split('?')[0]} answered {(status == 0 ? "nothing (not reachable)" : status.ToString())}");
                 var p = Utilities.GetPlayerFromSlot(slot);
                 if (p is not { IsValid: true } || menu is null || !skinViews.TryGetValue(slot, out var view)) return;
                 done(p, view, status, body);
