@@ -1,4 +1,4 @@
-> **Хуулбар.** Эх сурвалж: [legacyxxx-plugins/LegacyX-Hud/README.md](https://github.com/userneon/legacyxxx-plugins/blob/main/LegacyX-Hud/README.md), 2026-10-02-д хуулсан. Зөв, шинэ хувилбар нь эх repo дээр. Харьцангуй холбоосууд ажиллахгүй байж болно.
+> **Хуулбар.** Эх сурвалж: [legacyxxx-plugins/LegacyX-Hud/README.md](https://github.com/userneon/legacyxxx-plugins/blob/main/LegacyX-Hud/README.md), 2026-10-11-д хуулсан. Зөв, шинэ хувилбар нь эх repo дээр. Харьцангуй холбоосууд ажиллахгүй байж болно.
 
 # LEGACY-X Hud
 
@@ -6,16 +6,30 @@ Shows the LEGACY-X Workshop HUD (repository `legacyxxx-workshop`) to players. Th
 plugin creates the `custom_hud_layout` entity through **PanoramaManager** and fills it per player: texts by
 Label id, states by toggling classes. Every id is listed in the addon's `CONTRACT.md`.
 
-**Screens** (0.2.0): welcome card (server, player and rank in one box, centre of the screen, 7 s), `!lxhud` test, rank card at round start, result card of every counted match
-(then a compact card until the next live round), rank up / down, the "Skins updated." toast, and the knife-round
-side vote by keyboard, 10 seconds (**A / D** move, **E** confirm; moving again takes the confirmation back; only confirmed votes
-count, a tie or none is Stay). The `!admin` panel is not driven yet.
+**Screens**: welcome card (server, player and rank in one box, centre of the screen, 7 s), the knife-round side vote, and the menu below.
+The vote runs in the 10 second freeze time after the knife round: the winners click the **Stay** or **Switch** card with the mouse
+(nothing is chosen at first, clicking the other card changes it, 10 seconds). Most clicks wins; a tie or no clicks is Stay. Stay keeps the sides,
+Switch swaps the teams, and a few seconds later the normal round starts. The `!lxhud` test, the round-start
+rank card, the match result cards, rank up / down and the "Skins updated." toast were removed.
 
-Other plugins call it through server commands: `lx_hud_toast <steamId64> <ok|info> <text>` (LegacyX-WeaponPaints),
-`lx_hud_knife start <2|3> | stop` (LegacyX-MatchZy, which applies the result with `lx_knife_choice <slot> stay|switch`).
-The rank and match cards read the API like LegacyX-Community does (`LEGACYX_API_BASE_URL`,
-`LEGACYX_COMMUNITY_PLUGIN_ID/TOKEN`); without them only the banner, toast and knife vote work. `LEGACYX_HUD_RANK_CARD=false`
-turns the round-start rank card off.
+Another plugin calls it through a server command: `lx_hud_knife start <2|3> | stop` (LegacyX-MatchZy, which applies the result with `lx_knife_choice <slot> stay|switch`).
+The welcome card and the menu read the API like LegacyX-Community does (`LEGACYX_API_BASE_URL`,
+`LEGACYX_COMMUNITY_PLUGIN_ID/TOKEN`); without them the rank part stays empty.
+
+**Admin panel** (staff, `!admin`): when this plugin is loaded, LegacyX-Admin opens the panel instead of its chat menu (`lx_hud_admin open <slot>`, answered with
+`lx_admin_hud_ack <slot>`; with no answer in 0.4 s the chat menu opens). Players page: the list, a player's SteamID, IP (only for staff who may ban), penalties, and Kick, Ban…, Slay,
+Respawn, Mute, Gag, Silence, Move team. Server page: change map, back to warmup (second click within 10 seconds), clean weapons, restart round. The Ban…
+step picks Ban or IP ban, a length and a reason; mute, gag and silence ask for a length. Every button goes back to LegacyX-Admin as
+`lx_admin_do <actorSlot> <action> …`, which checks that staff member's own rights, so the greyed-out buttons are only a hint. Hold R closes it.
+Bans (who issued and who lifted a ban, filters, "Lift this ban" through `!unban`), Logins (the latest server logins) and Staff (read only) read
+the API with this plugin's game server token (`admin:read`, `/api/v1/plugin/admin/bans | logins | staff`); when the API cannot be reached they say so. IP bans
+are kept by the game servers, so they are not in the Bans list.
+
+**Menu** (`!menu`, or hold E in warmup / before the round, hold R to close): Welcome, Skins (knives, gloves, guns, agents) and
+Settings. Clicks, opening, closing and picking a skin play soft CS2 UI sounds (`itemtile_rollover_09`, `menu_focus`,
+`cards_rollover_01`, `itemtile_click_02`) quietly on the player's client with `playvol`. `LEGACYX_HUD_MENU_SOUND_VOLUME` (0 to 1,
+default 1) scales them, `LEGACYX_HUD_MENU_SOUNDS=false` turns them off, `LEGACYX_HUD_MENU_SOUND_CLICK` / `_OPEN` / `_BACK` /
+`_PICK` change a sound (a `sounds/...vsnd_c` path from the game, empty = silent). `LEGACYX_HUD_MENU_KEYS=false` turns the E / R keys off.
 
 ## Needs
 

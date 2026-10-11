@@ -1,4 +1,4 @@
-> **Хуулбар.** Эх сурвалж: [legacyxxx-workshop/README.md](https://github.com/userneon/legacyxxx-workshop/blob/main/README.md), 2026-10-02-д хуулсан. Зөв, шинэ хувилбар нь эх repo дээр. Харьцангуй холбоосууд ажиллахгүй байж болно.
+> **Хуулбар.** Эх сурвалж: [legacyxxx-workshop/README.md](https://github.com/userneon/legacyxxx-workshop/blob/main/README.md), 2026-10-11-д хуулсан. Зөв, шинэ хувилбар нь эх repo дээр. Харьцангуй холбоосууд ажиллахгүй байж болно.
 
 # legacyxxx-workshop
 
@@ -7,8 +7,7 @@ server by the LEGACY-X plugins through CS2's `custom_hud_layout` entity (added b
 
 | Layout | What players see |
 |---|---|
-| `legacyx_notify` | a welcome card in the middle (server, player, rank), announcements dropping from the top (staff message, match live, server restart, ban notice, AFK, knife result), a one-line toast, the rank card at round start, rank up / down |
-| `legacyx_match` | the EXP result of every ranked match: a centre card, then a compact card on the right until the next match |
+| `legacyx_notify` | a welcome card in the middle (server, player, rank), announcements dropping from the top (staff message, match live, server restart, ban notice, AFK, knife result) and the "Hold E to open menu" hint |
 | `legacyx_knife` | the knife-round vote (Stay / Switch, secret votes, 10 seconds) for the winning team |
 | `legacyx_admin` | `!admin`: players and actions, map change, every ban with your own marked, staff |
 
@@ -44,10 +43,20 @@ map art) and lucide icons, exported as PNG. After adding or renaming a PNG run `
    `addon\` into `content\csgo_addons\legacyx`, compiles every image, stylesheet and layout, and lists
    anything that did not compile.
 
+### Lite build (smaller download)
+
+`tools\build.cmd -Lite` leaves out the `!admin` panel (`legacyx_admin`, which the HUD plugin does not drive yet) and the
+nine map pictures only that panel uses. The HUD players see (notify, knife vote, match) is unchanged. Use it when joining
+the server fails with an overflow error; publish it to the same Workshop item as usual. Build without `-Lite` again when
+the admin panel goes live.
+
 ### Test in your own game
 
 `tools\build.cmd -Local` also copies the compiled files into `game\csgo\panorama`, so your own CS2 loads them
 without the Workshop. Restart the game after every build: Panorama caches layouts for the whole session.
+
+Do not keep the local copy while the server sends the Workshop addon: both load every file twice and joining fails with an
+overflow error. Run `tools\build.cmd -Unlocal` to delete the loose copies, then restart the game.
 
 ### Publish
 
