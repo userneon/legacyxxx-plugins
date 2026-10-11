@@ -6,7 +6,7 @@ namespace LegacyX.Admin.Authorization.Tests;
 /// <summary>Chat lines reach players in the LEGACY-X palette, as written, never with literal {tags}.</summary>
 public class ChatTests
 {
-    private const string Prefix = " \u0001LEGACY-\u000EX \u0008• ";
+    private const string Prefix = " \u0001LEGACY-\u000EX \u0008| ";
 
     [Fact]
     public void SystemMessagesUseThePrefixAndKeepTheText()
@@ -22,6 +22,19 @@ public class ChatTests
         // Tags and codes a module may still carry: lime / red / gold / lightred / a raw ChatColors.Blue and Red.
         var line = LegacyXChat.System("{lime}a{default} {red}b{DEFAULT} {gold}c \u000Bd \u000Ae {green}ok {lightred}no \u0007r");
         Assert.Equal(Prefix + "\u0001a\u0008 \u0001b\u0008 \u0001c \u0001d \u0008e \u0004ok \u0001no \u0001r", line);
+    }
+
+    [Fact]
+    public void PlayerLinesReadAllOrTeamBarNameAndText()
+    {
+        Assert.Equal(" \u0008ALL \u0008| \u0001Temuujin\u0008: \u0001gg", LegacyXChat.Player(false, "Temuujin", "gg"));
+        Assert.Equal(" \u0004TEAM \u0008| \u0001[OPERATOR I] Bat\u0008: \u0001push b", LegacyXChat.Player(true, "Bat", "push b", "OPERATOR I"));
+    }
+
+    [Fact]
+    public void PlayerLinesCannotCarryColorCodes()
+    {
+        Assert.Equal(" \u0008ALL \u0008| \u0001Evil\u0008: \u0001red", LegacyXChat.Player(false, "\u0007Evil", "\u0007red"));
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text;
 
 namespace LegacyX.Shared.Configuration;
@@ -11,7 +12,7 @@ namespace LegacyX.Shared.Configuration;
 /// </summary>
 public static class LegacyXChat
 {
-    public const string Prefix = "{white}LEGACY-{brand}X {grey}• ";
+    public const string Prefix = "{white}LEGACY-{brand}X {grey}| ";
 
     // CS2 chat color codes (the same values as CounterStrikeSharp's ChatColors), so this library
     // needs no CounterStrikeSharp reference.
@@ -33,6 +34,18 @@ public static class LegacyXChat
         ("{yellow}", White), ("{gold}", White), ("{orange}", White), ("{lightblue}", White),
         ("{blue}", White), ("{darkblue}", White),
     };
+
+    /// <summary>
+    /// A player's chat line as "ALL | Name: text" or "TEAM | Name: text". Control characters are cut from the name and
+    /// the text, so nobody can paste a color code into chat.
+    /// </summary>
+    public static string Player(bool team, string name, string text, string tag = "")
+    {
+        static string Clean(string value) => new string((value ?? string.Empty).Where(c => c >= ' ' && c != '\u007F').ToArray()).Trim();
+        var who = Clean(tag).Length > 0 ? $"[{Clean(tag)}] {Clean(name)}" : Clean(name);
+        var label = team ? "{green}TEAM" : "{grey}ALL";
+        return Colorize($"{label} {{grey}}| {{white}}{who}{{grey}}: {{white}}{Clean(text)}");
+    }
 
     public static string System(string message)
     {

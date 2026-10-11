@@ -790,7 +790,7 @@ public partial class AdminPlus
                         state.Gag != null && IsPunishmentActive(state.Gag));
 
         if (!isGagged)
-            return HookResult.Continue;
+            return SendFormattedChat(player, info, chatText);
 
         string message = chatText;
 
@@ -819,6 +819,32 @@ public partial class AdminPlus
         }
 
         return HookResult.Stop;
+    }
+
+    /// <summary>
+    /// Plain chat becomes "ALL | Name: text" / "TEAM | Name: text". Commands, @ staff chat, menu input and a report reason being typed
+    /// are left to their own handlers; the dead only talk to the dead, and a team line only goes to that team.
+    /// </summary>
+    private HookResult SendFormattedChat(CCSPlayerController player, CommandInfo info, string text)
+    {
+        text = text.Trim();
+        if (text.Length == 0 || text[0] is '!' or '/' or '@') return HookResult.Continue;
+        if (_selectedReportTarget != null) return HookResult.Continue;
+        if (_menuStates.TryGetValue(player.Slot, out var menu) && menu.InputMode) return HookResult.Continue;
+        var team = string.Equals(info.GetArg(0), "say_team", StringComparison.OrdinalIgnoreCase);
+        // The rank (or staff role) the player carries as a clan tag; MatchZy's coach tag says more during a match.
+        var line = LegacyXChat.Player(team, player.PlayerName ?? player.SteamID.ToString(), text, player.Clan ?? "");
+        var alive = player.PawnIsAlive;
+        foreach (var recipient in Utilities.GetPlayers())
+        {
+            if (!recipient.IsValid || recipient.IsBot) continue;
+            if (team && recipient.TeamNum != player.TeamNum) continue;
+            if (!alive && recipient.PawnIsAlive && recipient.TeamNum > 1) continue;
+            recipient.PrintToChat(line);
+        }
+        Console.WriteLine($"[chat] {(team ? "TEAM" : "ALL")} | {player.PlayerName}: {text}");
+        _ = Discord.SendChatLog(player.PlayerName, player.SteamID.ToString(), text, team ? "Team Chat" : "All Chat", this);
+        return HookResult.Handled;
     }
 
     private static bool IsPrefixedCommand(string s)
