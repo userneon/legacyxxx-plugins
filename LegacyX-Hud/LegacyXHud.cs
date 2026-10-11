@@ -118,29 +118,39 @@ public sealed partial class LegacyXHud : BasePlugin
     }
 
     /// <summary>
-    /// A new map destroys every panel entity this plugin spawned, so the handles it holds point at nothing and the HUD stays gone
-    /// for the rest of the session. Forget them (and what was drawn on them): each one is spawned again the next time it is used
-    /// (the notify layout at the first round start, the menu, the knife vote and the admin panel when they open).
+    /// PanoramaManager keeps the layouts across a map change or a round restart, but whatever this plugin wrote with SetVariableFor /
+    /// SetClassFor is gone from the client (it never saw what it meant): the "Hold E" hint, the welcome card, an open menu. The caches that
+    /// say "already sent" must go too, or nothing would be sent again and the HUD would stay empty. A map change clears them for everyone.
     /// </summary>
     private void OnMapChanged(string mapName)
     {
-        Console.WriteLine($"[{ModuleName}] Map {mapName}: the HUD layouts are spawned again when they are next used");
-        notify = knife = menu = admin = null;
-        menuListening = knifeListening = adminListening = false;
-        applied.Clear();
-        menuSent.Clear();
-        adminSent.Clear();
-        holds.Clear();
-        menuOpen.Clear();
-        adminViews.Clear();
+        Console.WriteLine($"[{ModuleName}] Map {mapName}: the HUD is drawn again from scratch");
+        foreach (var slot in Enumerable.Range(0, 64)) ForgetHudState(slot);
         knifeVotes.Clear();
-        skinViews.Clear();
-        generation.Clear();
         knifeTimer?.Kill();
         knifeTimer = null;
         adminRefresh?.Kill();
         adminRefresh = null;
         rulesProxy = null;
+    }
+
+    /// <summary>One player's HUD was redrawn by the library after a world reset: forget what was sent to them, and treat their menu and admin panel as closed.</summary>
+    private void ForgetHudState(int slot)
+    {
+        foreach (var key in applied.Keys.Where(k => k.Slot == slot).ToList()) applied.Remove(key);
+        menuSent.Remove(slot);
+        adminSent.Remove(slot);
+        holds.Remove(slot);
+        menuOpen.Remove(slot);
+        skinViews.Remove(slot);
+        adminViews.Remove(slot);
+        generation.Keys.Where(k => k.Slot == slot).ToList().ForEach(k => generation.Remove(k));
+    }
+
+    private void OnRestored(PanelEvent e)
+    {
+        if (e.Action != PanelAction.Restored || e.Player is not { IsValid: true } player) return;
+        ForgetHudState(player.Slot);
     }
 
     private HookResult OnPlayerConnectFull(EventPlayerConnectFull e, GameEventInfo info)
@@ -180,7 +190,18 @@ public sealed partial class LegacyXHud : BasePlugin
         return handle;
     }
 
-    private PanelHandle? EnsureNotify() => Ensure(ref notify, notifyLayout, "lx_notify");
+    private bool notifyListening;
+
+    private PanelHandle? EnsureNotify()
+    {
+        var handle = Ensure(ref notify, notifyLayout, "lx_notify");
+        if (handle is not null && !notifyListening)
+        {
+            handle.OnEvent += OnRestored;
+            notifyListening = true;
+        }
+        return handle;
+    }
 
     /// <summary>SetVariableFor / SetClassFor do nothing for a player without a session: open the layout first.</summary>
     private static bool OpenFor(PanelHandle panel, CCSPlayerController player)

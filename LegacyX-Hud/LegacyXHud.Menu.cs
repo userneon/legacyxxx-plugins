@@ -158,6 +158,7 @@ public sealed partial class LegacyXHud
         var panel = menu;
         var player = e.Player;
         if (panel is null || player is not { IsValid: true }) return;
+        if (e.Action == PanelAction.Restored) { OnRestored(e); return; }
         if (e.Action == PanelAction.Close)
         {
             CloseMenu(panel, player);

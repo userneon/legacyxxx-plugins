@@ -396,6 +396,7 @@ public sealed partial class LegacyXHud
         var panel = admin;
         var actor = e.Player;
         if (panel is null || actor is not { IsValid: true }) return;
+        if (e.Action == PanelAction.Restored) { OnRestored(e); return; }
         if (e.Action == PanelAction.Close) { CloseAdmin(actor); return; }
         if (e.Action != PanelAction.Button || !adminViews.TryGetValue(actor.Slot, out var view)) return;
         var id = e.ElementId;

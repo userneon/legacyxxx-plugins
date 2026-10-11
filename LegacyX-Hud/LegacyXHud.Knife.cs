@@ -110,6 +110,7 @@ public sealed partial class LegacyXHud
 
     private void OnKnifeEvent(PanelEvent e)
     {
+        if (e.Action == PanelAction.Restored) { OnRestored(e); return; }
         if (e.Action != PanelAction.Button || knife is null) return;
         var player = e.Player;
         if (player is not { IsValid: true } || !knifeVotes.TryGetValue(player.Slot, out var vote)) return;
