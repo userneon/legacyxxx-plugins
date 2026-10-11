@@ -832,8 +832,8 @@ public partial class AdminPlus
         if (_selectedReportTarget != null) return HookResult.Continue;
         if (_menuStates.TryGetValue(player.Slot, out var menu) && menu.InputMode) return HookResult.Continue;
         var team = string.Equals(info.GetArg(0), "say_team", StringComparison.OrdinalIgnoreCase);
-        // The rank (or staff role) the player carries as a clan tag; MatchZy's coach tag says more during a match.
-        var line = LegacyXChat.Player(team, player.PlayerName ?? player.SteamID.ToString(), text, player.Clan ?? "");
+        // No rank or staff role in chat (owner request): just ALL | Name: text.
+        var line = LegacyXChat.Player(team, player.PlayerName ?? player.SteamID.ToString(), text);
         var alive = player.PawnIsAlive;
         foreach (var recipient in Utilities.GetPlayers())
         {
