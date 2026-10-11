@@ -17,8 +17,8 @@ namespace AdminPlus;
 /// <summary>
 /// Central SteamID bans kept in the LEGACY-X database (issued from the Discord bot or the website).
 /// Players are checked against the Root API when they connect and every few seconds while online,
-/// so a ban issued elsewhere removes them from every server. Local banned_user.cfg bans keep
-/// working as before. If the API can't be reached nobody is kicked (fail open).
+/// so a ban issued elsewhere removes them from every server. Bans exist only in the database; this server
+/// keeps no ban files. If the API can't be reached nobody is kicked (fail open).
 /// </summary>
 public partial class AdminPlus
 {
@@ -30,7 +30,7 @@ public partial class AdminPlus
         var environment = LegacyXEnvironmentLoader.Load();
         if (!environment.GetModuleBoolean("ADMIN", "CENTRAL_BANS_ENABLED", true))
         {
-            Console.WriteLine("[LEGACY-X Admin] Central bans are disabled; only local banned_user.cfg bans apply.");
+            Console.WriteLine("[LEGACY-X Admin] Central bans are disabled: bans are neither enforced nor listed on this server.");
             return;
         }
 
@@ -46,6 +46,7 @@ public partial class AdminPlus
         _centralBanClient = new CentralBanClient(apiBaseUrl, pluginId, pluginSecret);
         var sweepSeconds = environment.GetModuleInt("ADMIN", "CENTRAL_BANS_SWEEP_SECONDS", 30, 10, 300);
         AddTimer(sweepSeconds, SweepCentralBans, TimerFlags.REPEAT);
+        _ = RefreshBanCacheAsync();
         Console.WriteLine($"[LEGACY-X Admin] Central bans enabled: checking on connect and every {sweepSeconds}s.");
     }
 
@@ -54,33 +55,44 @@ public partial class AdminPlus
     {
         var player = Utilities.GetPlayerFromSlot(playerSlot);
         if (_centralBanClient == null || player == null || !player.IsValid || player.IsBot) return;
-        _ = CheckAndKickAsync([player.SteamID.ToString()]);
+        var ip = PlayerIp(player);
+        _ = CheckAndKickAsync([player.SteamID.ToString()], ip.Length > 0 ? [ip] : []);
+    }
+
+    /// <summary>The player's IPv4 address without the port, or "" when it is not known.</summary>
+    private static string PlayerIp(CCSPlayerController player)
+    {
+        var ip = (player.IpAddress ?? "").Split(':')[0];
+        return System.Text.RegularExpressions.Regex.IsMatch(ip, @"^\d{1,3}(\.\d{1,3}){3}$") ? ip : "";
     }
 
     private void SweepCentralBans()
     {
         if (_centralBanClient == null) return;
-        var steamIds = Utilities.GetPlayers()
-            .Where(p => p != null && p.IsValid && !p.IsBot && p.SteamID != 0)
-            .Select(p => p.SteamID.ToString())
-            .Distinct()
-            .ToList();
+        var players = Utilities.GetPlayers().Where(p => p != null && p.IsValid && !p.IsBot && p.SteamID != 0).ToList();
+        var steamIds = players.Select(p => p.SteamID.ToString()).Distinct().ToList();
+        var ips = players.Select(PlayerIp).Where(ip => ip.Length > 0).Distinct().ToList();
+        _ = RefreshBanCacheAsync();
         if (steamIds.Count == 0) return;
-        _ = CheckAndKickAsync(steamIds);
+        _ = CheckAndKickAsync(steamIds, ips);
     }
 
-    private async Task CheckAndKickAsync(List<string> steamIds)
+    private async Task CheckAndKickAsync(List<string> steamIds, List<string> ips)
     {
         var client = _centralBanClient;
         if (client == null) return;
 
-        List<CentralBan> bans;
+        var bans = new List<CentralBan>();
+        var ipBans = new List<CentralIpBan>();
         try
         {
-            bans = new List<CentralBan>();
-            // The API accepts up to 128 SteamIDs per request.
-            foreach (var chunk in steamIds.Chunk(128))
-                bans.AddRange(await client.CheckAsync(chunk));
+            // The API accepts up to 128 SteamIDs and 128 addresses per request.
+            for (var start = 0; start < steamIds.Count; start += 128)
+            {
+                var result = await client.CheckAsync(steamIds.Skip(start).Take(128), ips.Skip(start).Take(128));
+                bans.AddRange(result.Bans);
+                ipBans.AddRange(result.IpBans);
+            }
         }
         catch (Exception ex)
         {
@@ -92,7 +104,7 @@ public partial class AdminPlus
             }
             return;
         }
-        if (bans.Count == 0) return;
+        if (bans.Count == 0 && ipBans.Count == 0) return;
 
         // Game state may only be touched on the main thread.
         Server.NextFrame(() =>
@@ -107,6 +119,15 @@ public partial class AdminPlus
                 target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
                 LogAction($"Central ban: removed {name} ({ban.SteamId}), {term}. Reason: {ban.Reason}");
                 Console.WriteLine($"[LEGACY-X Admin] Central ban: removed {name} ({ban.SteamId}), {term}.");
+            }
+            foreach (var ipBan in ipBans)
+            {
+                foreach (var target in Utilities.GetPlayers().Where(p => p != null && p.IsValid && !p.IsBot && PlayerIp(p) == ipBan.Ip).ToList())
+                {
+                    target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
+                    LogAction($"Central IP ban: removed {SanitizeName(target.PlayerName)} ({target.SteamID}), {ipBan.Ip}. Reason: {ipBan.Reason}");
+                    Console.WriteLine($"[LEGACY-X Admin] Central IP ban: removed {SanitizeName(target.PlayerName)} ({target.SteamID}).");
+                }
             }
         });
     }
@@ -126,11 +147,11 @@ internal sealed class CentralBanClient
         _pluginSecret = pluginSecret;
     }
 
-    internal async Task<List<CentralBan>> CheckAsync(IEnumerable<string> steamIds)
+    internal async Task<CentralBanResponse> CheckAsync(IEnumerable<string> steamIds, IEnumerable<string> ips)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, _apiBaseUrl + "/api/v1/plugin/bans/check")
         {
-            Content = JsonContent.Create(new { steamIds = steamIds.ToArray() }),
+            Content = JsonContent.Create(new { steamIds = steamIds.ToArray(), ips = ips.ToArray() }),
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _pluginSecret);
         request.Headers.Add("x-plugin-id", _pluginId);
@@ -140,7 +161,18 @@ internal sealed class CentralBanClient
             var detail = await response.Content.ReadAsStringAsync();
             throw new InvalidOperationException($"LEGACY-X API returned {(int)response.StatusCode}: {detail[..Math.Min(200, detail.Length)]}");
         }
-        var body = await response.Content.ReadFromJsonAsync<CentralBanResponse>();
+        return await response.Content.ReadFromJsonAsync<CentralBanResponse>() ?? new CentralBanResponse();
+    }
+
+    /// <summary>Every active ban, SteamID and IP, for this server's ban menus.</summary>
+    internal async Task<List<CentralListedBan>> ListActiveAsync()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, _apiBaseUrl + "/api/v1/plugin/bans/active");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _pluginSecret);
+        request.Headers.Add("x-plugin-id", _pluginId);
+        using var response = await Http.SendAsync(request);
+        if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"LEGACY-X API returned {(int)response.StatusCode}");
+        var body = await response.Content.ReadFromJsonAsync<CentralListResponse>();
         return body?.Bans ?? [];
     }
 }
@@ -148,6 +180,28 @@ internal sealed class CentralBanClient
 internal sealed class CentralBanResponse
 {
     [JsonPropertyName("bans")] public List<CentralBan> Bans { get; set; } = [];
+    [JsonPropertyName("ipBans")] public List<CentralIpBan> IpBans { get; set; } = [];
+}
+
+internal sealed class CentralIpBan
+{
+    [JsonPropertyName("ip")] public string Ip { get; set; } = string.Empty;
+    [JsonPropertyName("reason")] public string Reason { get; set; } = string.Empty;
+}
+
+internal sealed class CentralListResponse
+{
+    [JsonPropertyName("bans")] public List<CentralListedBan> Bans { get; set; } = [];
+}
+
+internal sealed class CentralListedBan
+{
+    [JsonPropertyName("steamId")] public string? SteamId { get; set; }
+    [JsonPropertyName("ip")] public string? Ip { get; set; }
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("reason")] public string Reason { get; set; } = string.Empty;
+    [JsonPropertyName("isPermanent")] public bool IsPermanent { get; set; }
+    [JsonPropertyName("expiresAt")] public DateTimeOffset? ExpiresAt { get; set; }
 }
 
 internal sealed class CentralBan

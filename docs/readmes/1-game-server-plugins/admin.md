@@ -23,7 +23,7 @@ The module reads `CounterStrikeSharp/.env` through `LegacyX.Shared.Configuration
 | `LEGACYX_SERVER_ADDRESS` | Shared address included only in a Call channel alert. |
 | `LEGACYX_ADMIN_CENTRAL_BANS_ENABLED` | Checks players against the central ban list in the LEGACY-X database (bans issued from the Discord bot) on connect and every `LEGACYX_ADMIN_CENTRAL_BANS_SWEEP_SECONDS` (default 30), and removes banned players. Uses `LEGACYX_ADMIN_API_BASE_URL` and `LEGACYX_ADMIN_PLUGIN_SECRET`; the token needs the `bans:read` scope. Fails open when the API is unreachable. |
 
-Local bans (`css_ban`, the `!admin` menu) still live in `banned_user.cfg` on each server. Central bans live in the database and apply on every server. From the console or RCON, `css_ban` and `css_unban` accept a SteamID64, `STEAM_X:Y:Z` or `[U:1:N]` for players who are not online.
+Bans (`css_ban`, `css_ipban`, the `!admin` menu) live only in the LEGACY-X database and apply on every server; this server keeps no `banned_user.cfg` or `banned_ip.cfg`. A restart loses nothing, and the website, Discord and the game all show the same list. From the console or RCON, `css_ban` and `css_unban` accept a SteamID64, `STEAM_X:Y:Z` or `[U:1:N]` for players who are not online, and `css_unban` also accepts an IP address.
 
 The module's ban, admin, communication, and menu files are functional state files managed by upstream AdminPlus. They contain no API tokens, database credentials, or webhooks.
 

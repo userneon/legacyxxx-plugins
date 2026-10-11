@@ -1070,23 +1070,14 @@ public partial class AdminPlus
                 return;
             }
 
-            var line = $"addip \"{target.IpAddress}\" expiry:0 // {reason}";
-            lock (_lock)
-            {
-                IpBans[target.IpAddress] = (0, line, safeName);
-                File.WriteAllLines(BannedIpPath, IpBans.Values.Select(x => x.line));
-            }
+            RememberIpBan(target.IpAddress, 0, safeName, reason);
+            ReportIpBan(target.IpAddress, 0, reason, admin);
             PlayerExtensions.PrintToAll(Localizer["IpBan.AddedNick", admin.PlayerName, safeName, reason]);
             LogAction($"{admin.PlayerName} ip-banned {safeName} ({target.IpAddress}). Reason: {reason}");
         }
         else
         {
-            var line = $"banid \"{steamId}\" \"{safeName}\" ip:{target.IpAddress} expiry:{expiry} // {reason}";
-            lock (_lock)
-            {
-                SteamBans[steamId] = (expiry, line, safeName, target.IpAddress);
-                File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(x => x.line));
-            }
+            RememberSteamBan(steamId, expiry, safeName, target.IpAddress, reason);
             if (minutes == 0)
                 PlayerExtensions.PrintToAll(Localizer["PermabannedReason", admin.PlayerName, safeName, reason]);
             else

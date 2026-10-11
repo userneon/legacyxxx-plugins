@@ -4,6 +4,7 @@ using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Utils;
+using LegacyX.Shared.Configuration;
 using CounterStrikeSharp.API.ValveConstants.Protobuf;
 using System;
 using System.Collections.Generic;
@@ -177,14 +178,7 @@ public partial class AdminPlus
             var safeName = SanitizeName(playerName);
             var expiry = minutes == 0 ? 0 : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + minutes * 60;
 
-            var safeReason = SanitizeForCfg(reason);
-            var safeTeam = SanitizeForCfg(teamInput);
-            var line = $"banid \"{steamId}\" \"{safeName}\" ip:{ip} expiry:{expiry} // {safeReason} (Team: {safeTeam})";
-
-            lock (_lock)
-            {
-                SteamBans[steamId] = (expiry, line, safeName, ip);
-            }
+            RememberSteamBan(steamId, expiry, safeName, ip, $"{reason} (Team: {SanitizeForCfg(teamInput)})");
 
             target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
             ReportBan(steamId, minutes, reason, caller);
@@ -193,8 +187,6 @@ public partial class AdminPlus
 
         if (bannedCount > 0)
         {
-            File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(x => x.line));
-            
             string durationText = minutes == 0 ? Localizer["Duration.Forever"] : Localizer["Duration.Temporary", minutes];
             PlayerExtensions.PrintToAll(Localizer["Team.Ban.Success", executorName, teamName, durationText, reason]);
             PlayerExtensions.PrintToAll(Localizer["Team.Ban.PlayerCount", bannedCount]);
@@ -265,14 +257,7 @@ public partial class AdminPlus
         var safeName = SanitizeName(playerName);
         var expiry = minutes == 0 ? 0 : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + minutes * 60;
 
-        var safeReason = SanitizeForCfg(reason);
-        var line = $"banid \"{steamId}\" \"{safeName}\" ip:{ip} expiry:{expiry} // {safeReason}";
-
-        lock (_lock)
-        {
-            SteamBans[steamId] = (expiry, line, safeName, ip);
-            File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(x => x.line));
-        }
+        if (!string.IsNullOrEmpty(steamId)) RememberSteamBan(steamId, expiry, safeName, ip, reason);
 
         if (target != null)
             target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
@@ -358,15 +343,8 @@ public partial class AdminPlus
             reason = string.Join(" ", Enumerable.Range(2, info.ArgCount - 2).Select(i => info.GetArg(i)));
         }
 
-        var safeReason = SanitizeForCfg(reason);
-        var safeDisplayName = SanitizeForCfg(displayName);
-        var line = $"addip \"{ip}\" expiry:0 // {safeReason} (Player: {safeDisplayName})";
-
-        lock (_lock)
-        {
-            IpBans[ip] = (0, line, displayName);
-            File.WriteAllLines(BannedIpPath, IpBans.Values.Select(x => x.line));
-        }
+        RememberIpBan(ip, 0, displayName, reason);
+        ReportIpBan(ip, 0, reason, caller);
 
         foreach (var p in Utilities.GetPlayers()!.Where(p => p.IsValid && !string.IsNullOrEmpty(p.IpAddress) && p.IpAddress.StartsWith(ip + ":")))
             p.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
@@ -409,8 +387,6 @@ public partial class AdminPlus
         }
 
         string key = info.GetArg(1);
-        bool removed = false;
-        
         // A SteamID in any format unbans that SteamID64 directly, whether or not the player is online.
         if (TryNormalizeSteamId(key, out var normalizedKey))
         {
@@ -442,58 +418,47 @@ public partial class AdminPlus
         }
         
         string playerName = "Unknown";
-        string ip = "-";
-        string reason = "Unbanned";
+        string reason = Localizer["Discord.BanLog.UnbanReason"].Value;
+        var isIp = key.Contains('.');
 
         lock (_lock)
         {
-            if (SteamBans.ContainsKey(key))
+            if (SteamBans.TryGetValue(key, out var steamBan))
             {
-                var banInfo = SteamBans[key];
-                playerName = banInfo.nick; 
-                ip = banInfo.ip;
-                reason = Localizer["Discord.BanLog.UnbanReason"].Value;
+                playerName = steamBan.nick;
+                SteamBans.Remove(key);
             }
-            else if (IpBans.ContainsKey(key))
+            else if (IpBans.TryGetValue(key, out var ipBan))
             {
-                var banInfo = IpBans[key];
-                playerName = banInfo.nick; 
-                ip = key; 
+                playerName = ipBan.nick;
                 reason = Localizer["Discord.BanLog.UnbanIpReason"].Value;
-            }
-            
-            if (SteamBans.Remove(key))
-            {
-                File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(x => x.line));
-                removed = true;
-            }
-            if (IpBans.Remove(key))
-            {
-                File.WriteAllLines(BannedIpPath, IpBans.Values.Select(x => x.line));
-                removed = true;
+                IpBans.Remove(key);
             }
         }
 
-        // A SteamID is also unbanned on the website and every server, including bans issued from
-        // Discord or the website that this server's banned_user.cfg never had.
-        ReportUnban(key, caller);
-
+        // The database is where bans live: lifting happens there, for every server, and its answer says whether anything was banned.
         string executorName = GetExecutorName(caller);
-
-        if (removed)
+        var banKey = key;
+        void Finished(int? lifted)
         {
-            PlayerExtensions.PrintToAll(Localizer["Unban.Success", executorName, key]);
-            LogAction($"{executorName} unbanned {key}");
-            
-            AddTimer(0.1f, () => {
-                _ = Discord.SendBanLog(playerName, key, executorName, reason, "N/A", true, this);
+            Server.NextFrame(() =>
+            {
+                if (lifted is > 0)
+                {
+                    PlayerExtensions.PrintToAll(Localizer["Unban.Success", executorName, banKey]);
+                    LogAction($"{executorName} unbanned {banKey}");
+                    _ = Discord.SendBanLog(playerName, banKey, executorName, reason, "N/A", true, this);
+                }
+                else if (caller != null && caller.IsValid)
+                    caller.Print(lifted == null ? "{red}Could not reach the ban list. Try again." : Localizer["Unban.NotFound", banKey]);
+                else
+                    Console.WriteLine(lifted == null ? "Could not reach the ban list. Try again." : Localizer["Unban.NotFoundConsole", banKey]);
             });
         }
-        else
-        {
-            if (caller != null && caller.IsValid) caller.Print(Localizer["Unban.NotFound", key]);
-            else Console.WriteLine(Localizer["Unban.NotFoundConsole", key]);
-        }
+
+        if (!_centralPenaltiesEnabled) { Finished(null); return; }
+        if (isIp) ReportIpUnban(key, caller, Finished);
+        else ReportUnbanWithResult(key, caller, Finished);
     }
 
     private void CmdLastBan(CCSPlayerController? caller, CommandInfo info)
@@ -608,14 +573,8 @@ public partial class AdminPlus
 
                 if (isIpBan)
                 {
-                    var safeReason = SanitizeForCfg(reason);
-                    var line = $"addip \"{ip}\" expiry:0 // {safeReason}";
-
-                    lock (_lock)
-                    {
-                        IpBans[ip] = (0, line, safeName);
-                        File.WriteAllLines(BannedIpPath, IpBans.Values.Select(x => x.line));
-                    }
+                    RememberIpBan(ip, 0, safeName, reason);
+                    ReportIpBan(ip, 0, reason, admin);
 
                     PlayerExtensions.PrintToAll(Localizer["IpBan.AddedIp", admin.PlayerName, ip, reason]);
                     LogAction($"{admin.PlayerName} ip-banned {safeName} ({ip}). Reason: {reason}");
@@ -623,14 +582,7 @@ public partial class AdminPlus
                 else
                 {
                     var expiry = minutes == 0 ? 0 : DateTimeOffset.UtcNow.ToUnixTimeSeconds() + minutes * 60;
-                    var safeReason = SanitizeForCfg(reason);
-                    var line = $"banid \"{steamId}\" \"{safeName}\" ip:{ip} expiry:{expiry} // {safeReason}";
-
-                    lock (_lock)
-                    {
-                        SteamBans[steamId.ToString()] = (expiry, line, safeName, ip);
-                        File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(x => x.line));
-                    }
+                    RememberSteamBan(steamId.ToString(), expiry, safeName, ip, reason);
                     ReportBan(steamId.ToString(), minutes, reason, admin);
 
                     if (minutes == 0)
@@ -900,131 +852,36 @@ public partial class AdminPlus
             return;
         }
 
-        int steamBanCount = 0;
-        int ipBanCount = 0;
-
-        lock (_lock)
+        // Bans are kept in the database only, so clearing them is the website's job: an owner's in-game !cleanbans lifts them everywhere.
+        if (caller != null && caller.IsValid)
         {
-            steamBanCount = SteamBans.Count;
-            ipBanCount = IpBans.Count;
-            
-            SteamBans.Clear();
-            IpBans.Clear();
-            
-            File.WriteAllText(BannedUserPath, "");
-            File.WriteAllText(BannedIpPath, "");
-        }
-
-        if (caller != null && caller.IsValid)
-            caller.Print(Localizer["CleanBans.Success", steamBanCount, ipBanCount]);
-        else
-            Console.WriteLine(Localizer["CleanBans.Console", steamBanCount, ipBanCount]);
-            
-        LogAction($"All bans cleared by {GetExecutorName(caller)}. SteamID: {steamBanCount}, IP: {ipBanCount}");
-
-        // An owner's !cleanbans also clears every ban on the website and the other servers. The
-        // console has no website identity, so from there only this server's files are cleared.
-        if (caller != null && caller.IsValid)
+            LogAction($"All bans cleared by {GetExecutorName(caller)}.");
             ReportAllBansCleared(caller);
+        }
         else
-            Console.WriteLine("[LEGACY-X Admin] Website bans are unchanged: run !cleanbans in-game as an owner to clear them everywhere.");
+            Console.WriteLine("[LEGACY-X Admin] Bans are kept on the website: run !cleanbans in-game as an owner to clear them everywhere.");
     }
 
-    private void CmdCleanIpBans(CCSPlayerController? caller, CommandInfo info)
+    private void CmdCleanIpBans(CCSPlayerController? caller, CommandInfo info) => TellBansLiveOnWebsite(caller);
+
+    private void TellBansLiveOnWebsite(CCSPlayerController? caller)
     {
-        if (caller != null && (!caller.IsValid || !AdminManager.PlayerHasPermissions(caller, "@css/root")))
-        {
-            if (caller.IsValid) caller.Print(Localizer["NoPermission"]);
-            return;
-        }
-
-        int ipBanCount = 0;
-
-        lock (_lock)
-        {
-            ipBanCount = IpBans.Count;
-            IpBans.Clear();
-            File.WriteAllText(BannedIpPath, "");
-        }
-
-        if (caller != null && caller.IsValid)
-            caller.Print(Localizer["CleanIpBans.Success", ipBanCount]);
-        else
-            Console.WriteLine(Localizer["CleanIpBans.Console", ipBanCount]);
-            
-        LogAction($"All IP bans cleared by {GetExecutorName(caller)}. Count: {ipBanCount}");
+        const string message = "Bans are kept on the website. Lift one with !unban, or clear them all with !cleanbans as an owner.";
+        if (caller != null && caller.IsValid) caller.PrintToChat(LegacyXChat.System(message));
+        else Console.WriteLine($"[LEGACY-X Admin] {message}");
     }
 
     private string FindSteamIdByName(string playerName)
     {
-        try
+        lock (_lock)
         {
-            if (File.Exists(BannedUserPath))
-            {
-                foreach (var line in File.ReadAllLines(BannedUserPath))
-                {
-                    var match = System.Text.RegularExpressions.Regex.Match(line, @"banid\s+""([^""]+)""\s+""([^""]+)""");
-                    if (match.Success)
-                    {
-                        string steamId = match.Groups[1].Value;
-                        string fullPlayerName = match.Groups[2].Value;
-                        
-                        if (fullPlayerName.Contains(playerName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            return steamId;
-                        }
-                    }
-                }
-            }
-            
-            if (File.Exists(BannedIpPath))
-            {
-                foreach (var line in File.ReadAllLines(BannedIpPath))
-                {
-                    var match = System.Text.RegularExpressions.Regex.Match(line, @"addip\s+""([^""]+)""\s+expiry:\d+\s+//\s+[^(]*\(Player:\s+([^)]+)\)");
-                    if (match.Success)
-                    {
-                        string ip = match.Groups[1].Value;
-                        string fullPlayerName = match.Groups[2].Value;
-                        
-                        if (fullPlayerName.Contains(playerName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            return ip; 
-                        }
-                    }
-                }
-            }
+            foreach (var kv in SteamBans)
+                if (kv.Value.nick.Contains(playerName, StringComparison.OrdinalIgnoreCase)) return kv.Key;
+            foreach (var kv in IpBans)
+                if (kv.Value.nick.Contains(playerName, StringComparison.OrdinalIgnoreCase)) return kv.Key;
         }
-        catch (Exception ex)
-        {
-            LogError($"finding Steam ID by name: {ex.Message}");
-        }
-        
         return "";
     }
 
-    private void CmdCleanSteamBans(CCSPlayerController? caller, CommandInfo info)
-    {
-        if (caller != null && (!caller.IsValid || !AdminManager.PlayerHasPermissions(caller, "@css/root")))
-        {
-            if (caller.IsValid) caller.Print(Localizer["NoPermission"]);
-            return;
-        }
-
-        int steamBanCount = 0;
-
-        lock (_lock)
-        {
-            steamBanCount = SteamBans.Count;
-            SteamBans.Clear();
-            File.WriteAllText(BannedUserPath, "");
-        }
-
-        if (caller != null && caller.IsValid)
-            caller.Print(Localizer["CleanSteamBans.Success", steamBanCount]);
-        else
-            Console.WriteLine(Localizer["CleanSteamBans.Console", steamBanCount]);
-            
-        LogAction($"All SteamID bans cleared by {GetExecutorName(caller)}. Count: {steamBanCount}");
-    }
+    private void CmdCleanSteamBans(CCSPlayerController? caller, CommandInfo info) => TellBansLiveOnWebsite(caller);
 }

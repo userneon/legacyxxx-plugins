@@ -14,9 +14,8 @@ namespace AdminPlus;
 /// <summary>
 /// Game → API → database: every ban, unban, mute and gag issued on this server is also recorded in
 /// the LEGACY-X database, so it shows on legacyx.cc/penalties, the player's profile and the Discord
-/// penalties feed, and (bans) is enforced on every server. The local banned_user.cfg and
-/// communication files keep working exactly as before; if the API is unreachable only the record is
-/// missing. Uses LEGACYX_ADMIN_API_BASE_URL and LEGACYX_ADMIN_PLUGIN_SECRET, which then needs bans:write.
+/// penalties feed, and (bans) is enforced on every server. Bans are kept in the database only (no
+/// banned_user.cfg); if the API is unreachable a new ban is not recorded. Uses LEGACYX_ADMIN_API_BASE_URL and LEGACYX_ADMIN_PLUGIN_SECRET, which then needs bans:write.
 /// </summary>
 public partial class AdminPlus
 {
@@ -76,13 +75,6 @@ public partial class AdminPlus
             source = "game",
             issuerSteamId,
         }, $"ban {steamId64}");
-    }
-
-    /// <summary>Lifts every central ban of the SteamID, including ones issued on the website or Discord.</summary>
-    internal void ReportUnban(string steamId64, CCSPlayerController? caller)
-    {
-        if (!_centralPenaltiesEnabled || !SteamId64Pattern.IsMatch(steamId64)) return;
-        Send("/api/v1/plugin/bans/revoke", new { steamId = steamId64, issuerName = PenaltyIssuerName(caller), reason = "Lifted in-game" }, $"unban {steamId64}");
     }
 
     /// <summary>

@@ -35,8 +35,6 @@ public partial class AdminPlus : BasePlugin
     public override string ModuleVersion => "1.0.8-legacyx.1";
     public override string ModuleAuthor => "LEGACY-X Community · upstream debr1sj (MIT)";
 
-    internal static string BannedUserPath = string.Empty;
-    internal static string BannedIpPath = string.Empty;
     internal static Dictionary<string, (long expiry, string line, string nick, string ip)> SteamBans = new();
     internal static Dictionary<string, (long expiry, string line, string nick)> IpBans = new();
     internal static object _lock = new();
@@ -44,9 +42,6 @@ public partial class AdminPlus : BasePlugin
     private const int MAX_DISCONNECTED_PLAYERS = 50;
     
     private static readonly HashSet<ulong> _loggedPlayers = new();
-    private DateTime _lastBanCacheRefreshUtc = DateTime.MinValue;
-    private DateTime _lastUserBanWriteUtc = DateTime.MinValue;
-    private DateTime _lastIpBanWriteUtc = DateTime.MinValue;
     
 
     private Timer? cleanupTimer;
@@ -116,10 +111,7 @@ public partial class AdminPlus : BasePlugin
         InitializeCentralBans();
         InitializeCentralPenalties();
 
-            BannedUserPath = Path.Combine(Server.GameDirectory, "csgo/cfg/banned_user.cfg");
-            BannedIpPath = Path.Combine(Server.GameDirectory, "csgo/cfg/banned_ip.cfg");
 
-        LoadBans();
         StartCleanup();
         
         Discord.LoadConfig();
@@ -364,8 +356,6 @@ public partial class AdminPlus : BasePlugin
 
     private void EnforceBan(int playerSlot)
     {
-        TryRefreshBanCacheIfChanged();
-
         var player = Utilities.GetPlayerFromSlot(playerSlot);
         if (player == null || !player.IsValid || player.IsBot) return;
 
@@ -397,32 +387,6 @@ public partial class AdminPlus : BasePlugin
         }
     }
 
-    private void TryRefreshBanCacheIfChanged()
-    {
-        try
-        {
-            var now = DateTime.UtcNow;
-            if ((now - _lastBanCacheRefreshUtc).TotalMilliseconds < 800)
-                return;
-
-            _lastBanCacheRefreshUtc = now;
-
-            var userWrite = File.Exists(BannedUserPath) ? File.GetLastWriteTimeUtc(BannedUserPath) : DateTime.MinValue;
-            var ipWrite = File.Exists(BannedIpPath) ? File.GetLastWriteTimeUtc(BannedIpPath) : DateTime.MinValue;
-
-            if (userWrite != _lastUserBanWriteUtc || ipWrite != _lastIpBanWriteUtc)
-            {
-                LoadBans();
-                _lastUserBanWriteUtc = userWrite;
-                _lastIpBanWriteUtc = ipWrite;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[LEGACY-X Admin] Ban cache refresh check failed: {ex.Message}");
-        }
-    }
-
     private void NotifyBlockedBan(CCSPlayerController player, string banType, string banKey)
     {
         var safeName = SanitizeName(player.PlayerName);
@@ -443,139 +407,6 @@ public partial class AdminPlus : BasePlugin
         AddTimer(3.0f, () => EnforceBan(playerSlot));
         AddTimer(6.0f, () => EnforceBan(playerSlot));
         AddTimer(10.0f, () => EnforceBan(playerSlot));
-    }
-
-    internal void LoadBans()
-    {
-        lock (_lock)
-        {
-            SteamBans.Clear();
-            IpBans.Clear();
-
-            try
-            {
-                int steamCount = 0, ipCount = 0;
-
-                if (File.Exists(BannedUserPath))
-                {
-                    foreach (var line in File.ReadAllLines(BannedUserPath))
-                    {
-                        if (TryParseSteamBanLine(line, out var key, out var expiry, out var nick, out var ip))
-                        {
-                            SteamBans[key] = (expiry, line, nick, ip);
-                            steamCount++;
-                        }
-                    }
-                }
-                else
-                {
-                    CreateEmptyBanFile(BannedUserPath, "SteamID");
-                }
-
-                if (File.Exists(BannedIpPath))
-                {
-                    foreach (var line in File.ReadAllLines(BannedIpPath))
-                    {
-                        if (TryParseIpBanLine(line, out var key, out var expiry, out var nick))
-                        {
-                            IpBans[key] = (expiry, line, nick);
-                            ipCount++;
-                        }
-                    }
-                }
-                else
-                {
-                    CreateEmptyBanFile(BannedIpPath, "IP");
-                }
-
-            }
-            catch (Exception ex)
-            {
-                LogError($"{ex.Message}");
-            }
-        }
-    }
-
-    private void CreateEmptyBanFile(string filePath, string banType)
-    {
-        try
-        {
-            if (File.Exists(filePath))
-            {
-                return;
-            }
-
-            var directory = Path.GetDirectoryName(filePath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            string header;
-            if (banType == "SteamID")
-            {
-                header = $"// {banType} ban list - LEGACY-X Admin\n" +
-                        $"// Format: banid \"STEAM_ID\" \"PLAYER_NAME\" ip:IP_ADDRESS expiry:EXPIRY_TIME // REASON\n" +
-                        $"// Example: banid \"STEAM_1:0:123456789\" \"PlayerName\" ip:192.168.1.1 expiry:0 // Cheating\n\n";
-            }
-            else
-            {
-                header = $"// {banType} ban list - LEGACY-X Admin\n" +
-                        $"// Format: addip \"IP_ADDRESS\" expiry:0 // REASON\n" +
-                        $"// Example: addip \"192.168.1.1\" expiry:0 // Cheating\n\n";
-            }
-
-            File.WriteAllText(filePath, header);
-        }
-        catch (Exception ex)
-        {
-            LogError($"Failed to create {banType.ToLower()} ban file: {ex.Message}");
-        }
-    }
-
-    private bool TryParseSteamBanLine(string line, out string key, out long expiry, out string nick, out string ip)
-    {
-        key = ""; expiry = 0; nick = "Unknown"; ip = "-";
-
-        try
-        {
-            var match = Regex.Match(line, @"^\s*banid\s+""([^""]+)""\s+""([^""]+)""\s+ip:([^\s]+)\s+expiry:(\d+)");
-            if (match.Success)
-            {
-                key = match.Groups[1].Value;
-                nick = match.Groups[2].Value;
-                ip = match.Groups[3].Value;
-                expiry = long.Parse(match.Groups[4].Value);
-                return true;
-            }
-        }
-        catch (Exception ex)
-        {
-            LogError($"SteamBan parse error: {ex.Message}");
-        }
-        return false;
-    }
-
-    private bool TryParseIpBanLine(string line, out string key, out long expiry, out string nick)
-    {
-        key = ""; expiry = 0; nick = "Unknown";
-
-        try
-        {
-            var match = Regex.Match(line, @"^\s*addip\s+\""(.*?)\""\s+expiry:(\d+)(?:\s*//\s*(.+))?");
-            if (match.Success)
-            {
-                key = match.Groups[1].Value;
-                expiry = long.Parse(match.Groups[2].Value);
-                nick = match.Groups[3].Success ? match.Groups[3].Value : "Unknown";
-                return true;
-            }
-        }
-        catch (Exception ex)
-        {
-            LogError($"IpBan parse error: {ex.Message}");
-        }
-        return false;
     }
 
     private void PrintPluginVersionToConsole(CCSPlayerController? caller)
@@ -739,19 +570,6 @@ public partial class AdminPlus : BasePlugin
                 steamToRemove.ForEach(key => SteamBans.Remove(key));
                 ipToRemove.ForEach(key => IpBans.Remove(key));
 
-                if (steamToRemove.Count > 0 || ipToRemove.Count > 0)
-                {
-                    try
-                    {
-                        File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(v => v.line));
-                        File.WriteAllLines(BannedIpPath, IpBans.Values.Select(v => v.line));
-                Console.WriteLine($"[LEGACY-X Admin] Cleaned up {steamToRemove.Count} expired Steam bans and {ipToRemove.Count} expired IP bans");
-                    }
-                    catch (Exception ex)
-                    {
-                        LogError($"Cleanup write error: {ex.Message}");
-                    }
-                }
             }
 
             var reportCutoff = DateTime.Now.AddMinutes(-10);

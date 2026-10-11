@@ -601,13 +601,7 @@ public partial class AdminPlus
             int minutes = 30;
 
             var expiry = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + minutes * 60;
-            var line = $"banid \"{steamId}\" \"{playerName}\" ip:{ip} expiry:{expiry} // {reason}";
-
-            lock (_lock)
-            {
-                SteamBans[steamId] = (expiry, line, playerName, ip);
-                File.WriteAllLines(BannedUserPath, SteamBans.Values.Select(x => x.line));
-            }
+            RememberSteamBan(steamId, expiry, playerName, ip, reason);
 
             _targetPlayer.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
             ReportBan(steamId, minutes, reason, null, "Vote ban");
