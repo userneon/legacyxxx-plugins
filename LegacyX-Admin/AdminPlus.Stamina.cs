@@ -69,6 +69,8 @@ public partial class AdminPlus
     private void RunStaminaCheckedServerCommand(CCSPlayerController admin, string command)
     {
         var safeCommand = command ?? string.Empty;
+        // One command only: a ";" or a line break would let typed text run a second one.
+        if (safeCommand.Contains(';') || safeCommand.Contains('\n') || safeCommand.Contains('\r')) return;
         var token = safeCommand.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries)[0];
         if (token.Length == 0 || !HasCommandAccess(admin, token))
         {

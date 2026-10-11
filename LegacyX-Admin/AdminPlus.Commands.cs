@@ -1102,13 +1102,25 @@ public partial class AdminPlus
 
     private void ForceChangeMap(CCSPlayerController? caller, string mapName)
     {
+        // The name goes into a server console line, so it may only be a plain map name or a Workshop ID: a ";" would run any other command.
         if (mapName.StartsWith("workshop/", StringComparison.OrdinalIgnoreCase))
         {
-            string workshopId = mapName.Replace("workshop/", "");
+            string workshopId = mapName["workshop/".Length..];
+            if (!ulong.TryParse(workshopId, out _))
+            {
+                SendErrorMessage(caller, "Map.InvalidWorkshop", "Invalid Workshop ID!");
+                return;
+            }
             Server.ExecuteCommand($"host_workshop_map {workshopId}");
 
             var executorName = GetExecutorNameCommand(caller);
             PlayerExtensions.PrintToAll(Localizer["Map.WorkshopChanged", executorName, workshopId]);
+            return;
+        }
+
+        if (!System.Text.RegularExpressions.Regex.IsMatch(mapName, @"^[A-Za-z0-9_\-]{1,64}$"))
+        {
+            SendErrorMessage(caller, "Map.NotFound", $"Map not found: {mapName}", mapName);
             return;
         }
 
