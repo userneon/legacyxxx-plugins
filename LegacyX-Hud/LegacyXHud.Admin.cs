@@ -12,14 +12,12 @@ using CssTimer = CounterStrikeSharp.API.Modules.Timers.Timer;
 
 namespace LegacyXHud;
 
-// The admin panel (legacyx_admin): LegacyX-Admin's !admin opens it (lx_hud_admin open <slot>) when this plugin is loaded.
+// The admin panel (legacyx_admin): LegacyX-Admin's !admin asks for it (lx_hud_admin open <slot>), and this plugin answers
+// lx_admin_hud_ack <slot> so that LegacyX-Admin does not open its chat menu.
 // Players and Server pages, and the Ban step. Every action goes back to LegacyX-Admin as lx_admin_do <actor> <action> ...,
 // which checks the clicking staff member's own rights; the panel only greys out buttons the viewer cannot use.
 public sealed partial class LegacyXHud
 {
-    // A sentinel LegacyX-Admin looks for before it hands !admin to this panel.
-    private readonly FakeConVar<bool> adminReady = new("lx_hud_admin_ready", "LegacyX-Hud's admin panel is available", true);
-
     private string adminLayout = LayoutDir + "legacyx_admin.vxml_c";
     private PanelHandle? admin;
     private bool adminListening;
@@ -118,7 +116,13 @@ public sealed partial class LegacyXHud
         switch (command.GetArg(1).ToLowerInvariant())
         {
             case "open" when int.TryParse(command.GetArg(2), out var slot):
-                if (Utilities.GetPlayerFromSlot(slot) is { IsValid: true, IsBot: false } who) OpenAdmin(who);
+                // Tell LegacyX-Admin this panel has the request, so it does not open its chat menu.
+                Server.ExecuteCommand($"lx_admin_hud_ack {slot}");
+                if (Utilities.GetPlayerFromSlot(slot) is { IsValid: true, IsBot: false } who)
+                {
+                    Console.WriteLine($"[{ModuleName}] Admin panel requested by {who.PlayerName}");
+                    OpenAdmin(who);
+                }
                 break;
             case "status" when command.ArgCount >= 6 && int.TryParse(command.GetArg(2), out var actorSlot) && int.TryParse(command.GetArg(3), out var targetSlot):
                 if (!adminViews.TryGetValue(actorSlot, out var view) || view.Selected != targetSlot) break;
@@ -142,7 +146,12 @@ public sealed partial class LegacyXHud
             actor.PrintToChat(" The admin panel is not available on this server right now.");
             return;
         }
-        if (!OpenFor(panel, actor)) return;
+        if (!OpenFor(panel, actor))
+        {
+            Console.WriteLine($"[{ModuleName}] Admin panel could not be opened for {actor.PlayerName}: no session for the layout (is the Workshop addon with legacyx_admin downloaded?)");
+            actor.PrintToChat(" The admin panel could not be opened. Rejoin once so your game downloads the latest addon.");
+            return;
+        }
         adminSent.Remove(actor.Slot);
         foreach (var key in applied.Keys.Where(k => k.Slot == actor.Slot && (k.PanelId.StartsWith("adm", StringComparison.Ordinal) || k.PanelId.StartsWith("pl_", StringComparison.Ordinal) || k.PanelId.StartsWith("ban", StringComparison.Ordinal))).ToList())
             applied.Remove(key);

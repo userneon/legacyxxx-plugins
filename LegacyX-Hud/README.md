@@ -14,8 +14,8 @@ Another plugin calls it through a server command: `lx_hud_knife start <2|3> | st
 The welcome card and the menu read the API like LegacyX-Community does (`LEGACYX_API_BASE_URL`,
 `LEGACYX_COMMUNITY_PLUGIN_ID/TOKEN`); without them the rank part stays empty.
 
-**Admin panel** (staff, `!admin`): when this plugin is loaded, LegacyX-Admin opens the panel instead of its chat menu (`lx_hud_admin open <slot>`; it
-looks for the `lx_hud_admin_ready` sentinel). Players page: the list, a player's SteamID, IP (only for staff who may ban), penalties, and Kick, Ban…, Slay,
+**Admin panel** (staff, `!admin`): when this plugin is loaded, LegacyX-Admin opens the panel instead of its chat menu (`lx_hud_admin open <slot>`, answered with
+`lx_admin_hud_ack <slot>`; with no answer in 0.4 s the chat menu opens). Players page: the list, a player's SteamID, IP (only for staff who may ban), penalties, and Kick, Ban…, Slay,
 Respawn, Mute, Gag, Silence, Move team. Server page: change map, back to warmup (second click within 10 seconds), clean weapons, restart round. The Ban…
 step picks Ban or IP ban, a length and a reason; mute, gag and silence ask for a length. Every button goes back to LegacyX-Admin as
 `lx_admin_do <actorSlot> <action> …`, which checks that staff member's own rights, so the greyed-out buttons are only a hint. Hold R closes it.

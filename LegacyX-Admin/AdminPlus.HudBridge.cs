@@ -19,8 +19,15 @@ public partial class AdminPlus
     /// <summary>Commands the panel may run for an actor through RunServerCmd (which checks that actor's access to each).</summary>
     private static readonly string[] HudCommands = { "css_slay", "css_respawn", "css_team", "css_clean", "css_rr", "css_map", "css_unmute", "css_ungag", "css_unsilence", "css_unban" };
 
+    /// <summary>Slots whose !admin LegacyX-Hud has taken (it answers lx_admin_hud_ack right away); the others get the chat menu.</summary>
+    private readonly System.Collections.Generic.HashSet<int> _hudAnswered = new();
+
     private void RegisterHudBridge()
     {
+        AddCommand("lx_admin_hud_ack", "LegacyX-Hud admin panel took this !admin: lx_admin_hud_ack <slot>", (caller, info) =>
+        {
+            if (caller == null && int.TryParse(info.GetArg(1), out var slot)) _hudAnswered.Add(slot);
+        });
         AddCommand("lx_admin_do", "LegacyX-Hud admin panel: lx_admin_do <actorSlot> <action> <targetSlot> [args]", HudDo);
         AddCommand("lx_admin_status", "LegacyX-Hud admin panel: lx_admin_status <actorSlot> <targetSlot>", HudStatus);
     }

@@ -68,13 +68,20 @@ public partial class AdminPlus
             return;
         }
 
-        // With LegacyX-Hud loaded the panel in the game's own UI replaces the chat menu.
-        if (ConVar.Find("lx_hud_admin_ready") != null)
+        // With LegacyX-Hud loaded the panel in the game's own UI replaces the chat menu: ask it to open, and if it does not
+        // answer within a moment (it is not loaded, or its layout is missing) the chat menu opens as before.
+        var slot = caller.Slot;
+        _hudAnswered.Remove(slot);
+        Server.ExecuteCommand($"lx_hud_admin open {slot}");
+        AddTimer(0.4f, () =>
         {
-            Server.ExecuteCommand($"lx_hud_admin open {caller.Slot}");
-            return;
-        }
+            if (_hudAnswered.Remove(slot)) return;
+            if (caller.IsValid) ShowChatAdminMenu(caller, info);
+        });
+    }
 
+    private void ShowChatAdminMenu(CCSPlayerController caller, CommandInfo info)
+    {
         var menu = CreateMenu("Admin");
         List<ChatMenuOptionData> options = [];
 
