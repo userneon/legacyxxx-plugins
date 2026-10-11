@@ -736,8 +736,7 @@ pm2 restart all && sudo systemctl restart 'cs2@*'
 | **[Hostinger]** | Одоогийн VPS: вэб, API, Discord bot, хуучин CS2 серверүүд |
 | **[Шинэ VPS]** | Монгол VPS: CS2 серверүүд энд шилжинэ |
 
-**Юу нүүх вэ:** plugin `.env`, `/etc/legacyx/cs2/*.conf` (GSLT, map), `banned_user.cfg`/`banned_ip.cfg`
-(локал ban), `communication_data.json` (mute/gag), `plugins/LegacyX-MatchZy/matchzy.db` (MatchZy stats),
+**Юу нүүх вэ:** plugin `.env`, `/etc/legacyx/cs2/*.conf` (GSLT, map), `plugins/LegacyX-MatchZy/matchzy.db` (MatchZy stats),
 `cfg/MatchZy` (lineup, whitelist, spawn), `configs/` (`core.json`,
 plugin тохиргоо). Өөрчлөгдөх зүйл ганц мөр: `.env` дахь `LEGACYX_SERVER_HOST=<ШИНЭ-IP>`. Backend, bot,
 вэб, nginx, SSL, Supabase-д хүрэхгүй. Тоглогч, ban, match бүгд Supabase-д байгаа тул алдагдахгүй.
@@ -790,9 +789,9 @@ for c in /etc/legacyx/cs2/*.conf; do sudo systemctl disable --now "cs2@$(basenam
 sudo bash -c '
 CS=/home/cs2/cs2/game/csgo
 OUT=/root/legacyx-game-$(date +%Y%m%d-%H%M).tar.gz
-LIST=$(for p in /etc/legacyx $CS/cfg/banned_user.cfg $CS/cfg/banned_ip.cfg $CS/cfg/MatchZy \
+LIST=$(for p in /etc/legacyx $CS/cfg/MatchZy \
   $CS/addons/counterstrikesharp/.env $CS/addons/counterstrikesharp/configs \
-  $(find $CS/addons/counterstrikesharp/plugins \( -name communication_data.json -o -name matchzy.db \) 2>/dev/null); do
+  $(find $CS/addons/counterstrikesharp/plugins -name matchzy.db 2>/dev/null); do
   [ -e "$p" ] && echo "${p#/}"; done)
 umask 077; tar -czf "$OUT" -C / $LIST && tar -tzf "$OUT"
 '

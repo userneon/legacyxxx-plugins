@@ -142,4 +142,32 @@ public partial class AdminPlus
         [JsonPropertyName("bansLifted")] public int BansLifted { get; set; }
         [JsonPropertyName("penaltiesLifted")] public int PenaltiesLifted { get; set; }
     }
+
+    private async Task<List<CentralCommPenalty>> FetchActiveCommPenaltiesAsync()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, _penaltyApiBaseUrl + "/api/v1/plugin/penalties/active");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _penaltyPluginSecret);
+        request.Headers.Add("x-plugin-id", _penaltyPluginId);
+        using var response = await PenaltyHttp.SendAsync(request);
+        if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"LEGACY-X API returned {(int)response.StatusCode}");
+        var body = await response.Content.ReadFromJsonAsync<CentralCommResponse>();
+        return body?.Penalties ?? [];
+    }
+}
+
+internal sealed class CentralCommResponse
+{
+    [JsonPropertyName("penalties")] public List<CentralCommPenalty> Penalties { get; set; } = [];
+}
+
+internal sealed class CentralCommPenalty
+{
+    [JsonPropertyName("steamId")] public string SteamId { get; set; } = string.Empty;
+    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("type")] public string Type { get; set; } = string.Empty;
+    [JsonPropertyName("reason")] public string Reason { get; set; } = string.Empty;
+    [JsonPropertyName("isPermanent")] public bool IsPermanent { get; set; }
+    [JsonPropertyName("expiresAt")] public DateTimeOffset? ExpiresAt { get; set; }
+    [JsonPropertyName("createdAt")] public DateTimeOffset CreatedAt { get; set; }
+    [JsonPropertyName("issuer")] public string Issuer { get; set; } = string.Empty;
 }

@@ -147,12 +147,6 @@ public partial class AdminPlus : BasePlugin
         try
         {
             Directory.CreateDirectory(ModuleDirectory);
-
-            var communicationDataPath = Path.Combine(ModuleDirectory, "communication_data.json");
-            if (!File.Exists(communicationDataPath))
-            {
-                File.WriteAllText(communicationDataPath, "[]" + Environment.NewLine);
-            }
         }
         catch (Exception ex)
         {

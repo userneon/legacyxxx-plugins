@@ -7,6 +7,7 @@ using CounterStrikeSharp.API.Modules.Events;
 using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
+using LegacyX.Shared.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,8 +20,6 @@ namespace AdminPlus;
 
 public partial class AdminPlus
 {
-    private string CommunicationDataPath => Path.Combine(ModuleDirectory, "communication_data.json");
-    
 
     private List<CommunicationPunishment> _communicationPunishments = new();
 
@@ -30,7 +29,8 @@ public partial class AdminPlus
     private Timer? _expiredCheckTimer;
     private Timer? _syncTimer;
     private DateTime _lastCommRefreshUtc = DateTime.MinValue;
-    private DateTime _lastCommDataWriteUtc = DateTime.MinValue;
+    private DateTime _commLocalChangeUtc = DateTime.MinValue;
+    private DateTime _commErrorLogUtc = DateTime.MinValue;
     private readonly HashSet<string> _allowedChatCommands = new(StringComparer.OrdinalIgnoreCase)
     {
         "rtv", "nominate", "timeleft", "rank", "top", "help", "rules",
@@ -136,32 +136,59 @@ public partial class AdminPlus
         
     }
 
-    private void LoadCommunicationData()
+    /// <summary>Mutes and gags live only in the database; this reads them (at start and every few seconds).</summary>
+    private void LoadCommunicationData() => _ = RefreshCommunicationAsync();
+
+    private async System.Threading.Tasks.Task RefreshCommunicationAsync()
     {
+        if (!_centralPenaltiesEnabled) return;
+        var startedAt = DateTime.UtcNow;
+        List<CentralCommPenalty> rows;
         try
         {
-            if (File.Exists(CommunicationDataPath))
-            {
-                var json = File.ReadAllText(CommunicationDataPath);
-                var allPunishments = JsonSerializer.Deserialize<List<CommunicationPunishment>>(json) ?? new List<CommunicationPunishment>();
-
-                int expiredCount = allPunishments.RemoveAll(p => p.IsExpired);
-                _communicationPunishments = allPunishments;
-
-                SyncMuteSystemsFromJson();
-
-                if (expiredCount > 0)
-                {
-                    SaveCommunicationData();
-                }
-
-                _lastCommDataWriteUtc = File.GetLastWriteTimeUtc(CommunicationDataPath);
-            }
+            rows = await FetchActiveCommPenaltiesAsync();
         }
         catch (Exception ex)
         {
-            LogError($"{ex.Message}");
+            if (DateTime.UtcNow - _commErrorLogUtc > TimeSpan.FromMinutes(5))
+            {
+                _commErrorLogUtc = DateTime.UtcNow;
+                LogError($"Mute and gag list refresh failed; the last copy stays: {ex.Message}");
+            }
+            return;
         }
+
+        var punishments = rows
+            .Where(row => ulong.TryParse(row.SteamId, out _))
+            .Select(row =>
+            {
+                var created = row.CreatedAt.ToLocalTime().DateTime;
+                var ends = row.IsPermanent || row.ExpiresAt == null ? DateTime.MaxValue : row.ExpiresAt.Value.ToLocalTime().DateTime;
+                return new CommunicationPunishment
+                {
+                    SteamID = ulong.Parse(row.SteamId),
+                    PlayerName = string.IsNullOrWhiteSpace(row.Name) ? "Unknown" : SanitizeName(row.Name),
+                    Type = row.Type == "gag" ? "GAG" : "MUTE",
+                    Duration = row.IsPermanent ? 0 : Math.Max(1, (int)Math.Round((ends - created).TotalMinutes)),
+                    Reason = row.Reason,
+                    AdminName = row.Issuer,
+                    AdminSteamID = 0,
+                    Created = created,
+                    EndTime = ends,
+                };
+            })
+            .Where(p => !p.IsExpired)
+            .ToList();
+
+        // Game state may only be touched on the main thread.
+        Server.NextFrame(() =>
+        {
+            // A mute or gag made on this server a moment ago may not have reached the database yet; keep it and refresh again later.
+            if (_commLocalChangeUtc > startedAt - TimeSpan.FromSeconds(3)) return;
+            _communicationPunishments = punishments;
+            foreach (var state in _commStates.Values) { state.Mute = null; state.Gag = null; }
+            SyncMuteSystemsFromJson();
+        });
     }
 
     private void SyncMuteSystemsFromJson()
@@ -218,43 +245,15 @@ public partial class AdminPlus
     private bool IsPunishmentActive(PunishEntry? entry)
         => entry != null && (entry.Permanent || (entry.Ends != null && entry.Ends > DateTime.Now));
 
-    private void SaveCommunicationData()
-    {
-        try
-        {
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(_communicationPunishments, options);
-            File.WriteAllText(CommunicationDataPath, json);
-            _lastCommDataWriteUtc = File.GetLastWriteTimeUtc(CommunicationDataPath);
-        }
-        catch (Exception ex)
-        {
-            LogError($"{ex.Message}");
-        }
-    }
+    /// <summary>Nothing is written to disk. This marks a local change so a refresh already under way does not undo it.</summary>
+    private void SaveCommunicationData() => _commLocalChangeUtc = DateTime.UtcNow;
 
     private void TryRefreshCommunicationDataIfChanged()
     {
-        try
-        {
-            if (!File.Exists(CommunicationDataPath))
-                return;
-
-            var now = DateTime.UtcNow;
-            if ((now - _lastCommRefreshUtc).TotalMilliseconds < 750)
-                return;
-
-            _lastCommRefreshUtc = now;
-            var currentWrite = File.GetLastWriteTimeUtc(CommunicationDataPath);
-            if (currentWrite == _lastCommDataWriteUtc)
-                return;
-
-            LoadCommunicationData();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[AdminPlus] Communication cache refresh check failed: {ex.Message}");
-        }
+        var now = DateTime.UtcNow;
+        if ((now - _lastCommRefreshUtc).TotalSeconds < 5) return;
+        _lastCommRefreshUtc = now;
+        LoadCommunicationData();
     }
 
     private void EnforceMutePunishments()
@@ -908,26 +907,10 @@ public partial class AdminPlus
             return;
         }
 
-        int beforeCount = _communicationPunishments.Count;
-        
-        Console.WriteLine(Localizer["CleanAll.Listing", beforeCount]);
-        foreach (var punishment in _communicationPunishments)
-        {
-            string duration = punishment.IsPermanent ? Localizer["Duration.Forever"] : $"{punishment.Duration} {Localizer["Duration.Minute"]}";
-            Console.WriteLine(Localizer["CleanAll.Item", punishment.PlayerName, punishment.SteamID, punishment.Type, duration]);
-        }
-        
-        _communicationPunishments.Clear();
-        _commStates.Clear();
-        
-        SaveCommunicationData();
-        
-        if (caller != null && caller.IsValid)
-            caller.Print(Localizer["CleanAll.Success", beforeCount, 0]);
-        else
-            Console.WriteLine(Localizer["CleanAll.Console", beforeCount, 0]);
-            
-        LogAction($"All communication punishments cleared by {GetExecutorName(caller)}. Count: {beforeCount}");
+        // Mutes and gags are kept in the database only; lift them one by one with !unmute / !ungag, or on the website.
+        const string message = "Mutes and gags are kept on the website. Lift them with !unmute / !ungag, or on the penalties page.";
+        if (caller != null && caller.IsValid) caller.PrintToChat(LegacyXChat.System(message));
+        else Console.WriteLine($"[LEGACY-X Admin] {message}");
     }
 
     private void CmdCleanMute(CCSPlayerController? caller, CommandInfo info)
@@ -938,24 +921,10 @@ public partial class AdminPlus
             return;
         }
 
-        int beforeCount = _communicationPunishments.Count(p => p.Type == "MUTE");
-        
-        _communicationPunishments.RemoveAll(p => p.Type == "MUTE");
-        
-        var muteKeys = _commStates.Where(kvp => kvp.Value.Mute != null).Select(kvp => kvp.Key).ToList();
-        foreach (var key in muteKeys)
-        {
-            _commStates[key].Mute = null;
-        }
-        
-        SaveCommunicationData();
-        
-        if (caller != null && caller.IsValid)
-            caller.Print(Localizer["CleanMute.Success", beforeCount]);
-        else
-            Console.WriteLine(Localizer["CleanMute.Console", beforeCount]);
-            
-        LogAction($"All mute punishments cleared by {GetExecutorName(caller)}. Count: {beforeCount}");
+        // Mutes and gags are kept in the database only; lift them one by one with !unmute / !ungag, or on the website.
+        const string message = "Mutes and gags are kept on the website. Lift them with !unmute / !ungag, or on the penalties page.";
+        if (caller != null && caller.IsValid) caller.PrintToChat(LegacyXChat.System(message));
+        else Console.WriteLine($"[LEGACY-X Admin] {message}");
     }
 
     private void CmdCleanGag(CCSPlayerController? caller, CommandInfo info)
@@ -966,24 +935,10 @@ public partial class AdminPlus
             return;
         }
 
-        int beforeCount = _communicationPunishments.Count(p => p.Type == "GAG");
-        
-        _communicationPunishments.RemoveAll(p => p.Type == "GAG");
-        
-        var gagKeys = _commStates.Where(kvp => kvp.Value.Gag != null).Select(kvp => kvp.Key).ToList();
-        foreach (var key in gagKeys)
-        {
-            _commStates[key].Gag = null;
-        }
-        
-        SaveCommunicationData();
-        
-        if (caller != null && caller.IsValid)
-            caller.Print(Localizer["CleanGag.Success", beforeCount]);
-        else
-            Console.WriteLine(Localizer["CleanGag.Console", beforeCount]);
-            
-        LogAction($"All gag punishments cleared by {GetExecutorName(caller)}. Count: {beforeCount}");
+        // Mutes and gags are kept in the database only; lift them one by one with !unmute / !ungag, or on the website.
+        const string message = "Mutes and gags are kept on the website. Lift them with !unmute / !ungag, or on the penalties page.";
+        if (caller != null && caller.IsValid) caller.PrintToChat(LegacyXChat.System(message));
+        else Console.WriteLine($"[LEGACY-X Admin] {message}");
     }
 
     public void CleanupCommunication()
