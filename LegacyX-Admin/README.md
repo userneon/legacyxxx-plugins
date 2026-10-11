@@ -27,7 +27,7 @@ The module's ban, admin, communication, and menu files are functional state file
 
 ## Languages
 
-Upstream languages live in `lang/` and retain their complete keys. Every supplied locale uses the `LEGACY-X Admin` prefix. A complete Mongolian translation is intentionally a separate reviewed localization task; the plugin falls back to English when the client has no matching translation file.
+Upstream languages live in `lang/` and retain their complete keys. Every supplied locale uses the `LEGACY-X Admin` prefix. `en.json` (the file used when the client language has no translation, which is every Mongolian player) is now Mongolian for everything players see in chat and menus; console, Help and Discord log lines stay English.
 
 ## Build
 
