@@ -82,6 +82,7 @@ public partial class AdminPlus
         {
             case "kick":
                 if (!HasEffectivePermission(actor, "@css/generic")) { actor.Print(Localizer["NoPermission"]); return; }
+                if (CheckImmunity(actor, target)) { actor.Print(Localizer["Punish.ImmunityBlocked"]); return; }
                 target.Disconnect(CounterStrikeSharp.API.ValveConstants.Protobuf.NetworkDisconnectionReason.NETWORK_DISCONNECT_KICKED);
                 PlayerExtensions.PrintToAll(Localizer["Player.Kick.Success", actor.PlayerName, SanitizeName(target.PlayerName), Localizer["Ban.NoReason"]]);
                 LogAction($"{actor.PlayerName} kicked {SanitizeName(target.PlayerName)} from the admin panel.");

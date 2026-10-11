@@ -660,6 +660,7 @@ public partial class AdminPlus
             {
                 if (HasEffectivePermission(admin, "@css/generic"))
                 {
+                    if (CheckImmunity(admin, p)) { admin.Print(Localizer["Punish.ImmunityBlocked"]); return; }
                     p.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_KICKED);
                     string reason = Localizer["Ban.NoReason"];
                     PlayerExtensions.PrintToAll(Localizer["Player.Kick.Success", admin.PlayerName, SanitizeName(p.PlayerName), reason]);
@@ -1055,6 +1056,13 @@ public partial class AdminPlus
         if (!HasEffectivePermission(admin, "@css/ban"))
         {
             admin.Print(Localizer["NoPermission"]);
+            return;
+        }
+
+        var live = Utilities.GetPlayers().FirstOrDefault(p => p != null && p.IsValid && p.SteamID == target.SteamId);
+        if (live != null && CheckImmunity(admin, live))
+        {
+            admin.Print(Localizer["Ban.ImmunityBlocked"]);
             return;
         }
 
