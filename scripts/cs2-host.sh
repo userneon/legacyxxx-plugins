@@ -27,6 +27,7 @@
 #       Workshop addon IDs every player downloads on connect (MultiAddonManager mm_client_extra_addons),
 #       e.g. the custom Panorama UI. No IDs prints the current value; "none" clears it. Restart the servers after.
 #   sudo ./scripts/cs2-host.sh remove <port>        stops and deletes that server's service and config
+#   sudo ./scripts/cs2-migrate.sh pack | unpack <file> <new host>   move the servers to another VPS (.env + server configs; see the script header)
 #   sudo ./scripts/announce.sh setup                 post what each update changed to a Discord channel
 #   ./scripts/cs2-host.sh status | logs <port>      what is running / that server's console
 #
