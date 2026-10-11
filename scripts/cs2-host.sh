@@ -27,6 +27,10 @@
 #       Workshop addon IDs every player downloads on connect (MultiAddonManager mm_client_extra_addons),
 #       e.g. the custom Panorama UI. No IDs prints the current value; "none" clears it. Restart the servers after.
 #   sudo ./scripts/cs2-host.sh remove <port>        stops and deletes that server's service and config
+#   sudo ./scripts/cs2-host.sh name <port> "<website name>" ["<in-game name>"]
+#       two separate names for one server: the website's (e.g. "Match 1") and the one players see in the server
+#       browser, scoreboard and console (e.g. "Match 10"). No second name keeps the in-game one as it is. Restarts nothing:
+#       run  sudo systemctl restart cs2@<port>  when no match is running.
 #   sudo ./scripts/cs2-migrate.sh pack | unpack <file> <new host>   move the servers to another VPS (.env + server configs; see the script header)
 #   sudo ./scripts/announce.sh setup                 post what each update changed to a Discord channel
 #   ./scripts/cs2-host.sh status | logs <port>      what is running / that server's console
@@ -237,7 +241,7 @@ Type=simple
 User=$CS2_USER
 WorkingDirectory=$CS2_DIR
 EnvironmentFile=$CONF_DIR/%i.conf
-ExecStart=/bin/bash -c 'exec $CS2_DIR/game/cs2.sh -dedicated -port %i -maxplayers \${MAXPLAYERS} +map \${MAP} \${GAME_ARGS} +sv_setsteamaccount \${GSLT}'
+ExecStart=/bin/bash -c 'exec $CS2_DIR/game/cs2.sh -dedicated -port %i -maxplayers \${MAXPLAYERS} +map \${MAP} \${GAME_ARGS} +sv_setsteamaccount \${GSLT} +hostname "\$\${GAME_NAME:-LEGACY-X}"'
 Restart=on-failure
 RestartSec=10
 LimitNOFILE=100000
@@ -376,6 +380,23 @@ EOF
   say "On the website it is srv-$port (it appears within 30 s of starting)."
 }
  
+cmd_name() {
+  need_root
+  local port="${1:-}" site="${2:-}" game="${3:-}"
+  [[ "$port" =~ ^[0-9]+$ && -n "$site" ]] || die "Usage: $0 name <port> \"<website name>\" [\"<in-game name>\"]"
+  [[ -f "$CONF_DIR/$port.conf" ]] || die "No server on port $port."
+  site="$(printf '%s' "$site" | tr -d '\r\n"=' | cut -c1-60)"
+  set_env_value "LEGACYX_${port}_SERVER_NAME" "$site"
+  say "Website name for $port: $site (shown within 30 s of the next heartbeat)"
+  if [[ -n "$game" ]]; then
+    game="$(printf '%s' "$game" | tr -d '\r\n"=$`\\' | cut -c1-60)"
+    sed -i '/^GAME_NAME=/d' "$CONF_DIR/$port.conf"
+    printf 'GAME_NAME="%s"\n' "$game" >> "$CONF_DIR/$port.conf"
+    write_unit
+    say "In-game name for $port: $game (applies at the next restart: sudo systemctl restart cs2@$port)"
+  fi
+}
+
 cmd_update() {
   need_root
   local package=""
@@ -595,6 +616,7 @@ cmd_status() {
 case "${1:-}" in
   install) shift; cmd_install "$@" ;;
   add) shift; cmd_add "$@" ;;
+  name) shift; cmd_name "$@" ;;
   update) shift; cmd_update "$@" ;;
   deploy) shift; cmd_deploy "$@" ;;
   env) cmd_env ;;
