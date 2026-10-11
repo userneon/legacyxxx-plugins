@@ -80,6 +80,7 @@ public sealed partial class LegacyXHud : BasePlugin
         // The entity system is not ready at plugin load: spawn after the first round starts.
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
         RegisterEventHandler<EventPlayerConnectFull>(OnPlayerConnectFull);
+        RegisterListener<Listeners.OnMapStart>(OnMapChanged);
         menuKeys = env.GetModuleBoolean("HUD", "MENU_KEYS", true);
         menuSounds = env.GetModuleBoolean("HUD", "MENU_SOUNDS", true);
         if (float.TryParse(env.GetModule("HUD", "MENU_SOUND_VOLUME", "1"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var volume))
@@ -114,6 +115,32 @@ public sealed partial class LegacyXHud : BasePlugin
         EnsureNotify();
         if (IsWarmup()) return HookResult.Continue;
         return HookResult.Continue;
+    }
+
+    /// <summary>
+    /// A new map destroys every panel entity this plugin spawned, so the handles it holds point at nothing and the HUD stays gone
+    /// for the rest of the session. Forget them (and what was drawn on them): each one is spawned again the next time it is used
+    /// (the notify layout at the first round start, the menu, the knife vote and the admin panel when they open).
+    /// </summary>
+    private void OnMapChanged(string mapName)
+    {
+        Console.WriteLine($"[{ModuleName}] Map {mapName}: the HUD layouts are spawned again when they are next used");
+        notify = knife = menu = admin = null;
+        menuListening = knifeListening = adminListening = false;
+        applied.Clear();
+        menuSent.Clear();
+        adminSent.Clear();
+        holds.Clear();
+        menuOpen.Clear();
+        adminViews.Clear();
+        knifeVotes.Clear();
+        skinViews.Clear();
+        generation.Clear();
+        knifeTimer?.Kill();
+        knifeTimer = null;
+        adminRefresh?.Kill();
+        adminRefresh = null;
+        rulesProxy = null;
     }
 
     private HookResult OnPlayerConnectFull(EventPlayerConnectFull e, GameEventInfo info)
