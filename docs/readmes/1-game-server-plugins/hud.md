@@ -37,6 +37,26 @@ default 1) scales them, `LEGACYX_HUD_MENU_SOUNDS=false` turns them off, `LEGACYX
 * The Workshop addon published and sent to players: `mm_client_extra_addons <ID>` (MultiAddonManager).
 * `LEGACYX_HUD_ENABLED=true` (default) in `CounterStrikeSharp/.env`.
 
+## Testing the HUD in your own game
+
+The server builds and loads the plugin; your own CS2 loads the Workshop addon, either from the Workshop or as a local build. Never both at once: every file would load twice
+and joining fails with an overflow error.
+
+```
+# VPS: deploy the plugins, stop sending the Workshop addon while you test your local copy, restart the server
+cd ~/legacyxxx-plugins && git pull && sudo ./scripts/deploy.sh /home/cs2/cs2/game/csgo
+sudo ./scripts/cs2-host.sh client-addons none
+sudo systemctl restart cs2@<port>
+
+# Windows (legacyxxx-workshop): git pull, tools\build.cmd -Local, then restart CS2 completely
+
+# When you are done: tools\build.cmd -Unlocal on the PC, then send the Workshop addon again
+sudo ./scripts/cs2-host.sh client-addons 3810642940
+sudo systemctl restart cs2@<port>
+```
+
+`3810642940` is LEGACY-X's Workshop item (publish the new build to it first). Use the full build, not `-Lite`, when staff need the admin panel.
+
 ## If nothing shows
 
 1. Console at start: `[LEGACY-X Hud] Ready. Layout ...`, or `Could not spawn ...: <reason>`.
