@@ -29,7 +29,10 @@
 #   sudo ./scripts/cs2-host.sh remove <port>        stops and deletes that server's service and config
 #   sudo ./scripts/cs2-host.sh name <port> "<website name>" ["<in-game name>"]
 #       two separate names for one server: the website's (e.g. "Match 1") and the one players see in the server
-#       browser, scoreboard and console (e.g. "Match 10"). No second name keeps the in-game one as it is. Restarts nothing:
+#       browser, scoreboard and console (e.g. "Match 10"). No second name makes the in-game one the same as the website name.
+#   sudo ./scripts/cs2-host.sh name-sync
+#       every server's in-game name = its website name, in one go.
+#       Restarts nothing:
 #       run  sudo systemctl restart cs2@<port>  when no match is running.
 #   sudo ./scripts/cs2-migrate.sh pack | unpack <file> <new host>   move the servers to another VPS (.env + server configs; see the script header)
 #   sudo ./scripts/announce.sh setup                 post what each update changed to a Discord channel
@@ -373,6 +376,7 @@ GSLT=$gslt
 MAP=$map
 MAXPLAYERS=$maxplayers
 GAME_ARGS="$args"
+GAME_NAME="${name:-LEGACY-X $port}"
 EOF
   open_port "$port"
   systemctl enable --now "cs2@$port" >/dev/null
@@ -388,6 +392,7 @@ cmd_name() {
   site="$(printf '%s' "$site" | tr -d '\r\n"=' | cut -c1-60)"
   set_env_value "LEGACYX_${port}_SERVER_NAME" "$site"
   say "Website name for $port: $site (shown within 30 s of the next heartbeat)"
+  [[ -n "$game" ]] || game="$site"
   if [[ -n "$game" ]]; then
     game="$(printf '%s' "$game" | tr -d '\r\n"=$`\\' | cut -c1-60)"
     sed -i '/^GAME_NAME=/d' "$CONF_DIR/$port.conf"
@@ -395,6 +400,22 @@ cmd_name() {
     write_unit
     say "In-game name for $port: $game (applies at the next restart: sudo systemctl restart cs2@$port)"
   fi
+}
+
+# Makes every server's in-game name the same as its website name (LEGACYX_<port>_SERVER_NAME in the .env).
+cmd_name_sync() {
+  need_root
+  local env="$CSGO_DIR/addons/counterstrikesharp/.env" port site changed=0
+  [[ -f "$env" ]] || die "No $env."
+  for port in $(ports); do
+    site="$(grep -m1 "^LEGACYX_${port}_SERVER_NAME=" "$env" | cut -d= -f2- | tr -d '\r\n"=$`\\' | cut -c1-60 || true)"
+    [[ -n "$site" ]] || { say "$port: no website name in the .env, skipped (set one: $0 name $port \"<name>\")"; continue; }
+    sed -i '/^GAME_NAME=/d' "$CONF_DIR/$port.conf"
+    printf 'GAME_NAME="%s"\n' "$site" >> "$CONF_DIR/$port.conf"
+    say "$port: in-game name = $site"; changed=1
+  done
+  [[ $changed -eq 1 ]] && write_unit && say "Applies at each server's next restart: sudo systemctl restart cs2@<port>"
+  return 0
 }
 
 cmd_update() {
@@ -617,6 +638,7 @@ case "${1:-}" in
   install) shift; cmd_install "$@" ;;
   add) shift; cmd_add "$@" ;;
   name) shift; cmd_name "$@" ;;
+  name-sync) cmd_name_sync ;;
   update) shift; cmd_update "$@" ;;
   deploy) shift; cmd_deploy "$@" ;;
   env) cmd_env ;;
