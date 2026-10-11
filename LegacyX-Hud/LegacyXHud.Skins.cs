@@ -168,7 +168,7 @@ public sealed partial class LegacyXHud
     {
         json = default;
         message = "";
-        if (status == 404) message = "Sign in on legacyx.cc with this Steam account to pick skins.";
+        if (status == 404) message = "Could not load skins. Try again.";
         else if (status != 200 || body is not { } found) message = "Could not load skins. Try again.";
         else json = found;
         return message.Length > 0;
@@ -308,7 +308,7 @@ public sealed partial class LegacyXHud
                     label = Text(ok, "label") ?? item.Name;
                     message = $"Equipped {label}.";
                 }
-                else if (status == 404) message = "Sign in on legacyx.cc with this Steam account to pick skins.";
+                else if (status == 404) message = "Could not load skins. Try again.";
                 else if (status == 409) message = "The server does not see you yet. Try again in a few seconds.";
                 else
                 {
