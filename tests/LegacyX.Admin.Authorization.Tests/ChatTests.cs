@@ -6,7 +6,7 @@ namespace LegacyX.Admin.Authorization.Tests;
 /// <summary>Chat lines reach players in the LEGACY-X palette, as written, never with literal {tags}.</summary>
 public class ChatTests
 {
-    private const string Prefix = " \u0001LEGACY-\u0007X \u0008• ";
+    private const string Prefix = " \u0001LEGACY-\u000EX \u0008• ";
 
     [Fact]
     public void SystemMessagesUseThePrefixAndKeepTheText()

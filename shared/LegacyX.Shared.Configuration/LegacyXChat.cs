@@ -19,8 +19,8 @@ public static class LegacyXChat
     private const char Green = '\x04';
     private const char Grey = '\x08';
     private const char Silver = '\x0A';
-    // Chat has no exact #e11d48; red is the nearest crimson.
-    private const char Brand = '\x07';
+    // Chat has no exact #8b5cf6; Purple (\x0E) is the nearest violet.
+    private const char Brand = '\x0E';
 
     // The tags a message may use ({white}, {grey}, {green}), and what every other color tag becomes.
     // {default} means "back to the body color", which is grey. {brand} is for the prefix only.

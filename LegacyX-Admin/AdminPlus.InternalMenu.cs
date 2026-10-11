@@ -485,7 +485,7 @@ public partial class AdminPlus
     private const string MenuDim = "#a3a3a3";
     private const string MenuFaint = "#737373";
     private const string MenuOff = "#525252";
-    private const string MenuBrand = "#e11d48";
+    private const string MenuBrand = "#8b5cf6";
 
     private static string MenuEscape(string? text) => System.Net.WebUtility.HtmlEncode(text ?? string.Empty);
 
