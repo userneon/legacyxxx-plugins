@@ -969,9 +969,15 @@ public partial class AdminPlus
             caller.Print(Localizer["Rcon.Sent", executorName, cmd]);
     }
 
+    /// <summary>Cvars that hold a secret or open the server up: never read or changed through chat or console commands.</summary>
+    private static readonly HashSet<string> ProtectedCvars = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "rcon_password", "sv_password", "sv_setsteamaccount", "tv_password", "tv_relaypassword", "tv_adminpassword", "sv_cheats",
+    };
+
     private void CmdCvar(CCSPlayerController? caller, CommandInfo info)
     {
-        if (caller != null && (!caller.IsValid || !AdminManager.PlayerHasPermissions(caller, "@css/generic")))
+        if (caller != null && (!caller.IsValid || !AdminManager.PlayerHasPermissions(caller, "@css/cvar")))
         {
             if (caller.IsValid) caller.Print(Localizer["NoPermission"]);
             return;
@@ -984,6 +990,11 @@ public partial class AdminPlus
         }
 
         var cvarName = info.GetArg(1);
+        if (caller != null && ProtectedCvars.Contains(cvarName))
+        {
+            SendErrorMessage(caller, "Cvar.CheatsBlocked", $"{cvarName} cannot be read or changed here.");
+            return;
+        }
         var convar = ConVar.Find(cvarName);
 
         if (convar == null)
@@ -1043,7 +1054,9 @@ public partial class AdminPlus
         foreach (var p in players)
         {
             uint imm = AdminManager.GetPlayerImmunity(p);
-            string line = $"[{p.PlayerName}] [{p.SteamID}] [{p.IpAddress ?? "-"}] [Imm:{imm}]";
+            // An IP address is shown only to staff who may ban (the console always may).
+            var showIp = caller == null || !caller.IsValid || AdminManager.PlayerHasPermissions(caller, "@css/ban");
+            string line = $"[{p.PlayerName}] [{p.SteamID}] [{(showIp ? p.IpAddress ?? "-" : "hidden")}] [Imm:{imm}]";
 
             if (caller != null && caller.IsValid)
                 caller.PrintToConsole(line);
