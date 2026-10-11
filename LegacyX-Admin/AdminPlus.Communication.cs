@@ -828,7 +828,9 @@ public partial class AdminPlus
     private HookResult SendFormattedChat(CCSPlayerController player, CommandInfo info, string text)
     {
         text = text.Trim();
-        if (text.Length == 0 || text[0] is '!' or '/' or '@') return HookResult.Continue;
+        // '!' and '/' are plugin commands, '@' is staff chat, '.' is MatchZy (.ready, .pause, .stay …): MatchZy and the report prompt read
+        // the player_chat event, which only fires when the say command runs, so these must stay native chat.
+        if (text.Length == 0 || text[0] is '!' or '/' or '@' or '.') return HookResult.Continue;
         if (_selectedReportTarget != null) return HookResult.Continue;
         if (_menuStates.TryGetValue(player.Slot, out var menu) && menu.InputMode) return HookResult.Continue;
         var team = string.Equals(info.GetArg(0), "say_team", StringComparison.OrdinalIgnoreCase);
