@@ -109,6 +109,7 @@ public partial class AdminPlus : BasePlugin
         LoadMenuConfigFile();
         InitializeStaffAuthorization();
         InitializeCentralBans();
+        InitializeStaffPanel();
         InitializeCentralPenalties();
 
 
