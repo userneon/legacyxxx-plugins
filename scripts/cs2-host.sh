@@ -158,6 +158,9 @@ latest_mam_release() { curl -fsSL https://api.github.com/repos/Source2ZE/MultiAd
 install_multiaddonmanager() {
   say "MultiAddonManager"
   local release url tag tmp file
+  # The map-change settings go in first and whatever happens next (GitHub down, a package with another layout): a server that already
+  # has MultiAddonManager must never keep the defaults that resend the Workshop addon at every map change.
+  if [[ -n "$(find "$CSGO_DIR/addons" -iname 'multiaddonmanager*' -print -quit 2>/dev/null)" ]]; then ensure_mam_client_cache; fi
   release="$(latest_mam_release)" || { say "MultiAddonManager: GitHub not reachable, skipped."; return 0; }
   # Release assets are named per Steam runtime (e.g. ...-steamrt3.tar.gz, ...-steamrt4.tar.gz, ...-windows.zip).
   # steamrt3 needs the oldest glibc, so it loads everywhere; MAM_ASSET_PATTERN picks another (e.g. steamrt4).
