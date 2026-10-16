@@ -4,7 +4,7 @@ Shows the LEGACY-X Workshop HUD (repository `legacyxxx-workshop`) to players. Th
 plugin creates the `custom_hud_layout` entity through **PanoramaManager** and fills it per player: texts by
 Label id, states by toggling classes. Every id is listed in the addon's `CONTRACT.md`.
 
-**Screens**: welcome card (server, player and rank in one box, centre of the screen, 7 s), the knife-round side vote, and the menu below.
+**Screens**: the knife-round side vote, `!me` (your rank, EXP and matches in one card, centre of the screen, 12 s), the skin menu (`!ws`) and the admin panel (`!admin`). There is no welcome card on join, no `!menu` and no knife-round result toast (owner request 2026-10-16).
 The vote runs in the 10 second freeze time after the knife round: the winners click the **Stay** or **Switch** card with the mouse
 (nothing is chosen at first, clicking the other card changes it, 10 seconds). Most clicks wins; a tie or no clicks is Stay. Stay keeps the sides,
 Switch swaps the teams, and a few seconds later the normal round starts. The `!lxhud` test, the round-start
@@ -23,7 +23,7 @@ Bans (who issued and who lifted a ban, filters, "Lift this ban" through `!unban`
 the API with this plugin's game server token (`admin:read`, `/api/v1/plugin/admin/bans | logins | staff`); when the API cannot be reached they say so. IP bans
 are kept by the game servers, so they are not in the Bans list.
 
-**Menu** (`!menu`, or hold E in warmup / before the round, hold R to close): Welcome, Skins (knives, gloves, guns, agents) and
+**Menu** (`!ws`, in warmup / before the round; hold R to close): Skins (knives, gloves, guns, agents) and
 Settings. Clicks, opening, closing and picking a skin play soft CS2 UI sounds (`itemtile_rollover_09`, `menu_focus`,
 `cards_rollover_01`, `itemtile_click_02`) quietly on the player's client with `playvol`. `LEGACYX_HUD_MENU_SOUND_VOLUME` (0 to 1,
 default 1) scales them, `LEGACYX_HUD_MENU_SOUNDS=false` turns them off, `LEGACYX_HUD_MENU_SOUND_CLICK` / `_OPEN` / `_BACK` /

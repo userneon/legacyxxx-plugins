@@ -55,8 +55,6 @@ public sealed partial class LegacyXHud
 
         var winners = Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false } && p.TeamNum == team).ToList();
         var other = team == 2 ? 3 : 2;
-        foreach (var loser in Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false } && p.TeamNum == other))
-            Announce(loser, "Knife round lost", $"{TeamName(team)} are choosing the side.");
         if (winners.Count == 0) return;
 
         knifeTeam = team;
@@ -142,9 +140,6 @@ public sealed partial class LegacyXHud
         Console.WriteLine($"[{ModuleName}] Knife vote result: {choice} (stay {stay}, switch {swap})");
         KnifeStop();
         if (voter >= 0) Server.ExecuteCommand($"lx_knife_choice {voter} {choice}");
-        var sideNow = choice == "stay" ? team : (team == 2 ? 3 : 2);
-        foreach (var player in Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false } && p.TeamNum is 2 or 3))
-            Announce(player, $"{TeamName(team)} {(choice == "stay" ? "stay" : "switch")}", $"Playing {TeamName(sideNow)}. Good luck.");
     }
 
     /// <summary>Ends the vote without a result (MatchZy already went live, or the vote finished).</summary>

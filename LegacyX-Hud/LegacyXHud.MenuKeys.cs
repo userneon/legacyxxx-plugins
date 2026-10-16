@@ -73,7 +73,7 @@ public sealed partial class LegacyXHud
             var adminOpen = adminViews.ContainsKey(player.Slot);
             var isOpen = menuOpen.Contains(player.Slot) || adminOpen;
 
-            UpdateHint(player, hold, isOpen ? 2 : allowed && !knifeVotes.ContainsKey(player.Slot) ? 1 : 0);
+            UpdateHint(player, hold, isOpen ? 2 : 0);
 
             if (hold.NeedRelease)
             {
@@ -81,17 +81,8 @@ public sealed partial class LegacyXHud
                 continue;
             }
 
-            if (!isOpen)
-            {
-                // The knife-round vote already uses E; do not open a menu over it.
-                if (!allowed || !use || knifeVotes.ContainsKey(player.Slot)) { hold.Open = 0; continue; }
-                hold.Open += step;
-                if (hold.Open < HoldOpenSeconds) continue;
-                hold.Open = 0;
-                hold.NeedRelease = true;
-                OpenMenu(player);
-                continue;
-            }
+            // The menu opens only with !ws (skins) or !admin; the keys only close it.
+            if (!isOpen) { hold.Open = 0; continue; }
 
             if (!reload)
             {

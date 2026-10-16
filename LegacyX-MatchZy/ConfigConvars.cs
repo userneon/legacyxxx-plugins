@@ -41,7 +41,7 @@ namespace MatchZy
         public FakeConVar<string> legacyXMatchCoreServerId = new("legacyx_match_core_server_id", "Registered LEGACY-X server identifier sent to Match Core.", "legacyx-match-1");
         public FakeConVar<int> legacyXMatchCoreReconnectWindow = new("legacyx_match_core_reconnect_window", "Original participant reconnect grace window in seconds. Default: 300", 300);
         public FakeConVar<float> legacyXMatchCoreFillTimeout = new("legacyx_match_core_fill_timeout", "Seconds until staff receives a temporary fill reminder. Default: 120", 120.0f);
-        public FakeConVar<bool> legacyXQuietOverlayEnabled = new("legacyx_quiet_overlay_enabled", "Show quiet LEGACY-X center overlays for welcome and match identity. Default: true", true);
+        public FakeConVar<bool> legacyXQuietOverlayEnabled = new("legacyx_quiet_overlay_enabled", "Show quiet LEGACY-X center overlays for welcome and match identity. Default: false", false);
         public FakeConVar<float> legacyXMatchOverlayDuration = new("legacyx_match_overlay_duration", "Seconds to keep the LIVE Match ID center overlay active. Default: 300", 300.0f);
 
         [ConsoleCommand("matchzy_whitelist_enabled_default", "Whether Whitelist is enabled by default or not. Default value: false")]

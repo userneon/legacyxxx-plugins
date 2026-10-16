@@ -15,7 +15,7 @@ namespace LegacyXHud;
 /// fills them per player: texts by variable name (= the Label id), states by toggling classes (see
 /// CONTRACT.md of the addon).
 ///
-/// Screens: legacyx_notify (welcome card), legacyx_menu (!menu) and legacyx_knife (side vote by keyboard).
+/// Screens: legacyx_notify (the !me card), legacyx_menu (!ws) and legacyx_knife (side vote by keyboard).
 /// legacyx_admin is the staff panel LegacyX-Admin's !admin opens.
 ///
 /// Other plugins reach it through a server command, so nothing is shared between plugin contexts:
@@ -163,14 +163,6 @@ public sealed partial class LegacyXHud : BasePlugin
         holds.Remove(slot);
         foreach (var key in applied.Keys.Where(k => k.Slot == slot && k.PanelId == "hint_fill").ToList()) applied.Remove(key);
         _ = LoadProfileAsync(steamId);
-        // A few seconds: the client must finish loading the map and the addon before it can draw the panel.
-        AddTimer(5f, () =>
-        {
-            var joined = Utilities.GetPlayerFromSlot(slot);
-            if (joined is not { IsValid: true, IsBot: false }) return;
-            if (profiles.TryGetValue(steamId, out var known)) Welcome(joined, known);
-            else _ = WelcomeAfterLookupAsync(slot, steamId);
-        });
         return HookResult.Continue;
     }
 
@@ -271,19 +263,6 @@ public sealed partial class LegacyXHud : BasePlugin
         panel.SetVariableFor(player, "ann_title", title);
         panel.SetVariableFor(player, "ann_body", body);
         Flash(panel, player, "ann", 7f);
-    }
-
-    /// <summary>The rank was not loaded yet: ask once more, then show the card with it (or without, for a player with no rank).</summary>
-    private async Task WelcomeAfterLookupAsync(int slot, ulong steamId)
-    {
-        var profile = await FetchProfileAsync(steamId);
-        Server.NextFrame(() =>
-        {
-            var joined = Utilities.GetPlayerFromSlot(slot);
-            if (joined is not { IsValid: true, IsBot: false }) return;
-            if (profile is not null) profiles[steamId] = profile;
-            Welcome(joined, profile);
-        });
     }
 
     /// <summary>

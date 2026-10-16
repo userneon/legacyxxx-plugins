@@ -7,7 +7,7 @@ using PanoramaManager;
 
 namespace LegacyXHud;
 
-// The player menu (legacyx_menu): !menu opens it, the mouse is captured while it is open. Three tabs
+// The player menu (legacyx_menu): !ws opens it, the mouse is captured while it is open. Three tabs
 // (Welcome, Skins, Settings) and a Close button; every click arrives as a Button with the element's id.
 // Welcome shows the player's name and rank from the same profile the welcome card uses.
 public sealed partial class LegacyXHud
@@ -81,13 +81,6 @@ public sealed partial class LegacyXHud
             menuListening = true;
         }
         return handle;
-    }
-
-    [ConsoleCommand("css_menu", "Open the LEGACY-X menu")]
-    public void OnMenuCommand(CCSPlayerController? player, CommandInfo command)
-    {
-        if (!enabled || player is not { IsValid: true, IsBot: false }) return;
-        OpenMenu(player);
     }
 
     /// <summary>!ws: the skin menu (knives, gloves, guns, agents), opened on its Skins page.</summary>
