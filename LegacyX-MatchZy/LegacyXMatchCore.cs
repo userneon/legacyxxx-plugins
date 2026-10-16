@@ -55,7 +55,35 @@ public partial class MatchZy
         var configuredTeam = GetPlayerTeam(player);
         if (configuredTeam == CsTeam.CounterTerrorist) return "team1";
         if (configuredTeam == CsTeam.Terrorist) return "team2";
+        // A match started with .ready / .start has no team lists, so GetPlayerTeam finds nobody: use the side the player is on now.
+        // team1 is whichever team holds CT at this moment (teamSides follows the half-time swap).
+        var team1HoldsCt = teamSides.TryGetValue(matchzyTeam1, out var side) && side == "CT";
+        if (player.TeamNum == (byte)CsTeam.CounterTerrorist) return team1HoldsCt ? "team1" : "team2";
+        if (player.TeamNum == (byte)CsTeam.Terrorist) return team1HoldsCt ? "team2" : "team1";
         return null;
+    }
+
+    /// <summary>
+    /// A pug started with .ready / .start whose ten players stand 6v4 (or 7v3...) is made 5v5 first: the extra players from the bigger
+    /// side, those with the lowest score, move over. Only when exactly ten players are on a side, so a short or full server is left alone.
+    /// </summary>
+    private void BalanceLegacyXTeams()
+    {
+        if (!IsMatchCoreEnabled || isMatchSetup) return;
+        var humans = playerData.Values.Where(player => IsPlayerValid(player) && !player.IsBot && !player.IsHLTV).ToList();
+        var ct = humans.Where(player => player.TeamNum == (byte)CsTeam.CounterTerrorist).ToList();
+        var t = humans.Where(player => player.TeamNum == (byte)CsTeam.Terrorist).ToList();
+        if (ct.Count + t.Count != 10 || ct.Count == t.Count) return;
+
+        var from = ct.Count > t.Count ? ct : t;
+        var to = ct.Count > t.Count ? CsTeam.Terrorist : CsTeam.CounterTerrorist;
+        var moves = (from.Count - 5);
+        foreach (var player in from.OrderBy(candidate => candidate.Score).ThenBy(candidate => candidate.PlayerName).Take(moves).ToList())
+        {
+            player.SwitchTeam(to);
+            PrintToAllChat($"{{white}}{player.PlayerName}{{grey}} moved to {(to == CsTeam.Terrorist ? "T" : "CT")} so the teams are 5v5.");
+        }
+        Log($"[LegacyXMatchCore] Teams were {ct.Count}v{t.Count}; {moves} player(s) moved to {to} to make them 5v5.");
     }
 
     private void BeginLegacyXMatchCore()

@@ -683,6 +683,7 @@ namespace MatchZy
                 pendingRestoreFileName = "";
                 return;
             }
+            BalanceLegacyXTeams();
             // If default names, we pick a player and use their name as their team name
             if (matchzyTeam1.teamName == "COUNTER-TERRORISTS")
             {
