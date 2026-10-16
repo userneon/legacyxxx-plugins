@@ -4,7 +4,7 @@ Shows the LEGACY-X Workshop HUD (repository `legacyxxx-workshop`) to players. Th
 plugin creates the `custom_hud_layout` entity through **PanoramaManager** and fills it per player: texts by
 Label id, states by toggling classes. Every id is listed in the addon's `CONTRACT.md`.
 
-**Screens**: the knife-round side vote, `!me` (your rank, EXP and matches in one card, centre of the screen, 12 s), the skin menu (`!ws`) and the admin panel (`!admin`). There is no welcome card on join, no `!menu` and no knife-round result toast (owner request 2026-10-16).
+**Screens**: the knife-round side vote, `!me` (your rank, EXP to the next rank, matches, K/D and win rate in one card, centre of the screen, 12 s), the skin menu (`!ws`) and the admin panel (`!admin`). There is no welcome card on join, no `!menu` and no knife-round result toast (owner request 2026-10-16).
 The vote runs in the 10 second freeze time after the knife round: the winners click the **Stay** or **Switch** card with the mouse
 (nothing is chosen at first, clicking the other card changes it, 10 seconds). Most clicks wins; a tie or no clicks is Stay. Stay keeps the sides,
 Switch swaps the teams, and a few seconds later the normal round starts. The `!lxhud` test, the round-start

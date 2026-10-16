@@ -294,15 +294,13 @@ public sealed partial class LegacyXHud : BasePlugin
     }
 
     /// <summary>
-    /// legacyx_notify "wc": the welcome card in the middle of the screen for 7 seconds, with the server's name, the
-    /// player's name and rank in one box. A player without a rank yet gets the server and the name only.
+    /// legacyx_notify "wc", the !me card: rank, EXP to the next rank, matches, K/D and win rate of the player, for
+    /// <paramref name="seconds"/>. A figure the API did not send shows as "-", never a made-up number.
     /// </summary>
-    private void Welcome(CCSPlayerController player, Profile? profile, float seconds = 7f)
+    private void Welcome(CCSPlayerController player, Profile? profile, float seconds = 12f)
     {
         var panel = EnsureNotify();
         if (panel is null || !OpenFor(panel, player)) return;
-        var name = serverName.Length > 0 ? serverName : (ConVar.Find("hostname")?.StringValue ?? "LEGACY-X");
-        panel.SetVariableFor(player, "wc_server", name);
         panel.SetVariableFor(player, "wc_name", player.PlayerName);
         var ranked = profile is not null;
         panel.SetClassFor(player, "wc_emblem", "hidden", !ranked);
@@ -310,10 +308,28 @@ public sealed partial class LegacyXHud : BasePlugin
         if (profile is not null)
         {
             panel.SetVariableFor(player, "wc_rank", profile.RankName);
-            panel.SetVariableFor(player, "wc_exp", seconds > 7f ? $"{profile.Exp:N0} EXP · {profile.Matches:N0} matches" : $"{profile.Exp:N0} EXP");
+            panel.SetVariableFor(player, "wc_exp", $"{profile.Exp:N0} EXP");
+            panel.SetVariableFor(player, "wc_next", profile.NextMin is { } next && profile.NextName is { Length: > 0 } nextName ? $"{Math.Max(0, next - profile.Exp):N0} to {nextName}" : "Top rank");
+            panel.SetVariableFor(player, "wc_matches", profile.Matches.ToString("N0"));
+            panel.SetVariableFor(player, "wc_kd", KillDeathText(profile));
+            panel.SetVariableFor(player, "wc_winrate", WinRateText(profile));
             SetState(panel, player, "wc_emblem", "rank", $"rank-{profile.RankId}");
             SetState(panel, player, "wc_rank", "tier", TierClass(profile.RankName));
+            SetState(panel, player, "wc_fill", "p", ProgressClass(profile) ?? "p0");
         }
         Flash(panel, player, "wc", seconds);
+    }
+
+    private static string KillDeathText(Profile p)
+    {
+        if (p.Kills is not { } kills || p.Deaths is not { } deaths || kills + deaths == 0) return "-";
+        return (deaths > 0 ? kills / (double)deaths : kills).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static string WinRateText(Profile p)
+    {
+        if (p.Wins is not { } wins) return "-";
+        var played = wins + (p.Losses ?? 0) + (p.Draws ?? 0);
+        return played > 0 ? $"{Math.Round(wins * 100.0 / played)}%" : "-";
     }
 }

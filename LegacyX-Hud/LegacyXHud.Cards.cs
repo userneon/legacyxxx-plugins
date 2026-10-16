@@ -18,7 +18,7 @@ public sealed partial class LegacyXHud
     private string pluginId = "legacyx-community";
     private string pluginSecret = "";
 
-    private sealed record Profile(int RankId, string RankName, int Exp, int Matches, int? MinExp, int? NextMin, string? NextName, bool ProLeague);
+    private sealed record Profile(int RankId, string RankName, int Exp, int Matches, int? MinExp, int? NextMin, string? NextName, bool ProLeague, int? Kills = null, int? Deaths = null, int? Wins = null, int? Losses = null, int? Draws = null);
 
 
     // SteamID64 -> last profile read; the "before" of the next match.
@@ -47,7 +47,8 @@ public sealed partial class LegacyXHud
             return new Profile(
                 rankId, name, Int(p, "current_exp") ?? 0, Int(p, "matches_completed") ?? 0,
                 Int(p, "current_rank_min_exp"), Int(p, "next_rank_min_exp"), Str(p, "next_rank_name"),
-                p.TryGetProperty("pro_league_unlocked", out var pro) && pro.ValueKind == JsonValueKind.True);
+                p.TryGetProperty("pro_league_unlocked", out var pro) && pro.ValueKind == JsonValueKind.True,
+                Int(p, "kills"), Int(p, "deaths"), Int(p, "wins"), Int(p, "losses"), Int(p, "draws"));
         }
         catch (Exception ex)
         {

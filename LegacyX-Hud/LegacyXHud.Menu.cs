@@ -116,7 +116,7 @@ public sealed partial class LegacyXHud
                     return;
                 }
                 profiles[steamId] = profile;
-                Welcome(still, profile, 12f);
+                Welcome(still, profile);
             });
         });
     }
