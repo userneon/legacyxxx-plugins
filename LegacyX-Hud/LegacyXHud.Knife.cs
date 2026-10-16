@@ -68,8 +68,12 @@ public sealed partial class LegacyXHud
             panel.SetVariableFor(player, "knife_sub", $"Pick the side you play on. Most clicks wins; a tie or no clicks is Stay.");
             panel.SetVariableFor(player, "knife_stay_sub", $"Keep {TeamName(team)} · {(stayT ? "attack" : "defend")}");
             panel.SetVariableFor(player, "knife_switch_sub", $"Move to {TeamName(other)} · {(stayT ? "defend" : "attack")}");
-            SetState(panel, player, "knife_stay_side", "side", stayT ? "side-t" : "side-ct");
-            SetState(panel, player, "knife_switch_side", "side", stayT ? "side-ct" : "side-t");
+            // Both classes are set on both cards: the layout starts with side-t on Stay and side-ct on Switch, and a class that is
+            // only added would stay, so when CT won both cards showed the CT emblem.
+            panel.SetClassFor(player, "knife_stay_side", "side-t", stayT);
+            panel.SetClassFor(player, "knife_stay_side", "side-ct", !stayT);
+            panel.SetClassFor(player, "knife_switch_side", "side-t", !stayT);
+            panel.SetClassFor(player, "knife_switch_side", "side-ct", stayT);
             SetState(panel, player, "knife_fill", "p", "p100");
             ShowVote(panel, player, knifeVotes[player.Slot]);
             panel.SetClassFor(player, "knife", "shown", true);
