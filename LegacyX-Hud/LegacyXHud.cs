@@ -290,7 +290,7 @@ public sealed partial class LegacyXHud : BasePlugin
     /// legacyx_notify "wc": the welcome card in the middle of the screen for 7 seconds, with the server's name, the
     /// player's name and rank in one box. A player without a rank yet gets the server and the name only.
     /// </summary>
-    private void Welcome(CCSPlayerController player, Profile? profile)
+    private void Welcome(CCSPlayerController player, Profile? profile, float seconds = 7f)
     {
         var panel = EnsureNotify();
         if (panel is null || !OpenFor(panel, player)) return;
@@ -303,10 +303,10 @@ public sealed partial class LegacyXHud : BasePlugin
         if (profile is not null)
         {
             panel.SetVariableFor(player, "wc_rank", profile.RankName);
-            panel.SetVariableFor(player, "wc_exp", $"{profile.Exp:N0} EXP");
+            panel.SetVariableFor(player, "wc_exp", seconds > 7f ? $"{profile.Exp:N0} EXP · {profile.Matches:N0} matches" : $"{profile.Exp:N0} EXP");
             SetState(panel, player, "wc_emblem", "rank", $"rank-{profile.RankId}");
             SetState(panel, player, "wc_rank", "tier", TierClass(profile.RankName));
         }
-        Flash(panel, player, "wc", 7f);
+        Flash(panel, player, "wc", seconds);
     }
 }

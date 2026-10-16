@@ -701,12 +701,19 @@ public partial class AdminPlus : BasePlugin
         {
             _lastReportTime[caller.SteamID] = DateTime.Now;
             caller.Print($"No {roleName.ToLowerInvariant()} is online in game. Your request was sent to the team.");
+            caller.PrintToCenter($"{roleName[..1]}{roleName[1..].ToLowerInvariant()} called");
             return;
         }
         var callerName = SanitizeName(caller.PlayerName);
-        foreach (var recipient in recipients) recipient.Print($"{{white}}{callerName}{{grey}} needs a {roleName.ToLowerInvariant()}.");
+        foreach (var recipient in recipients)
+        {
+            recipient.Print($"{{white}}{callerName}{{grey}} needs a {roleName.ToLowerInvariant()}.");
+            // CS2's own centre alert, so it shows even over the game.
+            recipient.PrintToCenterAlert($"{callerName} called a {roleName.ToLowerInvariant()}");
+        }
         _lastReportTime[caller.SteamID] = DateTime.Now;
         caller.Print("{green}Request sent.");
+        caller.PrintToCenter($"{roleName[..1]}{roleName[1..].ToLowerInvariant()} called");
     }
 
     private HookResult OnAdminRoundEnd(EventRoundEnd @event, GameEventInfo info)

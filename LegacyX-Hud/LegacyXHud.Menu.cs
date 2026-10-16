@@ -90,6 +90,44 @@ public sealed partial class LegacyXHud
         OpenMenu(player);
     }
 
+    /// <summary>!ws: the skin menu (knives, gloves, guns, agents), opened on its Skins page.</summary>
+    [ConsoleCommand("css_ws", "Open the LEGACY-X skin menu")]
+    public void OnSkinMenuCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (!enabled || player is not { IsValid: true, IsBot: false }) return;
+        OpenMenu(player);
+        if (!menuOpen.Contains(player.Slot)) return;
+        var panel = EnsureMenu();
+        if (panel is null) return;
+        ShowMenuPage(panel, player, "skins");
+        SkinsOpen(panel, player);
+    }
+
+    /// <summary>!me: your own rank, EXP and match count in a card in the middle of the screen, a little longer than the join card.</summary>
+    [ConsoleCommand("css_me", "Show your rank, EXP and matches")]
+    public void OnSelfStatsCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (!enabled || player is not { IsValid: true, IsBot: false }) return;
+        var slot = player.Slot;
+        var steamId = player.SteamID;
+        Task.Run(async () =>
+        {
+            var profile = await FetchProfileAsync(steamId);
+            Server.NextFrame(() =>
+            {
+                var still = Utilities.GetPlayerFromSlot(slot);
+                if (still is not { IsValid: true, IsBot: false }) return;
+                if (profile is null)
+                {
+                    still.PrintToChat(" You have no rank yet. Finish a ranked match (5v5) to get one.");
+                    return;
+                }
+                profiles[steamId] = profile;
+                Welcome(still, profile, 12f);
+            });
+        });
+    }
+
     private void OpenMenu(CCSPlayerController player)
     {
         if (menuKeys && !MenuAllowed())
