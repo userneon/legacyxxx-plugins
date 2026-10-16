@@ -132,6 +132,33 @@ public sealed partial class LegacyXHud : BasePlugin
         adminRefresh?.Kill();
         adminRefresh = null;
         rulesProxy = null;
+        // Players are still loading the new map: let go of the mouse and keyboard for everyone once they are in, and again later.
+        AddTimer(2f, ReleaseHudInputForAll);
+        AddTimer(8f, ReleaseHudInputForAll);
+    }
+
+    private void ReleaseHudInputForAll()
+    {
+        foreach (var player in Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false })) ReleaseHudInput(player);
+    }
+
+    /// <summary>
+    /// The menu, the admin panel and the knife vote capture the player's mouse and keys while they are open. After a map change a
+    /// panel that was open is not open any more on our side, but the client can still hold the capture: the HUD and the microphone key
+    /// then do nothing until the player reconnects. Close whatever is not really open.
+    /// </summary>
+    private void ReleaseHudInput(CCSPlayerController player)
+    {
+        try
+        {
+            if (menu is { } m && !menuOpen.Contains(player.Slot) && m.IsOpenFor(player)) m.Close(player);
+            if (admin is { } a && !adminViews.ContainsKey(player.Slot) && a.IsOpenFor(player)) a.Close(player);
+            if (knife is { } k && !knifeVotes.ContainsKey(player.Slot) && k.IsOpenFor(player)) k.Close(player);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{ModuleName}] Could not release the HUD input for {player.PlayerName}: {ex.Message}");
+        }
     }
 
     /// <summary>One player's HUD was redrawn by the library after a world reset: forget what was sent to them, and treat their menu and admin panel as closed.</summary>
@@ -151,6 +178,7 @@ public sealed partial class LegacyXHud : BasePlugin
     {
         if (e.Action != PanelAction.Restored || e.Player is not { IsValid: true } player) return;
         ForgetHudState(player.Slot);
+        ReleaseHudInput(player);
     }
 
     private HookResult OnPlayerConnectFull(EventPlayerConnectFull e, GameEventInfo info)
