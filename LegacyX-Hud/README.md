@@ -23,11 +23,13 @@ Bans (who issued and who lifted a ban, filters, "Lift this ban" through `!unban`
 the API with this plugin's game server token (`admin:read`, `/api/v1/plugin/admin/bans | logins | staff`); when the API cannot be reached they say so. IP bans
 are kept by the game servers, so they are not in the Bans list.
 
-**Menu** (`!ws`, in warmup / before the round; hold R to close): Skins (knives, gloves, guns, agents) and
-Settings. Clicks, opening, closing and picking a skin play soft CS2 UI sounds (`itemtile_rollover_09`, `menu_focus`,
-`cards_rollover_01`, `itemtile_click_02`) quietly on the player's client with `playvol`. `LEGACYX_HUD_MENU_SOUND_VOLUME` (0 to 1,
+**Skin menu** (`!ws`, in warmup / before the round; hold R to close): a header with the T / CT emblems, a category list on the left (Pistols, SMGs,
+Rifles, Heavy, Agents, Gloves, Knives) and, on the right, a content area that scrolls: the guns of a group, the knife or glove types
+(a glove type shows one skin of that type), or the skins of one pick, 24 to a page (owner pick 2026-10-16). The pick is saved to the website
+loadout and applied at once through SkinBridge. Clicks, opening, closing and picking a skin play soft CS2 UI sounds (`itemtile_rollover_09`,
+`menu_focus`, `cards_rollover_01`, `itemtile_click_02`) quietly on the player's client with `playvol`. `LEGACYX_HUD_MENU_SOUND_VOLUME` (0 to 1,
 default 1) scales them, `LEGACYX_HUD_MENU_SOUNDS=false` turns them off, `LEGACYX_HUD_MENU_SOUND_CLICK` / `_OPEN` / `_BACK` /
-`_PICK` change a sound (a `sounds/...vsnd_c` path from the game, empty = silent). `LEGACYX_HUD_MENU_KEYS=false` turns the E / R keys off.
+`_PICK` change a sound (a `sounds/...vsnd_c` path from the game, empty = silent). `LEGACYX_HUD_MENU_KEYS=false` turns the R key off.
 
 ## Needs
 

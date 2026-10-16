@@ -16,10 +16,14 @@ namespace LegacyXHud;
 public sealed partial class LegacyXHud
 {
     private const int SkinTypeSlots = 25;
-    private const int SkinItemSlots = 9;
+    private const int SkinItemSlots = 24;          // one page of skins; the content scrolls (MENU_SKIN_PAGE in the backend)
     private const int TileSlots = 35;            // 4 columns of 8 guns, then Agent, Gloves, Knife
     private static readonly int[] ColumnStart = { 0, 8, 16, 24, 32 };
     private static readonly int[] ColumnSize = { 8, 8, 8, 8, 3 };
+
+    // The category list on the left: four gun groups (the API's columns), then the agents, the gloves and the knives.
+    private static readonly string[] CategoryNames = { "Pistols", "SMGs", "Rifles", "Heavy", "Agents", "Gloves", "Knives" };
+    private const int CategoryAgents = 4, CategoryGloves = 5, CategoryKnives = 6;
 
     private string skinPluginId = "legacyx-skinbridge";
     private string skinSecret = "";
@@ -33,6 +37,7 @@ public sealed partial class LegacyXHud
     private sealed class SkinView
     {
         public string Team = "t";
+        public int Cat;                                    // the category picked on the left
         public string Mode = "loadout";                    // loadout | types | items
         public Tile?[] Slots = new Tile?[TileSlots];       // the overview, by pool position
         public Tile? Picked;                               // the tile that was clicked
@@ -220,8 +225,35 @@ public sealed partial class LegacyXHud
                 current.Slots[ColumnStart[column] + rows[column]++] = new Tile(column, Text(t, "slot") ?? "", Text(t, "weaponClass") ?? "", Text(t, "label") ?? "", Text(t, "model"), eq);
             }
             SkinsStatus(menu!, p, "");
-            SkinsRender(menu!, p, current);
+            SkinsEnterCategory(menu!, p, current);
         });
+    }
+
+    /// <summary>
+    /// A category was picked (or the loadout arrived): the guns of a group are shown as cards, the agents go straight to their skins,
+    /// and gloves and knives to their types first.
+    /// </summary>
+    private void SkinsEnterCategory(PanelHandle panel, CCSPlayerController player, SkinView view)
+    {
+        view.Selected = -1;
+        view.Picked = null;
+        view.TypeClass = null;
+        view.Mode = "loadout";
+        if (view.Cat < CategoryAgents)
+        {
+            SkinsRender(panel, player, view);
+            return;
+        }
+        var slotName = view.Cat == CategoryAgents ? "agent" : view.Cat == CategoryGloves ? "glove" : "knife";
+        var tile = view.Slots.FirstOrDefault(t => t?.Slot == slotName);
+        if (tile is null)
+        {
+            SkinsStatus(panel, player, "Could not load skins. Try again.");
+            SkinsRender(panel, player, view);
+            return;
+        }
+        if (slotName == "agent") SkinsLoadItems(panel, player, view, tile, tile.WeaponClass, 0);
+        else SkinsLoadTypes(panel, player, view, tile);
     }
 
     /// <summary>A knife or glove tile was clicked: list the types first.</summary>
@@ -379,9 +411,11 @@ public sealed partial class LegacyXHud
     {
         Sc(panel, player, "sk_team_t", "active", view.Team == "t");
         Sc(panel, player, "sk_team_ct", "active", view.Team == "ct");
+        for (var i = 0; i < CategoryNames.Length; i++) Sc(panel, player, $"sk_cat{i}", "active", i == view.Cat);
         Sc(panel, player, "sk_view_loadout", "hidden", view.Mode != "loadout");
         Sc(panel, player, "sk_view_types", "hidden", view.Mode != "types");
         Sc(panel, player, "sk_view_items", "hidden", view.Mode != "items");
+        Sc(panel, player, "sk_actions", "hidden", view.Mode != "items");
         if (view.Mode == "loadout") RenderLoadout(panel, player, view);
         else if (view.Mode == "types") RenderTypes(panel, player, view);
         else RenderItems(panel, player, view);
@@ -389,12 +423,16 @@ public sealed partial class LegacyXHud
 
     private void RenderLoadout(PanelHandle panel, CCSPlayerController player, SkinView view)
     {
-        Sv(panel, player, "sk_eq_count", $"Equipped {view.Slots.Count(t => t?.Eq is not null)}");
+        var first = view.Cat < CategoryAgents ? ColumnStart[view.Cat] : -1;
+        var last = view.Cat < CategoryAgents ? first + ColumnSize[view.Cat] : -1;
+        Sv(panel, player, "sk_title", CategoryNames[view.Cat]);
+        Sv(panel, player, "sk_sub", view.Cat < CategoryAgents ? $"Equipped {view.Slots.Skip(first).Take(last - first).Count(t => t?.Eq is not null)}" : "");
         for (var i = 0; i < TileSlots; i++)
         {
             var tile = view.Slots[i];
-            Sc(panel, player, $"sk_w{i}", "hidden", tile is null);
-            if (tile is null) continue;
+            var shown = tile is not null && i >= first && i < last;
+            Sc(panel, player, $"sk_w{i}", "hidden", !shown);
+            if (!shown || tile is null) continue;
             Sv(panel, player, $"sk_w{i}_name", tile.Label);
             var eq = tile.Eq;
             Sc(panel, player, $"sk_w{i}_ck", "hidden", eq is null);
@@ -411,8 +449,8 @@ public sealed partial class LegacyXHud
     private void RenderTypes(PanelHandle panel, CCSPlayerController player, SkinView view)
     {
         var tile = view.Picked;
-        Sv(panel, player, "sk_ttitle", tile?.Slot == "glove" ? "Gloves" : "Knives");
-        Sv(panel, player, "sk_equipped", tile?.Eq is { } eq ? $"Equipped: {eq.WeaponClass} | {eq.Skin}" : "Pick a type, then a skin.");
+        Sv(panel, player, "sk_title", tile?.Slot == "glove" ? "Gloves" : "Knives");
+        Sv(panel, player, "sk_sub", tile?.Eq is { } eq ? $"Equipped: {eq.WeaponClass} | {eq.Skin}" : "Pick a type, then a skin.");
         for (var i = 0; i < SkinTypeSlots; i++)
         {
             var has = i < view.Types.Count && tile is not null;
@@ -434,7 +472,8 @@ public sealed partial class LegacyXHud
         var tile = view.Picked;
         var agent = tile?.Slot == "agent";
         Sv(panel, player, "sk_title", PickedName(view));
-        Sv(panel, player, "sk_count", agent ? $"{view.Total} agents" : $"{view.Total} skins");
+        Sv(panel, player, "sk_sub", agent ? $"{view.Total} agents" : $"{view.Total} skins");
+        Sc(panel, player, "sk_back", "hidden", agent);
         var pages = Math.Max(1, (view.Total + SkinItemSlots - 1) / SkinItemSlots);
         Sv(panel, player, "sk_page", $"{view.Offset / SkinItemSlots + 1} / {pages}");
         Sc(panel, player, "sk_prev", "disabled", view.Offset <= 0);
@@ -471,12 +510,6 @@ public sealed partial class LegacyXHud
         {
             case "sk_team_t": SkinsOpen(panel, player, "t"); return true;
             case "sk_team_ct": SkinsOpen(panel, player, "ct"); return true;
-            case "sk_tback":
-                view.Mode = "loadout";
-                view.Picked = null;
-                SkinsStatus(panel, player, "");
-                SkinsRender(panel, player, view);
-                return true;
             case "sk_back":
                 view.Selected = -1;
                 view.Mode = view.TypeClass is not null ? "types" : "loadout";
@@ -499,6 +532,15 @@ public sealed partial class LegacyXHud
             case "sk_next":
                 if (view.Picked is { } forward && view.Offset + SkinItemSlots < view.Total) SkinsLoadItems(panel, player, view, forward, PickedClass(view), view.Offset + SkinItemSlots);
                 return true;
+        }
+        if (id.StartsWith("sk_cat", StringComparison.Ordinal) && int.TryParse(id.AsSpan(6), out var cat) && cat >= 0 && cat < CategoryNames.Length)
+        {
+            view.Cat = cat;
+            SkinsStatus(panel, player, "");
+            // The overview of this team is already here once it has loaded; otherwise load it (it enters the category on arrival).
+            if (view.Slots.Any(t => t is not null)) SkinsEnterCategory(panel, player, view);
+            else SkinsOpen(panel, player);
+            return true;
         }
         if (id.StartsWith("sk_w", StringComparison.Ordinal) && int.TryParse(id.AsSpan(4), out var slot) && slot >= 0 && slot < TileSlots)
         {

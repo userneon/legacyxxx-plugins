@@ -1,19 +1,15 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
-using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
 using PanoramaManager;
 
 namespace LegacyXHud;
 
-// The player menu (legacyx_menu): !ws opens it, the mouse is captured while it is open. Three tabs
-// (Welcome, Skins, Settings) and a Close button; every click arrives as a Button with the element's id.
-// Welcome shows the player's name and rank from the same profile the welcome card uses.
+// The skin menu (legacyx_menu): !ws opens it, the mouse is captured while it is open. A header with the T / CT emblems and a Close
+// button, a category list and the skins (LegacyXHud.Skins.cs); every click arrives as a Button with the element's id.
 public sealed partial class LegacyXHud
 {
-    private static readonly string[] MenuPages = { "welcome", "skins", "settings" };
-
     // CS2's own UI sounds, played quietly on the player's client with `playvol` (soft ticks, not the loud button clicks).
     // Each has its own gentle level; LEGACYX_HUD_MENU_SOUND_VOLUME (0 to 1, default 1) scales them all, and
     // LEGACYX_HUD_MENU_SOUNDS=false turns them off. A sound is a `sounds/...vsnd_c` path from the game; empty = silent.
@@ -92,7 +88,6 @@ public sealed partial class LegacyXHud
         if (!menuOpen.Contains(player.Slot)) return;
         var panel = EnsureMenu();
         if (panel is null) return;
-        ShowMenuPage(panel, player, "skins");
         SkinsOpen(panel, player);
     }
 
@@ -141,38 +136,8 @@ public sealed partial class LegacyXHud
         MenuSound(player, soundOpen, LevelOpen);
         Ss(panel, player, "menu_hold_fill", "p", "p0");
 
-        var name = serverName.Length > 0 ? serverName : (ConVar.Find("hostname")?.StringValue ?? "LEGACY-X");
-        Sv(panel, player, "menu_footer", name.ToUpperInvariant());
-        Sv(panel, player, "menu_name", $"Welcome, {player.PlayerName}");
-        var ranked = profiles.TryGetValue(player.SteamID, out var profile);
-        Sc(panel, player, "menu_rankrow", "hidden", !ranked);
-        Sc(panel, player, "menu_matches_pill", "hidden", !ranked);
-        if (ranked && profile is not null)
-        {
-            Sv(panel, player, "menu_rank", profile.RankName);
-            Sv(panel, player, "menu_sub", profile.NextMin is { } next ? $"{profile.Exp:N0} EXP  ·  {Math.Max(0, next - profile.Exp):N0} to {profile.NextName}" : $"{profile.Exp:N0} EXP  ·  top rank");
-            Sv(panel, player, "menu_matches", $"{profile.Matches:N0} matches");
-            Ss(panel, player, "menu_fill", "p", ProgressClass(profile) ?? "p0");
-            Ss(panel, player, "menu_emblem", "rank", $"rank-{profile.RankId}");
-            Ss(panel, player, "menu_rank", "tier", TierClass(profile.RankName));
-        }
-        // The server box reads this server itself: its name, the map and who is on it.
-        var humans = Utilities.GetPlayers().Count(p => p is { IsValid: true, IsBot: false });
-        Sv(panel, player, "menu_srv_name", name);
-        Sv(panel, player, "menu_srv_map", Server.MapName);
-        Sv(panel, player, "menu_srv_players", $"{humans} / {Server.MaxPlayers} players");
-        ShowMenuPage(panel, player, "welcome");
         Sc(panel, player, "menu_dim", "shown", true);
         Sc(panel, player, "menu", "shown", true);
-    }
-
-    private void ShowMenuPage(PanelHandle panel, CCSPlayerController player, string page)
-    {
-        foreach (var name in MenuPages)
-        {
-            Sc(panel, player, $"menu_page_{name}", "hidden", name != page);
-            Sc(panel, player, $"menu_tab_{name}", "active", name == page);
-        }
     }
 
     private void CloseMenu(PanelHandle panel, CCSPlayerController player)
@@ -201,20 +166,6 @@ public sealed partial class LegacyXHud
         {
             case "menu_close":
                 CloseMenu(panel, player);
-                break;
-            case "menu_pick":
-                ShowMenuPage(panel, player, "skins");
-                SkinsOpen(panel, player);
-                break;
-            case "menu_tab_welcome":
-                ShowMenuPage(panel, player, "welcome");
-                break;
-            case "menu_tab_skins":
-                ShowMenuPage(panel, player, "skins");
-                SkinsOpen(panel, player);
-                break;
-            case "menu_tab_settings":
-                ShowMenuPage(panel, player, "settings");
                 break;
             default:
                 SkinsClick(panel, player, e.ElementId);
