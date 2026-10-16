@@ -33,11 +33,11 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
 
     public override void Load(bool hotReload)
     {
-        AddCommandListener("say", OnSay, HookMode.Pre);
-        AddCommandListener("say_team", OnSay, HookMode.Pre);
+        // Chat text is formatted and routed by LegacyX-Admin (ALL | Name: text, TEAM | Name: text; the dead only reach the dead). This plugin used
+        // to reroute it too, so every line was sent twice, once as "(CT) Name: text" with no sign of all or team chat.
         RegisterEventHandler<EventRoundStart>(OnRoundStart);
         ApplyVoiceBaseline();
-        Console.WriteLine($"[{ModuleName}] Loaded — spectator text isolation and competitive voice baseline enabled.");
+        Console.WriteLine($"[{ModuleName}] Loaded — competitive voice baseline enabled (chat is handled by LegacyX-Admin).");
     }
 
     private HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
@@ -53,23 +53,6 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
         player.PrintToChat(LegacyXChat.System("Spectators and dead players only chat with each other."));
     }
 
-    private HookResult OnSay(CCSPlayerController? sender, CommandInfo command)
-    {
-        if (!Config.Enabled || !Config.EnforceTextIsolation || sender == null || !sender.IsValid || sender.IsBot || sender.IsHLTV) return HookResult.Continue;
-
-        var message = Normalize(command.ArgString);
-        if (string.IsNullOrWhiteSpace(message)) return HookResult.Handled;
-        if (Config.PreservePluginCommands && (message.StartsWith("!") || message.StartsWith("."))) return HookResult.Continue;
-
-        var senderChannel = GetChannel(sender);
-        foreach (var recipient in Utilities.GetPlayers())
-        {
-            if (!CanReceive(recipient, senderChannel)) continue;
-            recipient.PrintToChat(Format(sender, senderChannel, message));
-        }
-        return HookResult.Handled;
-    }
-
     private void ApplyVoiceBaseline()
     {
         if (!Config.Enabled || !Config.EnforceCompetitiveVoiceCvars) return;
@@ -78,44 +61,4 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
         // Owner request: living players hear their dead teammates (sv_deadtalk 1); enemies stay unheard.
         Server.ExecuteCommand("sv_deadtalk 1");
     }
-
-    private bool CanReceive(CCSPlayerController? recipient, ChatChannel senderChannel)
-    {
-        if (recipient == null || !recipient.IsValid || recipient.IsBot || recipient.IsHLTV) return false;
-        var recipientChannel = GetChannel(recipient);
-        if (senderChannel == ChatChannel.Spectator) return recipientChannel == ChatChannel.Spectator;
-        return recipientChannel == senderChannel;
-    }
-
-    private ChatChannel GetChannel(CCSPlayerController player)
-    {
-        if (!IsAliveCompetitive(player)) return ChatChannel.Spectator;
-        return player.Team == CsTeam.Terrorist ? ChatChannel.Terrorist : ChatChannel.CounterTerrorist;
-    }
-
-    private static bool IsAliveCompetitive(CCSPlayerController player)
-    {
-        return player.Team is CsTeam.Terrorist or CsTeam.CounterTerrorist
-            && player.PlayerPawn.IsValid
-            && player.PlayerPawn.Value?.LifeState == (byte)LifeState_t.LIFE_ALIVE;
-    }
-
-    private string Format(CCSPlayerController sender, ChatChannel channel, string message)
-    {
-        var label = channel switch
-        {
-            ChatChannel.Spectator => "(Spec)",
-            ChatChannel.Terrorist => "(T)",
-            _ => "(CT)",
-        };
-        return LegacyXChat.Colorize($"{{grey}}{label} {{white}}") + $"{sender.PlayerName}: {message}";
-    }
-
-    private static string Normalize(string raw)
-    {
-        var clean = (raw ?? string.Empty).Replace("\"", string.Empty).Replace("\r", " ").Replace("\n", " ").Trim();
-        return clean.Length <= 192 ? clean : clean[..192];
-    }
-
-    private enum ChatChannel { Spectator, Terrorist, CounterTerrorist }
 }

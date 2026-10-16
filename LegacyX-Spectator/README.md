@@ -1,14 +1,10 @@
 # LEGACY-X Spectator Comms
 
-`LegacyXSpectatorComms.dll` enforces the LEGACY-X anti-ghosting communication policy. It has two complementary layers. First, it reapplies `sv_deadtalk 1` (living players hear their dead teammates, owner request) at load and each round start; `sv_alltalk` and `sv_full_alltalk` belong to LegacyX-MatchZy, which sets them per phase. Second, it intercepts ordinary `say` and `say_team` text, suppresses the default broadcast, and routes it only to the sender's allowed channel.
+`LegacyXSpectatorComms.dll` enforces the LEGACY-X anti-ghosting communication policy. It reapplies `sv_deadtalk 1` (living players hear their dead teammates, owner request) at load and each round start; `sv_alltalk` and `sv_full_alltalk` belong to LegacyX-MatchZy, which sets them per phase. 
 
-| Sender state | Can receive voice/text | Cannot receive voice/text |
-|---|---|---|
-| Spectator or dead | Spectator/dead channel | Any alive player |
-| Alive Terrorist | Alive Terrorists | Spectators, dead players, Counter-Terrorists |
-| Alive Counter-Terrorist | Alive Counter-Terrorists | Spectators, dead players, Terrorists |
+Chat text is formatted and routed by LegacyX-Admin, not here (owner request 2026-10-16): `ALL | Name: text` for `say`, `TEAM | Name: text` for `say_team`, the dead and spectators only reach each other, and a team line only reaches that team. This plugin used to reroute chat as well, which sent every line twice, once as `(CT) Name: text` with no sign of all or team chat. Its `EnforceTextIsolation` setting is kept in the config for older files and no longer does anything.
 
-> **Important:** `sv_deadtalk 1` lets dead players speak to living teammates (it does not open the enemy team); the stricter anti-ghosting `sv_deadtalk 0` was turned off on request. The plugin still provides the stricter recipient-aware text routing. [1]
+> **Important:** `sv_deadtalk 1` lets dead players speak to living teammates (it does not open the enemy team); the stricter anti-ghosting `sv_deadtalk 0` was turned off on request. [1]
 
 ## MatchZy and AFK boundary
 
