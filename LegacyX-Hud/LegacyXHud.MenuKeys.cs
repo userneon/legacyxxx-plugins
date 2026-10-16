@@ -5,24 +5,21 @@ using CounterStrikeSharp.API.Modules.Utils;
 
 namespace LegacyXHud;
 
-// The menu without typing: hold E to open it, hold R to close it. The server cannot read arbitrary keys, only the
-// game's own buttons (Use = E, Reload = R), so the menu is tied to those. A hold has to be continuous; after it fires
-// the key must be let go before it counts again, so one long press never opens and closes the menu in a loop.
+// Closing the menu without typing: hold R. The server cannot read arbitrary keys, only the game's own buttons (Reload = R).
+// A hold has to be continuous; after it fires the key must be let go before it counts again.
 public sealed partial class LegacyXHud
 {
-    private const float HoldOpenSeconds = 0.7f;
-    private const float HoldCloseSeconds = 0.5f;
+        private const float HoldCloseSeconds = 0.5f;
 
     private bool menuKeys = true;
     private readonly HashSet<int> menuOpen = new();
 
     private sealed class Hold
     {
-        public float Open;          // seconds E has been held while the menu is closed
         public float Close;         // seconds R has been held while the menu is open
         public bool NeedRelease;    // a hold fired: wait for the key to go up
         public int ShownStep = -1;  // last progress step drawn (0..20)
-        public int HintMode;        // 0 = hint hidden, 1 = "Hold E to open menu", 2 = "Hold R to close menu"
+        public int HintMode;        // 0 = hint hidden, 2 = "Hold R to close menu"
         public int HintStep = -1;   // last hint fill step drawn (0..20)
     }
 
@@ -82,7 +79,7 @@ public sealed partial class LegacyXHud
             }
 
             // The menu opens only with !ws (skins) or !admin; the keys only close it.
-            if (!isOpen) { hold.Open = 0; continue; }
+            if (!isOpen) continue;
 
             if (!reload)
             {
@@ -144,11 +141,11 @@ public sealed partial class LegacyXHud
             var wasHidden = hold.HintMode == 0;
             hold.HintMode = mode;
             hold.HintStep = -1;
-            panel.SetVariableFor(player, "hint_key", mode == 1 ? "E" : "R");
-            panel.SetVariableFor(player, "hint_text", mode == 1 ? "Hold E to open menu" : "Hold R to close menu");
+            panel.SetVariableFor(player, "hint_key", "R");
+            panel.SetVariableFor(player, "hint_text", "Hold R to close menu");
             if (wasHidden) panel.SetClassFor(player, "hint", "open", true);
         }
-        var progress = mode == 1 ? hold.Open / HoldOpenSeconds : hold.Close / HoldCloseSeconds;
+        var progress = hold.Close / HoldCloseSeconds;
         var stepNow = (int)Math.Round(Math.Clamp(progress, 0f, 1f) * 20);
         if (stepNow == hold.HintStep) return;
         hold.HintStep = stepNow;

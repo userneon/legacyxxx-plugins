@@ -277,22 +277,6 @@ public sealed partial class LegacyXHud : BasePlugin
 
     // ---- legacyx_notify: announcement, welcome card ----------------------------------------------------------------
 
-    /// <summary>legacyx_notify "ann": sets the two texts for this player, drops the banner in, then away (knife vote).</summary>
-    private void Announce(CCSPlayerController player, string title, string body)
-    {
-        var panel = EnsureNotify();
-        if (panel is null)
-        {
-            Console.WriteLine($"[{ModuleName}] Announce for {player.PlayerName} skipped: layout is not spawned");
-            return;
-        }
-        var opened = OpenFor(panel, player);
-        Console.WriteLine($"[{ModuleName}] Announce to slot {player.Slot}: \"{title}\" (open: {opened})");
-        panel.SetVariableFor(player, "ann_title", title);
-        panel.SetVariableFor(player, "ann_body", body);
-        Flash(panel, player, "ann", 7f);
-    }
-
     /// <summary>
     /// legacyx_notify "wc", the !me card: rank, EXP to the next rank, matches, K/D and win rate of the player, for
     /// <paramref name="seconds"/>. A figure the API did not send shows as "-", never a made-up number.
