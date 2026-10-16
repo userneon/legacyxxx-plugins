@@ -69,7 +69,7 @@ namespace MatchZy
 
         // Game Config
         public bool isKnifeRequired = true;
-        public int minimumReadyRequired = 5; // LEGACY-X exact 5v5 default; strict mode still requires all ten active players.
+        public int minimumReadyRequired = 10; // LEGACY-X ranked is exactly 5v5: the match starts when all ten have typed .ready.
         public bool isWhitelistRequired = false;
         public bool isSaveNadesAsGlobalEnabled = false;
 
