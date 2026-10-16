@@ -330,6 +330,7 @@ namespace MatchZy
             //     return HookResult.Continue;
             // });
 
+            RegisterListener<Listeners.OnTick>(OnLegacyXReadyKeyTick);
             RegisterListener<Listeners.OnMapStart>(mapName => { 
                 AddTimer(1.0f, () => {
                     if (!isMatchSetup)
