@@ -72,6 +72,10 @@ public partial class MatchZy
         if (!roster.TryGetValue("team1", out var team1) || !roster.TryGetValue("team2", out var team2) || team1.Count != 5 || team2.Count != 5)
         {
             Log("[LegacyXMatchCore] Match Core creation refused because the active roster is not exactly 5v5.");
+            // Say so to the players: otherwise they play the whole match and wonder why no EXP or rank changed.
+            var teamOne = roster.TryGetValue("team1", out var one) ? one.Count : 0;
+            var teamTwo = roster.TryGetValue("team2", out var two) ? two.Count : 0;
+            PrintToAllChat($"This match is {{white}}not ranked{{grey}}: ranked needs exactly 5v5 (now {teamOne}v{teamTwo}). No EXP or rank will change.");
             return;
         }
 
