@@ -421,7 +421,11 @@ public sealed partial class LegacyXHud
             var type = view.Types[i];
             Sv(panel, player, $"sk_type{i}_name", TypeLabel(tile!, type.WeaponClass));
             Sv(panel, player, $"sk_type{i}_n", $"{type.Skins} skins");
-            Ss(panel, player, $"sk_type{i}_ic", "kn", tile!.Slot == "knife" && KnifeIcons.TryGetValue(type.WeaponClass, out var knife) ? "kn-" + knife : null);
+            // A knife type has its grey icon; a glove type shows one skin of that type (glove_<type>.png), like the website.
+            Ss(panel, player, $"sk_type{i}_ic", "kn",
+                tile!.Slot == "knife" && KnifeIcons.TryGetValue(type.WeaponClass, out var knife) ? "kn-" + knife
+                : tile.Slot == "glove" && GloveModels.TryGetValue(type.WeaponClass, out var glove) ? "gl-" + glove
+                : null);
         }
     }
 
