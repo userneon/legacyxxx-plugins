@@ -31,7 +31,15 @@ namespace WeaponPaints
 
 			try
 			{
-				_ = Task.Run(async () => await WeaponSync.GetPlayerData(playerInfo));
+				// Joining, reconnecting and a map change all come through here. The loadout is read from the website and then
+				// handed to the player at once, so nobody has to type !rs: without this a player who spawned before the read
+				// finished kept the default skins until the next spawn.
+				var slot = player.Slot;
+				_ = Task.Run(async () =>
+				{
+					await WeaponSync.GetPlayerData(playerInfo);
+					Server.NextFrame(() => ApplyLoadoutWhenAlive(slot, 0));
+				});
 				/*
 				if (Config.Additional.SkinEnabled)
 				{
@@ -109,6 +117,25 @@ namespace WeaponPaints
 			Players.Remove(player);
 
 			return HookResult.Continue;
+		}
+
+		/// <summary>Gives the loaded skins to a player who is already in the world; one who is not yet will get them when they spawn.</summary>
+		private void ApplyLoadoutWhenAlive(int slot, int attempt)
+		{
+			var player = Utilities.GetPlayerFromSlot(slot);
+			if (player is not { IsValid: true, IsBot: false }) return;
+			var pawn = player.PlayerPawn.Value;
+			if (pawn is { IsValid: true } && pawn.LifeState == (byte)LifeState_t.LIFE_ALIVE)
+			{
+				GivePlayerGloves(player);
+				RefreshWeapons(player);
+				GivePlayerAgent(player);
+				GivePlayerMusicKit(player);
+				AddTimer(0.15f, () => { if (player.IsValid) GivePlayerPin(player); });
+				return;
+			}
+			// Still connecting or dead: try again a few times (the spawn path covers the rest).
+			if (attempt < 5) AddTimer(3f, () => ApplyLoadoutWhenAlive(slot, attempt + 1));
 		}
 
 		private void OnMapStart(string mapName)
