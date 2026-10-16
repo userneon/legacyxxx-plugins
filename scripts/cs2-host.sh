@@ -185,11 +185,27 @@ install_multiaddonmanager() {
     say "MultiAddonManager: the package had an unexpected layout, check $CSGO_DIR/addons by hand."
     return 0
   fi
+  ensure_mam_client_cache
   mkdir -p "$STATE_DIR"
   printf '%s\n' "$tag" > "$STATE_DIR/mam-version"
   say "MultiAddonManager ${tag:-installed} (in the console: meta list)"
 }
  
+# Without this a player who already has the Workshop addon is sent it again on every map change: the client drops out and comes
+# back ("loop shutdown"), and the HUD and the microphone are dead until the addon is back. With it, MultiAddonManager remembers
+# which SteamIDs already have the addons, so a map change keeps them in place. Written to MultiAddonManager's own cfg on every run.
+ensure_mam_client_cache() {
+  local cfg="$CSGO_DIR/cfg/multiaddonmanager/multiaddonmanager.cfg" name value
+  mkdir -p "$(dirname "$cfg")"
+  touch "$cfg"
+  for pair in "mm_cache_clients_with_addons 1" "mm_cache_clients_duration 0" "mm_block_disconnect_messages 1"; do
+    name="${pair%% *}"; value="${pair##* }"
+    sed -i "/^[[:space:]]*${name}[[:space:]]/d" "$cfg"
+    printf '%s "%s"\n' "$name" "$value" >> "$cfg"
+  done
+  chown -R "$CS2_USER:$CS2_USER" "$(dirname "$cfg")"
+}
+
 # Workshop addon IDs that every client downloads on connect. Written to MultiAddonManager's own cfg.
 cmd_client_addons() {
   need_root
@@ -206,6 +222,7 @@ cmd_client_addons() {
   sed -i '/^[[:space:]]*mm_client_extra_addons/d' "$cfg"
   printf 'mm_client_extra_addons "%s"\n' "$ids" >> "$cfg"
   chown -R "$CS2_USER:$CS2_USER" "$(dirname "$cfg")"
+  ensure_mam_client_cache
   say "mm_client_extra_addons \"$ids\" written to $cfg"
   say "Takes effect after a restart: sudo systemctl restart cs2@<port> (clients that join later download it)."
 }
