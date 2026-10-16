@@ -72,6 +72,18 @@ public partial class MatchZy
             player.PrintToCenterHtml(html);
         }
 
-        foreach (var stale in legacyXReadyKeys.Keys.Where(id => seated.All(player => player.UserId != id)).ToList()) legacyXReadyKeys.Remove(stale);
+        // Someone who has not picked a team yet (or only watches) sees the line too, telling them what to do and how far the match is.
+        foreach (var player in humans.Where(player => player.TeamNum < (byte)CsTeam.Terrorist))
+        {
+            var userId = player.UserId!.Value;
+            if (!legacyXReadyKeys.TryGetValue(userId, out var state)) legacyXReadyKeys[userId] = state = new ReadyKeyState();
+            var html = $"<font class='fontSize-m' color='#fafafa'>Choose a team to play</font><br><font class='fontSize-s' color='#a3a3a3'>{readyCount}/{needed} ready</font>";
+            if (html == state.LastDraw && Server.TickCount - state.LastDrawTick < LegacyXReadyRedrawTicks) continue;
+            state.LastDraw = html;
+            state.LastDrawTick = Server.TickCount;
+            player.PrintToCenterHtml(html);
+        }
+
+        foreach (var stale in legacyXReadyKeys.Keys.Where(id => humans.All(player => player.UserId != id)).ToList()) legacyXReadyKeys.Remove(stale);
     }
 }
