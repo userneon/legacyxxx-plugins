@@ -391,8 +391,8 @@ public sealed partial class LegacyXHud
                 if (current.Picked == tile || current.Picked == optimistic) current.Picked = newTile;
                 SkinsRender(menu, p, current);
                 MenuSound(p, soundPick, LevelPick);
-                // Same as typing !rs: SkinBridge reads the loadout from the API and applies it.
-                p.ExecuteClientCommandFromServer("css_rs");
+                // Same as typing !rs without its wait between uses: SkinBridge (css_lxapply) reads the loadout from the API and applies it.
+                p.ExecuteClientCommandFromServer("css_lxapply");
                 // A click came while this one was being saved: save the latest pick now.
                 if (current.EquipAgain)
                 {

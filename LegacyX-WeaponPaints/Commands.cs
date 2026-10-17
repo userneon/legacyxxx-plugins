@@ -132,6 +132,30 @@ public partial class WeaponPaints
 		}
 	}
 
+	// The skin menu applies a pick with this instead of !rs: !rs waits CmdRefreshCooldownSeconds between uses, so a second
+	// pick made a moment after the first was dropped and the player had to type !rs again.
+	private readonly Dictionary<int, DateTime> _menuApplyAt = new();
+
+	private void RegisterMenuApplyCommand()
+	{
+		AddCommand("css_lxapply", "Apply your skins after a menu pick", (player, info) =>
+		{
+			if (!Utility.IsPlayerValid(player) || player == null || player.UserId == null || player.IsBot) return;
+			if (!Config.Additional.SkinEnabled || !_gBCommandsAllowed) return;
+			if (_menuApplyAt.TryGetValue(player.Slot, out var next) && DateTime.UtcNow < next) return;
+			_menuApplyAt[player.Slot] = DateTime.UtcNow.AddMilliseconds(400);
+			RefreshFromWebsite(player, new PlayerInfo
+			{
+				UserId = player.UserId,
+				Slot = player.Slot,
+				Index = (int)player.Index,
+				SteamId = player.SteamID.ToString(),
+				Name = player.PlayerName,
+				IpAddress = player.IpAddress?.Split(":")[0]
+			});
+		});
+	}
+
 	private void RegisterCommands()
 	{
 		_config.Additional.CommandStattrak.ForEach(c =>

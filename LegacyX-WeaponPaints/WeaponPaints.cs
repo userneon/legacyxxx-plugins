@@ -81,6 +81,7 @@ namespace WeaponPaints;
 
 			RegisterListeners();
 			RegisterRefreshCommands();
+			RegisterMenuApplyCommand();
 		}
 
 		public void OnConfigParsed(WeaponPaintsConfig config)
