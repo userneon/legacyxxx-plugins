@@ -31,9 +31,13 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     // SteamID64 -> LEGACY-X rank (1-18) and ranked matches, from the API; re-applied every round
     // because the game resets the scoreboard fields.
     private readonly Dictionary<ulong, (int RankId, int Matches, int Exp, string Name, string Clan)> scoreboardRanks = new();
-    // The rank name is always the clan tag, shown as [OPERATOR I]. On top of it, the rank column can try
-    // 12 = skill-group icon or 11 = Premier rating (EXP); 0 = tag only (default). Switchable live with lx_scoreboard_type.
-    private int scoreboardRankType = 0;
+    // The rank name is always the clan tag, shown as [OPERATOR I]. On top of it, the rank column shows our own rank picture:
+    // type 12 with the ranking set to 18 + the rank (19-36), which are the names of the addon's skillgroup19-36.svg. Those names
+    // do not exist in CS2 itself, so the game cannot answer with its own picture (ranking 1-18 gave the CS:GO icons, never ours).
+    // 11 = Premier rating (EXP); 0 = tag only. Switchable live with lx_scoreboard_type.
+    private int scoreboardRankType = 12;
+    // The first of our 18 picture numbers is 19: the game's own are 1-18.
+    private int scoreboardIconOffset = 18;
     private readonly HashSet<ulong> scoreboardLogged = new();
     // Slots holding Tab last tick: the client only draws rank icons after a reveal sent while Tab is open.
     private readonly HashSet<int> scoreboardOpen = new();
@@ -55,7 +59,8 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         config.ScoreboardRanks = environment.GetModuleBoolean("COMMUNITY", "SCOREBOARD_RANKS", config.ScoreboardRanks);
         config.Welcome = environment.GetModuleBoolean("COMMUNITY", "WELCOME", config.Welcome);
         config.ClanTag = environment.GetModuleBoolean("COMMUNITY", "CLAN_TAG", config.ClanTag);
-        scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 0, 0, 12);
+        scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 12, 0, 12);
+        scoreboardIconOffset = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_ICON_OFFSET", 18, 0, 18);
         Config = config;
         Config.ApiBaseUrl = Config.ApiBaseUrl.TrimEnd('/');
     }
@@ -194,7 +199,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
             ApplyRankTag(player, rank.Name, rank.Clan);
             if (scoreboardRankType == 0) return;
             player.CompetitiveRankType = (sbyte)scoreboardRankType;
-            player.CompetitiveRanking = scoreboardRankType == 11 ? rank.Exp : rank.RankId;
+            player.CompetitiveRanking = scoreboardRankType == 11 ? rank.Exp : rank.RankId + scoreboardIconOffset;
             // The client hides a skill group below 10 wins; the rank itself is already earned on the site.
             player.CompetitiveWins = Math.Max(10, rank.Matches);
             Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRankType");
@@ -247,7 +252,10 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     {
         try
         {
-            var message = UserMessage.FromPartialName("ServerRankRevealAll");
+            // By name first; if a CS2 update renamed it, by its number (350), which other rank plugins use.
+            UserMessage message;
+            try { message = UserMessage.FromPartialName("ServerRankRevealAll"); }
+            catch { message = UserMessage.FromId(350); }
             if (player != null) message.Recipients.Add(player);
             else message.Recipients.AddAllPlayers();
             message.Send();

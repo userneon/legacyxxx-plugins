@@ -10,7 +10,11 @@
 
 Тоглогч серверт ороход plugin API-аас түүний цолыг уншаад нэрийн өмнө clan tag болгон тавина: `[OPERATOR I]`. Энэ нь Tab, чат болон killfeed дээр харагдана, 2 секунд тутамд дахин тавигдана, match дуусахад цол дахин уншигдана. Тоглогч сайтын clan-д байвал clan tag нь цолын өмнө орно: `[WOLF | OPERATOR I]` (clan tag сайтаас, 8 тэмдэгтээс хэтрэхгүй; `LEGACYX_COMMUNITY_CLAN_TAG=false` унтраана). Clan tag-ийг сайт дээр өөрчлөхөд тоглогч дахин орох эсвэл match дуусахад шинэчлэгдэнэ. Сайтад бүртгэлгүй тоглогчид шошго тавихгүй. Staff (OWNER, MANAGER, ADMIN, STAFF) цолын оронд role-оо харуулна, clan-д байвал `[WOLF | OWNER]`: тэр шошгыг LegacyX-Admin тавьдаг (clan tag-ийг API-ийн authorization хариунаас авна), энэ plugin staff-ыг алгасна. MatchZy-ийн `[TEAM COACH]` шошгыг дарахгүй.
 
-CS2 нь community серверт Rank баганын icon (`m_iCompetitiveRankType` 12) болон Premier тоог (11) тест дээр харуулаагүй тул тэдгээр нь `lx_scoreboard_type`-аар туршихад л үлдсэн. CS2-ийн өөрийн төрлүүд: **6** Competitive, **7** Wingman, **10** Danger Zone, **11** Premier. 6, 7, 10-ыг туршаагүй байсан: server console-д `lx_scoreboard_type 6`, дараа нь `7`, `10`, `12`, `11` гэж ээлжлэн бичээд Tab дээр icon гарч буй төрлийг хараарай (`0` буцаана). `LEGACYX_COMMUNITY_SCOREBOARD_RANK_TYPE` анхны горимыг, `LEGACYX_COMMUNITY_SCOREBOARD_RANKS=false` бүгдийг унтраана.
+Rank баганад **манай өөрийн rank зураг** гарна. Арга (ABKAM2023/CS2-LR-FakeRank-ийн "custom ranks"-тай ижил): `m_iCompetitiveRankType` = **12**, `m_iCompetitiveRanking` = **18 + rank (19–36)**. Workshop addon-ий `skillgroup19.svg … skillgroup36.svg` нь тэр дугаарын зураг. CS2 өөрөө 19-өөс дээш дугаартай зураггүй тул өөрийн (CS:GO) зургаа буцааж дарж чадахгүй. Өмнө нь ranking 1–18 тавьдаг байсан, тэр үед CS2 өөрийн CS:GO зургаа гаргадаг байсан.
+
+Хэрэглэх: addon-ийг республиш хийх (`tools\build.cmd`), server дээр `deploy`. `lx_scoreboard_type 12` (default), `11` (Premier тоо), `0` (зөвхөн clan tag). `LEGACYX_COMMUNITY_SCOREBOARD_ICON_OFFSET` (default 18) нь манай зургийн эхний дугаарыг 19 болгодог. `LEGACYX_COMMUNITY_SCOREBOARD_RANKS=false` бүгдийг унтраана.
+
+**Анхааруулга:** CS2-LR-FakeRank-ийн README "энэ plugin GSLT token-ы ban-д хүргэж болзошгүй" гэж бичсэн. Rank талбарыг server-ээс хуурамчаар бичих нь Valve-ийн заавартай зөрчилдөх магадлалтай. Бидний plugin энэ талбарыг өмнө нь бичиж байсан.
 
 ## Welcome
 
