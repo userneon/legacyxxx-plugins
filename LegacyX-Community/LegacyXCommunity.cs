@@ -258,14 +258,18 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         }
     }
 
-    /// <summary>Server console: lx_scoreboard_type 0 (rank tag), 12 (skill-group icon) or 11 (Premier number), for everyone at once.</summary>
-    [ConsoleCommand("lx_scoreboard_type", "Tab rank display: 0 = rank tag, 12 = skill-group icons, 11 = Premier rating (EXP)")]
+    /// <summary>
+    /// Server console: lx_scoreboard_type for everyone at once. 0 = the rank as a clan tag only. 6, 7, 10 and 12 put the rank (1-18) in the
+    /// rank column as a skill-group icon (CS2's own rank types: 6 Competitive, 7 Wingman, 10 Danger Zone; 12 was tried first), 11 shows the EXP
+    /// as a Premier rating. Which type draws the icon on a community server is found by trying them one after the other.
+    /// </summary>
+    [ConsoleCommand("lx_scoreboard_type", "Tab rank display: 0 = rank tag, 6/7/10/12 = skill-group icons, 11 = Premier rating (EXP)")]
     public void OnScoreboardType(CCSPlayerController? player, CommandInfo command)
     {
         if (player != null) return; // server console / RCON only
         if (!int.TryParse(command.GetArg(1), out var type) || type is < 0 or > 12)
         {
-            command.ReplyToCommand($"[{ModuleName}] lx_scoreboard_type is {scoreboardRankType}. Use 0 (rank tag), 12 (skill-group icons) or 11 (Premier rating).");
+            command.ReplyToCommand($"[{ModuleName}] lx_scoreboard_type is {scoreboardRankType}. Use 0 (rank tag), 6, 7, 10 or 12 (skill-group icons) or 11 (Premier rating).");
             return;
         }
         scoreboardRankType = type;
