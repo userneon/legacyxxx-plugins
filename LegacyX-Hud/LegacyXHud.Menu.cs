@@ -91,7 +91,7 @@ public sealed partial class LegacyXHud
         SkinsOpen(panel, player);
     }
 
-    /// <summary>!me: your own rank, EXP and match count in a card in the middle of the screen, a little longer than the join card.</summary>
+    /// <summary>!me: your own rank, EXP and matches as a few lines in the chat, only you see them.</summary>
     [ConsoleCommand("css_me", "Show your rank, EXP and matches")]
     public void OnSelfStatsCommand(CCSPlayerController? player, CommandInfo command)
     {
@@ -111,7 +111,11 @@ public sealed partial class LegacyXHud
                     return;
                 }
                 profiles[steamId] = profile;
-                Welcome(still, profile);
+                still.PrintToChat($" \u0004LEGACY-X \u0008| \u0001{profile.RankName} \u0008| \u0001{profile.Exp:N0} EXP \u0008| \u0001{profile.Matches:N0} matches");
+                if (profile.NextMin is { } next)
+                    still.PrintToChat($" \u0008Next: \u0001{profile.NextName ?? "next rank"} \u0008at {next:N0} EXP, {Math.Max(0, next - profile.Exp):N0} to go.");
+                if (profile.Wins is { } wins && profile.Losses is { } losses)
+                    still.PrintToChat($" \u0008Record: \u0001{wins}W {losses}L{(profile.Draws is { } draws && draws > 0 ? $" {draws}D" : "")}\u0008, K/D \u0001{profile.Kills ?? 0}/{profile.Deaths ?? 0}");
             });
         });
     }
