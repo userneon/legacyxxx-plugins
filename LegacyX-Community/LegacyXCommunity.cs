@@ -31,7 +31,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     // SteamID64 -> LEGACY-X rank (1-18) and ranked matches, from the API; re-applied every round
     // because the game resets the scoreboard fields.
     private readonly Dictionary<ulong, (int RankId, int Matches, int Exp, string Name, string Clan)> scoreboardRanks = new();
-    // The rank name is always the clan tag, shown as [OPERATOR I]. On top of it, the rank column shows our own rank picture:
+    // With type 0 the rank name is the clan tag, shown as [OPERATOR I]; with a picture type it is left out (only a clan tag stays). The rank column shows our own rank picture:
     // type 12 with the ranking set to 18 + the rank (19-36), which are the names of the addon's skillgroup19-36.svg. Those names
     // do not exist in CS2 itself, so the game cannot answer with its own picture (ranking 1-18 gave the CS:GO icons, never ours).
     // 11 = Premier rating (EXP); 0 = tag only. Switchable live with lx_scoreboard_type.
@@ -231,8 +231,9 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         if (AdminManager.PlayerHasPermissions(new SteamID(player.SteamID), "@css/generic")) return;
         // The scoreboard puts the clan tag in brackets itself: [OPERATOR I] 777.
         // A clan member shows the clan first: [WOLF | OPERATOR I]. The clan part is cut before the rank is.
-        var tag = rankName.ToUpperInvariant();
-        if (clanTag.Length > 0)
+        // With a rank picture in the rank column (type 6, 7, 10, 11 or 12) the rank name is not repeated as a tag: only the clan stays.
+        var tag = scoreboardRankType == 0 ? rankName.ToUpperInvariant() : clanTag;
+        if (scoreboardRankType == 0 && clanTag.Length > 0)
         {
             var room = 31 - tag.Length - 3;
             if (room >= 2) tag = $"{(clanTag.Length > room ? clanTag[..room] : clanTag)} | {tag}";
