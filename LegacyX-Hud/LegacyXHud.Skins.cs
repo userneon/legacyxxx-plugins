@@ -48,6 +48,7 @@ public sealed partial class LegacyXHud
         public List<SkinItem> Items = new();
         public int Selected = -1;
         public bool Busy;
+        public bool EquipAgain;                            // a click came while one was being saved: save the latest pick after it
     }
 
     private readonly Dictionary<int, SkinView> skinViews = new();
@@ -313,14 +314,25 @@ public sealed partial class LegacyXHud
 
     private void SkinsEquip(PanelHandle panel, CCSPlayerController player, SkinView view)
     {
-        if (view.Busy || view.Picked is not { } tile) return;
+        if (view.Picked is not { } tile) return;
         if (view.Selected < 0 || view.Selected >= view.Items.Count)
         {
             SkinsStatus(panel, player, "Pick a skin first.");
             return;
         }
+        if (view.Busy)
+        {
+            view.EquipAgain = true;
+            return;
+        }
         view.Busy = true;
         var item = view.Items[view.Selected];
+        // The pick shows at once (the check mark does not wait for the API); it is taken back below if saving fails.
+        var optimistic = tile with { Eq = new Equipped(item.Id, view.TypeClass ?? tile.WeaponClass, item.Name, item.PaintId, item.Defindex, item.Rarity) };
+        for (var i = 0; i < view.Slots.Length; i++)
+            if (view.Slots[i] == tile) view.Slots[i] = optimistic;
+        view.Picked = optimistic;
+        SkinsRender(panel, player, view);
         var team = view.Team;       // the tab the pick was made on: it is saved for that team only
         var steamId = player.SteamID;
         var playerSlot = player.Slot;
@@ -358,6 +370,14 @@ public sealed partial class LegacyXHud
                 if (skinViews.TryGetValue(playerSlot, out var current)) current.Busy = false;
                 var p = Utilities.GetPlayerFromSlot(playerSlot);
                 if (p is not { IsValid: true } || menu is null) return;
+                if (!saved && current is not null)
+                {
+                    for (var i = 0; i < current.Slots.Length; i++)
+                        if (current.Slots[i] == optimistic) current.Slots[i] = tile;
+                    if (current.Picked == optimistic) current.Picked = tile;
+                    current.EquipAgain = false;
+                    SkinsRender(menu, p, current);
+                }
                 SkinsStatus(menu, p, message);
                 // The menu line is easy to miss, so the answer is also in the chat.
                 p.PrintToChat(saved ? $" \u0004Equipped \u0001{label}\u0008." : $" \u0002{message}");
@@ -367,12 +387,19 @@ public sealed partial class LegacyXHud
                 var weaponClass = current.TypeClass ?? tile.WeaponClass;
                 var newTile = tile with { Eq = new Equipped(item.Id, weaponClass, item.Name, item.PaintId, item.Defindex, item.Rarity) };
                 for (var i = 0; i < current.Slots.Length; i++)
-                    if (current.Slots[i] == tile) current.Slots[i] = newTile;
-                current.Picked = newTile;
+                    if (current.Slots[i] == tile || current.Slots[i] == optimistic) current.Slots[i] = newTile;
+                if (current.Picked == tile || current.Picked == optimistic) current.Picked = newTile;
                 SkinsRender(menu, p, current);
                 MenuSound(p, soundPick, LevelPick);
                 // Same as typing !rs: SkinBridge reads the loadout from the API and applies it.
                 p.ExecuteClientCommandFromServer("css_rs");
+                // A click came while this one was being saved: save the latest pick now.
+                if (current.EquipAgain)
+                {
+                    current.EquipAgain = false;
+                    if (current.Selected >= 0 && current.Selected < current.Items.Count && current.Items[current.Selected].Id != item.Id)
+                        SkinsEquip(menu, p, current);
+                }
             });
         });
     }
