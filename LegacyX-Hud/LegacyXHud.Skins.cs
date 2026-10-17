@@ -359,6 +359,8 @@ public sealed partial class LegacyXHud
                 var p = Utilities.GetPlayerFromSlot(playerSlot);
                 if (p is not { IsValid: true } || menu is null) return;
                 SkinsStatus(menu, p, message);
+                // The menu line is easy to miss, so the answer is also in the chat.
+                p.PrintToChat(saved ? $" \u0004Equipped \u0001{label}\u0008." : $" \u0002{message}");
                 if (!saved || current is null) return;
                 // The overview shows the new pick at once (it is read again whenever the tab is opened).
                 ForgetLoadouts(steamId);
@@ -556,9 +558,11 @@ public sealed partial class LegacyXHud
         }
         if (id.StartsWith("sk_item", StringComparison.Ordinal) && int.TryParse(id.AsSpan(7), out var item) && item >= 0 && item < view.Items.Count)
         {
+            // A click on a skin picks it and equips it at once (the Equip button still does the same for the picked one).
             view.Selected = item;
             SkinsStatus(panel, player, "");
             SkinsRender(panel, player, view);
+            SkinsEquip(panel, player, view);
             return true;
         }
         return false;
