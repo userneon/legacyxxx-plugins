@@ -70,7 +70,8 @@ public sealed partial class LegacyXHud
             var adminOpen = adminViews.ContainsKey(player.Slot);
             var isOpen = menuOpen.Contains(player.Slot) || adminOpen;
 
-            UpdateHint(player, hold, isOpen ? 2 : 0);
+            // The menus carry their own "Hold R to close" with a bar, so the one at the top right stays hidden (it showed twice).
+            UpdateHint(player, hold, 0);
 
             if (hold.NeedRelease)
             {
