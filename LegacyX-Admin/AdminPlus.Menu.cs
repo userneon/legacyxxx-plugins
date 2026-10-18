@@ -274,6 +274,30 @@ public partial class AdminPlus
         });
 
 
+        m.AddMenuOption(Localizer["Menu.Fun.PlayerFx.Launch"], (p, o) =>
+        {
+            ShowTargetMenu(admin, Localizer["Menu.Fun.Prompt.SelectTarget"], target =>
+            {
+                ShowNumberMenu(admin, Localizer["Menu.Fun.Prompt.Power"], new[] { "300", "600", "1000", "1500" }, power =>
+                {
+                    RunServerCmd(admin, $"css_launch {target} {power}");
+                    ShowFunPlayerFxMenu(admin);
+                });
+            }, onlyAlive: true);
+        });
+
+        m.AddMenuOption(Localizer["Menu.Fun.PlayerFx.Size"], (p, o) =>
+        {
+            ShowTargetMenu(admin, Localizer["Menu.Fun.Prompt.SelectTarget"], target =>
+            {
+                ShowNumberMenu(admin, Localizer["Menu.Fun.Prompt.Size"], new[] { "0.5", "1", "1.5", "2", "3" }, size =>
+                {
+                    RunServerCmd(admin, size == "1" ? $"css_unsize {target}" : $"css_size {target} {size}");
+                    ShowFunPlayerFxMenu(admin);
+                });
+            }, onlyAlive: true);
+        });
+
         m.AddMenuOption(Localizer["Menu.Fun.PlayerFx.Blind"], (p, o) =>
         {
             ShowTargetMenu(admin, Localizer["Menu.Fun.Prompt.SelectTarget"], target =>

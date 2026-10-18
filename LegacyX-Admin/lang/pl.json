@@ -657,5 +657,15 @@
   "Report.Reason.Toxic": "Toksyczne zachowanie",
   "Report.Reason.Griefing": "Smutek / Sabotaż zespołu",
   "Report.Reason.Spam": "Spam/powódź",
-  "Report.Reason.Other": "Inny"
+  "Report.Reason.Other": "Inny",
+  "Menu.Fun.PlayerFx.Launch": "Launch into the air",
+  "Menu.Fun.PlayerFx.Size": "Change size",
+  "Menu.Fun.Prompt.Power": "How hard",
+  "Menu.Fun.Prompt.Size": "Size (1 = normal)",
+  "Fun.Launch.Usage": "Use {white}!launch <target> [power]{grey}.",
+  "Fun.Size.Usage": "Use {white}!size <target> <0.3-3>{grey} or {white}!unsize <target>{grey}.",
+  "css_launch<player>": "{white}{0}{grey} launched {white}{1}{grey} into the air (power {white}{2}{grey}).",
+  "css_launch<multiple>": "{white}{0}{grey} launched {white}{1}{grey} players into the air (power {white}{2}{grey}).",
+  "css_size<player>": "{white}{0}{grey} set the size of {white}{1}{grey} to {white}{2}{grey}.",
+  "css_size<multiple>": "{white}{0}{grey} set the size of {white}{1}{grey} players to {white}{2}{grey}."
 }

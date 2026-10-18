@@ -86,6 +86,7 @@ public partial class AdminPlus
 
     public void RegisterFunCommands()
     {
+        RegisterFunMoreCommands();
         AddPermCmd("@css/slay", "css_freeze", "<#userid|name|all @ commands> [time]", CmdFreeze);
         AddPermCmd("@css/slay", "css_unfreeze", "<#userid|name|all @ commands>", CmdUnfreeze);
         AddPermCmd("@css/slay", "css_gravity", "<gravity>", CmdGravity);
