@@ -22,6 +22,8 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public bool Welcome { get; set; } = true;
     /// <summary>A player in a LEGACY-X clan shows the clan tag before the rank in Tab: [WOLF | OPERATOR I].</summary>
     public bool ClanTag { get; set; } = true;
+    /// <summary>Killing the player who killed you last tells both of you "revenge" in the chat.</summary>
+    public bool Revenge { get; set; } = true;
 }
 
 public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
@@ -42,6 +44,8 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     // Slots holding Tab last tick: the client only draws rank icons after a reveal sent while Tab is open.
     private readonly HashSet<int> scoreboardOpen = new();
     private bool scoreboardBlocked;
+    // victim SteamID64 -> SteamID64 of whoever killed them last, on this map. Taking revenge clears it.
+    private readonly Dictionary<ulong, ulong> lastKiller = new();
     // SteamID64 -> when the player last got the welcome, so a map change does not repeat it.
     private readonly Dictionary<ulong, DateTime> welcomed = new();
 
@@ -59,6 +63,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         config.ScoreboardRanks = environment.GetModuleBoolean("COMMUNITY", "SCOREBOARD_RANKS", config.ScoreboardRanks);
         config.Welcome = environment.GetModuleBoolean("COMMUNITY", "WELCOME", config.Welcome);
         config.ClanTag = environment.GetModuleBoolean("COMMUNITY", "CLAN_TAG", config.ClanTag);
+        config.Revenge = environment.GetModuleBoolean("COMMUNITY", "REVENGE", config.Revenge);
         scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 12, 0, 12);
         scoreboardIconOffset = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_ICON_OFFSET", 18, 0, 18);
         Config = config;
@@ -82,6 +87,8 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
             if (player != null && player.IsValid) ApplyScoreboardRank(player);
             return HookResult.Continue;
         });
+        RegisterEventHandler<EventPlayerDeath>(OnRevengeDeath);
+        RegisterListener<Listeners.OnMapStart>(_ => lastKiller.Clear());
         RegisterEventHandler<EventRoundStart>((_, _) =>
         {
             foreach (var player in Utilities.GetPlayers()) ApplyScoreboardRank(player);
@@ -189,6 +196,34 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         if (string.IsNullOrEmpty(rankName)) return null;
         var exp = IntOrNull(found, "current_exp") ?? 0;
         return $"{{white}}{rankName}{{grey}} · {{white}}{exp:N0}{{grey}} EXP. Type {{white}}!rank{{grey}} for more.";
+    }
+
+    /// <summary>
+    /// Revenge (owner request 2026-10-18): remember who killed whom; when a player kills the one who killed them last, both are told
+    /// in their own chat (nobody else sees it, so it is never noise). Not for bots, suicides or team kills.
+    /// </summary>
+    private HookResult OnRevengeDeath(EventPlayerDeath @event, GameEventInfo info)
+    {
+        if (!Config.Revenge) return HookResult.Continue;
+        var victim = @event.Userid;
+        var killer = @event.Attacker;
+        if (victim == null || killer == null || !victim.IsValid || !killer.IsValid || victim.IsBot || killer.IsBot) return HookResult.Continue;
+        if (victim.Slot == killer.Slot || victim.TeamNum == killer.TeamNum || victim.SteamID == 0 || killer.SteamID == 0) return HookResult.Continue;
+        if (lastKiller.TryGetValue(killer.SteamID, out var theirKiller) && theirKiller == victim.SteamID)
+        {
+            lastKiller.Remove(killer.SteamID);
+            killer.PrintToChat(LegacyXChat.System($"{{white}}Revenge!{{grey}} You got {{white}}{ChatName(victim)}{{grey}} back."));
+            victim.PrintToChat(LegacyXChat.System($"{{white}}{ChatName(killer)}{{grey}} got revenge on you."));
+        }
+        lastKiller[victim.SteamID] = killer.SteamID;
+        return HookResult.Continue;
+    }
+
+    /// <summary>A player's name safe to put in a chat line (no colour braces, no control characters).</summary>
+    private static string ChatName(CCSPlayerController player)
+    {
+        var name = new string((player.PlayerName ?? "").Where(c => c >= ' ' && c != '{' && c != '}').ToArray()).Trim();
+        return name.Length > 0 ? name : "a player";
     }
 
     private void ApplyScoreboardRank(CCSPlayerController player)

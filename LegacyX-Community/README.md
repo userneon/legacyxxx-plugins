@@ -41,3 +41,5 @@ dotnet build -c Release
 ```
 
 Одоогоор server байхгүй тул энэ repository нь source/build preparation л агуулна. Future host батлагдсаны дараа central `.env`, secret-free config default болон release artifact-ийг reviewed deployment procedure-ээр байрлуулна.
+
+**Revenge.** Kill the player who killed you last (on this map) and you both get a line in your own chat: "Revenge! You got X back." / "X got revenge on you." Nobody else sees it; bots, suicides and team kills do not count, and a revenge clears itself so the next kill is not one. `LEGACYX_COMMUNITY_REVENGE=false` switches it off.
