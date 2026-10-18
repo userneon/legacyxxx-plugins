@@ -242,6 +242,15 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         try
         {
             ApplyRankTag(player, rank.Name, rank.Clan);
+            if (RankHidden())
+            {
+                // A ranked match is on: no rank in Tab, as on FACEIT. The new rank is on the website after the match.
+                player.CompetitiveRankType = 0;
+                player.CompetitiveRanking = 0;
+                Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRankType");
+                Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRanking");
+                return;
+            }
             if (scoreboardRankType == 0) return;
             player.CompetitiveRankType = (sbyte)scoreboardRankType;
             player.CompetitiveRanking = scoreboardRankType == 11 ? rank.Exp : rank.RankId + scoreboardIconOffset;
@@ -270,6 +279,13 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     }
 
     /// <summary>The rank name as the player's clan tag: shown before the name in Tab, chat and the kill feed.</summary>
+    /// <summary>True while LegacyX-MatchZy has a ranked match live (its legacyx_match_live convar): ranks stay out of Tab until it ends.</summary>
+    private static bool RankHidden()
+    {
+        try { return ConVar.Find("legacyx_match_live")?.GetPrimitiveValue<bool>() == true; }
+        catch { return false; }
+    }
+
     private void ApplyRankTag(CCSPlayerController player, string rankName, string clanTag = "")
     {
         // Staff (every LEGACY-X staff role carries @css/generic) show their role instead; LegacyX-Admin sets it.
@@ -277,8 +293,9 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         // The scoreboard puts the clan tag in brackets itself: [OPERATOR I] 777.
         // A clan member shows the clan first: [WOLF | OPERATOR I]. The clan part is cut before the rank is.
         // With a rank picture in the rank column (type 6, 7, 10, 11 or 12) the rank name is not repeated as a tag: only the clan stays.
-        var tag = scoreboardRankType == 0 ? rankName.ToUpperInvariant() : clanTag;
-        if (scoreboardRankType == 0 && clanTag.Length > 0)
+        var nameAsTag = scoreboardRankType == 0 && !RankHidden();
+        var tag = nameAsTag ? rankName.ToUpperInvariant() : clanTag;
+        if (nameAsTag && clanTag.Length > 0)
         {
             var room = 31 - tag.Length - 3;
             if (room >= 2) tag = $"{(clanTag.Length > room ? clanTag[..room] : clanTag)} | {tag}";

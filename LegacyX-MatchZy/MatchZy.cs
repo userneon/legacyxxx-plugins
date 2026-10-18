@@ -32,7 +32,13 @@ namespace MatchZy
         public bool isWarmup = false;
         public bool isKnifeRound = false;
         public bool isSideSelectionPhase = false;
-        public bool isMatchLive = false;
+        private bool matchLive = false;
+        // Mirrored into legacyx_match_live so LegacyX-Community can keep ranks out of Tab while a match is live.
+        public bool isMatchLive
+        {
+            get => matchLive;
+            set { matchLive = value; legacyXMatchLiveFlag.Value = value; }
+        }
         public long liveMatchId = -1;
         public int autoStartMode = 1;
 
