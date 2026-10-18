@@ -105,6 +105,8 @@ public partial class AdminPlus
             options.Add(new ChatMenuOptionData("Players", () => ShowPlayerCommands(caller)));
         if (new[] { "map", "rr", "clean" }.Any(command => HasCommandAccess(caller, command)))
             options.Add(new ChatMenuOptionData("Server", () => ShowServerCommands(caller)));
+        if (new[] { "freeze", "weapon" }.Any(command => HasCommandAccess(caller, command)))
+            options.Add(new ChatMenuOptionData("Fun", () => ShowFunRootMenu(caller)));
         if (HasCommandAccess(caller, "banlist")) options.Add(new ChatMenuOptionData("Bans", () => BanListMenu(caller, info)));
 
         if (options.Count == 0)
