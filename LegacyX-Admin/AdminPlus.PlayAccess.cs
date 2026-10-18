@@ -37,7 +37,7 @@ public partial class AdminPlus
     {
         var client = _centralBanClient;
         var player = Utilities.GetPlayerFromSlot(slot);
-        if (client == null || (!_requireLogin && !_enforceLeaveCooldown) || player == null || !player.IsValid || player.IsBot || player.SteamID == 0) return;
+        if (client == null || (!_requireLogin && !_enforceLeaveCooldown) || player == null || !player.IsValid || player.IsBot || player.IsHLTV || player.SteamID == 0) return;
         var steamId = player.SteamID.ToString();
         // Staff may always join (they test things before they have signed in anywhere).
         if (AdminManager.PlayerHasPermissions(new SteamID(player.SteamID), "@css/generic")) return;
@@ -104,6 +104,8 @@ public partial class AdminPlus
         {
             var current = Utilities.GetPlayerFromSlot(slot);
             if (current == null || !current.IsValid || current.SteamID.ToString() != steamId) return;
+            // Staff rights may only have arrived after the first check (they come from the API too): look again before removing.
+            if (AdminManager.PlayerHasPermissions(new SteamID(current.SteamID), "@css/generic")) return;
             current.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_KICKED);
             LogAction($"Play access: removed {SanitizeName(current.PlayerName)} ({steamId}): {reason}.");
             Console.WriteLine($"[LEGACY-X Admin] Play access: removed {SanitizeName(current.PlayerName)} ({steamId}): {reason}.");
