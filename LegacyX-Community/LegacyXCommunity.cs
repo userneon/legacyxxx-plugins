@@ -46,6 +46,8 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     private bool scoreboardBlocked;
     // victim SteamID64 -> SteamID64 of whoever killed them last, on this map. Taking revenge clears it.
     private readonly Dictionary<ulong, ulong> lastKiller = new();
+    // (killer, victim) -> how many times the first killed the second on this map; the "3 vs 2" of the revenge line.
+    private readonly Dictionary<(ulong, ulong), int> duelKills = new();
     // SteamID64 -> when the player last got the welcome, so a map change does not repeat it.
     private readonly Dictionary<ulong, DateTime> welcomed = new();
 
@@ -88,7 +90,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
             return HookResult.Continue;
         });
         RegisterEventHandler<EventPlayerDeath>(OnRevengeDeath);
-        RegisterListener<Listeners.OnMapStart>(_ => lastKiller.Clear());
+        RegisterListener<Listeners.OnMapStart>(_ => { lastKiller.Clear(); duelKills.Clear(); });
         RegisterEventHandler<EventRoundStart>((_, _) =>
         {
             foreach (var player in Utilities.GetPlayers()) ApplyScoreboardRank(player);
@@ -199,8 +201,9 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     }
 
     /// <summary>
-    /// Revenge (owner request 2026-10-18): remember who killed whom; when a player kills the one who killed them last, both are told
-    /// in their own chat (nobody else sees it, so it is never noise). Not for bots, suicides or team kills.
+    /// Revenge (owner request 2026-10-18): remember who killed whom and how often; when a player kills the one who killed them
+    /// last, both are told in their own chat as "LEGACY-X | Name 3 vs Name 2" (the kills each has on the other on this map).
+    /// Nobody else sees it, so it is never noise. Not for bots, suicides or team kills.
     /// </summary>
     private HookResult OnRevengeDeath(EventPlayerDeath @event, GameEventInfo info)
     {
@@ -209,15 +212,22 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         var killer = @event.Attacker;
         if (victim == null || killer == null || !victim.IsValid || !killer.IsValid || victim.IsBot || killer.IsBot) return HookResult.Continue;
         if (victim.Slot == killer.Slot || victim.TeamNum == killer.TeamNum || victim.SteamID == 0 || killer.SteamID == 0) return HookResult.Continue;
+        duelKills[(killer.SteamID, victim.SteamID)] = duelKills.GetValueOrDefault((killer.SteamID, victim.SteamID)) + 1;
         if (lastKiller.TryGetValue(killer.SteamID, out var theirKiller) && theirKiller == victim.SteamID)
         {
             lastKiller.Remove(killer.SteamID);
-            killer.PrintToChat(LegacyXChat.System($"{{white}}Revenge!{{grey}} You got {{white}}{ChatName(victim)}{{grey}} back."));
-            victim.PrintToChat(LegacyXChat.System($"{{white}}{ChatName(killer)}{{grey}} got revenge on you."));
+            var line = RevengeLine(ChatName(killer), duelKills.GetValueOrDefault((killer.SteamID, victim.SteamID)), ChatName(victim), duelKills.GetValueOrDefault((victim.SteamID, killer.SteamID)));
+            killer.PrintToChat(line);
+            victim.PrintToChat(line);
         }
         lastKiller[victim.SteamID] = killer.SteamID;
         return HookResult.Continue;
     }
+
+    // The one chat line that is red on purpose (owner's format "LEGACY-X | name N vs name N"): LegacyXChat turns red into white, so the
+    // CS2 codes are used here directly. \x07 red, \x08 grey, \x01 white.
+    internal static string RevengeLine(string killer, int killerKills, string victim, int victimKills) =>
+        $" \x07LEGACY-X \x08| \x01{killer} \x07{killerKills} \x08vs \x01{victim} \x07{victimKills}";
 
     /// <summary>A player's name safe to put in a chat line (no colour braces, no control characters).</summary>
     private static string ChatName(CCSPlayerController player)
