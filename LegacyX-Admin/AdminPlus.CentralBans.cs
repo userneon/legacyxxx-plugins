@@ -44,6 +44,7 @@ public partial class AdminPlus
         }
 
         _centralBanClient = new CentralBanClient(apiBaseUrl, pluginId, pluginSecret);
+        InitializePlayAccess(environment);
         var sweepSeconds = environment.GetModuleInt("ADMIN", "CENTRAL_BANS_SWEEP_SECONDS", 30, 10, 300);
         AddTimer(sweepSeconds, SweepCentralBans, TimerFlags.REPEAT);
         _ = RefreshBanCacheAsync();
@@ -57,6 +58,7 @@ public partial class AdminPlus
         if (_centralBanClient == null || player == null || !player.IsValid || player.IsBot) return;
         var ip = PlayerIp(player);
         _ = CheckAndKickAsync([player.SteamID.ToString()], ip.Length > 0 ? [ip] : []);
+        CheckPlayAccess(playerSlot);
     }
 
     /// <summary>The player's IPv4 address without the port, or "" when it is not known.</summary>
@@ -164,6 +166,21 @@ internal sealed class CentralBanClient
         return await response.Content.ReadFromJsonAsync<CentralBanResponse>() ?? new CentralBanResponse();
     }
 
+    /// <summary>Whether the player is signed in on the website and whether they are blocked for leaving matches.</summary>
+    internal async Task<PlayAccessEntry?> AccessAsync(string steamId)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, _apiBaseUrl + "/api/v1/plugin/players/access")
+        {
+            Content = JsonContent.Create(new { steamIds = new[] { steamId } }),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _pluginSecret);
+        request.Headers.Add("x-plugin-id", _pluginId);
+        using var response = await Http.SendAsync(request);
+        if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"LEGACY-X API returned {(int)response.StatusCode}");
+        var body = await response.Content.ReadFromJsonAsync<PlayAccessResponse>();
+        return body?.Players.FirstOrDefault(p => p.SteamId == steamId);
+    }
+
     /// <summary>Every active ban, SteamID and IP, for this server's ban menus.</summary>
     internal async Task<List<CentralListedBan>> ListActiveAsync()
     {
@@ -210,4 +227,22 @@ internal sealed class CentralBan
     [JsonPropertyName("reason")] public string Reason { get; set; } = string.Empty;
     [JsonPropertyName("isPermanent")] public bool IsPermanent { get; set; }
     [JsonPropertyName("expiresAt")] public DateTimeOffset? ExpiresAt { get; set; }
+}
+
+internal sealed class PlayAccessResponse
+{
+    [JsonPropertyName("players")] public List<PlayAccessEntry> Players { get; set; } = [];
+}
+
+internal sealed class PlayAccessEntry
+{
+    [JsonPropertyName("steamId")] public string SteamId { get; set; } = string.Empty;
+    [JsonPropertyName("loggedIn")] public bool LoggedIn { get; set; }
+    [JsonPropertyName("cooldown")] public PlayCooldown? Cooldown { get; set; }
+}
+
+internal sealed class PlayCooldown
+{
+    [JsonPropertyName("until")] public DateTimeOffset Until { get; set; }
+    [JsonPropertyName("minutes")] public int Minutes { get; set; }
 }
