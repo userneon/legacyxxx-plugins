@@ -6,6 +6,7 @@ using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API.ValveConstants.Protobuf;
+using LegacyX.Shared.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -37,8 +38,15 @@ public partial class AdminPlus
         }
     }
 
+    /// <summary>
+    /// !admin opens the chat menu, as it always did (owner request 2026-10-18). The panel in the game's own UI (LegacyX-Hud) is
+    /// still there: LEGACYX_ADMIN_PANORAMA_MENU=true makes !admin ask it first and fall back to the chat menu.
+    /// </summary>
+    private bool _panoramaAdminMenu;
+
     public void RegisterMenuCommands()
     {
+        _panoramaAdminMenu = LegacyXEnvironmentLoader.Load().GetModuleBoolean("ADMIN", "PANORAMA_MENU", false);
         RegisterHudBridge();
         AddCommand("admin", Localizer["Menu.AdminDesc"], AdminMenu);
         AddCommand("css_admin", "Open admin menu from console", AdminMenu);
@@ -68,7 +76,13 @@ public partial class AdminPlus
             return;
         }
 
-        // With LegacyX-Hud loaded the panel in the game's own UI replaces the chat menu: ask it to open, and if it does not
+        if (!_panoramaAdminMenu)
+        {
+            ShowChatAdminMenu(caller, info);
+            return;
+        }
+
+        // With the panel switched on and LegacyX-Hud loaded it replaces the chat menu: ask it to open, and if it does not
         // answer within a moment (it is not loaded, or its layout is missing) the chat menu opens as before.
         var slot = caller.Slot;
         _hudAnswered.Remove(slot);
