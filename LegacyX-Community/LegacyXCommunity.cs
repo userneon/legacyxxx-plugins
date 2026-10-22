@@ -354,6 +354,73 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         command.ReplyToCommand($"[{ModuleName}] Tab rank type set to {type} for {scoreboardRanks.Count} ranked player(s). Open Tab to check.");
     }
 
+    // Emotes (owner request 2026-10-22): bought with LX on the website, played in game with .e. The API says which a player owns and wears;
+    // the lines live here, keyed by the emote's fx key.
+    private static readonly Dictionary<string, (string Name, string Line)> EmoteLines = new()
+    {
+        ["gg"] = ("GG", "says {white}GG{grey}."),
+        ["hello"] = ("Hello", "says {white}Сайн уу!{grey}"),
+        ["gl"] = ("Good Luck", "wishes everyone {white}good luck{grey}."),
+        ["nice"] = ("Nice Shot", "says {white}nice shot!{grey}"),
+        ["clap"] = ("Applause", "claps: {white}*clap clap clap*{grey}"),
+        ["salute"] = ("Salute", "{white}salutes{grey} the server."),
+        ["fire"] = ("On Fire", "is {white}on fire!{grey}"),
+        ["legacy"] = ("Legacy", "{white}L E G A C Y{grey}"),
+    };
+    private const float EmoteCooldownSeconds = 8f;
+    private readonly Dictionary<ulong, float> emoteLastAt = new();
+
+    [ConsoleCommand("css_e", "Plays your emote: .e, or .e <name> for another you own; .emotes lists them")]
+    [ConsoleCommand("css_emote", "Plays your emote: .e, or .e <name> for another you own; .emotes lists them")]
+    [ConsoleCommand("css_emotes", "Lists the emotes you own")]
+    public void OnEmote(CCSPlayerController? player, CommandInfo? command)
+    {
+        if (player == null || !player.IsValid || player.IsBot) return;
+        var wanted = command != null && command.ArgCount > 1 ? command.ArgByIndex(1).Trim().ToLowerInvariant() : "";
+        var listOnly = command != null && command.GetArg(0).EndsWith("emotes", StringComparison.OrdinalIgnoreCase);
+        if (!listOnly && emoteLastAt.TryGetValue(player.SteamID, out var last) && Server.CurrentTime - last < EmoteCooldownSeconds) return;
+        _ = PlayEmoteAsync(player, wanted, listOnly);
+    }
+
+    private async Task PlayEmoteAsync(CCSPlayerController player, string wanted, bool listOnly)
+    {
+        if (!Config.Enabled || string.IsNullOrWhiteSpace(Config.ApiBaseUrl) || string.IsNullOrWhiteSpace(Config.PluginSecret))
+        {
+            Print(player, "Emotes aren't ready yet.");
+            return;
+        }
+        var steamId = player.SteamID;
+        var (_, profile) = await FetchProfileAsync(steamId.ToString());
+        if (profile is not { } found || !found.TryGetProperty("emotes", out var emotes))
+        {
+            Print(player, "Your emotes are unavailable right now. Try again soon.");
+            return;
+        }
+        var owned = new List<string>();
+        if (emotes.TryGetProperty("owned", out var ownedArray) && ownedArray.ValueKind == JsonValueKind.Array)
+            foreach (var entry in ownedArray.EnumerateArray()) if (entry.GetString() is { } key && EmoteLines.ContainsKey(key)) owned.Add(key);
+        var equipped = StringOrNull(emotes, "equipped");
+
+        if (listOnly)
+        {
+            Print(player, owned.Count == 0 ? "You have no emotes yet. Get them in the Shop on the website." : "Your emotes: " + string.Join(", ", owned.Select(key => $"{{white}}{key}{{grey}}")) + ". Play one with .e <name>.");
+            return;
+        }
+        var key2 = wanted.Length > 0 ? wanted : equipped;
+        if (key2 == null || !owned.Contains(key2))
+        {
+            Print(player, wanted.Length > 0 ? "You don't have that emote. Type .emotes to see yours." : "No emote worn. Pick one in the Shop, or type .e <name>.");
+            return;
+        }
+        Server.NextFrame(() =>
+        {
+            if (!player.IsValid) return;
+            if (emoteLastAt.TryGetValue(steamId, out var last) && Server.CurrentTime - last < EmoteCooldownSeconds) return;
+            emoteLastAt[steamId] = Server.CurrentTime;
+            Server.PrintToChatAll(LegacyXChat.System($"{{white}}{player.PlayerName}{{grey}} {EmoteLines[key2].Line}"));
+        });
+    }
+
     [ConsoleCommand("css_discord", "Shows the LEGACY-X Discord invite")]
     public void OnDiscord(CCSPlayerController? player, CommandInfo? command)
     {
