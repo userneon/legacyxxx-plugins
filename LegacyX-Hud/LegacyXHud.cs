@@ -89,6 +89,10 @@ public sealed partial class LegacyXHud : BasePlugin
         soundOpen = env.GetModule("HUD", "MENU_SOUND_OPEN", soundOpen);
         soundBack = env.GetModule("HUD", "MENU_SOUND_BACK", soundBack);
         soundPick = env.GetModule("HUD", "MENU_SOUND_PICK", soundPick);
+        roundSound = env.GetModuleBoolean("HUD", "ROUND_SOUND", true);
+        soundRound = env.GetModule("HUD", "ROUND_SOUND_FILE", soundRound);
+        if (float.TryParse(env.GetModule("HUD", "ROUND_SOUND_VOLUME", "0.6"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var roundVolume))
+            roundSoundVolume = Math.Clamp(roundVolume, 0f, 1f);
         if (menuKeys)
         {
             RegisterListener<Listeners.OnTick>(OnMenuKeysTick);
@@ -114,7 +118,24 @@ public sealed partial class LegacyXHud : BasePlugin
         Console.WriteLine($"[{ModuleName}] round_start, notify entity {(notify is null ? "not spawned yet" : "already spawned")}");
         EnsureNotify();
         if (IsWarmup()) return HookResult.Continue;
+        PlayRoundStartSound();
         return HookResult.Continue;
+    }
+
+    /// <summary>A short sting for every human player as each live round begins (never in warmup, never for bots).</summary>
+    private void PlayRoundStartSound()
+    {
+        if (!roundSound || soundRound.Length == 0) return;
+        var volume = Math.Clamp(roundSoundVolume, 0f, 1f).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        // A moment after the event, so it lands as the freeze time starts and not under the game's own round-start sounds.
+        AddTimer(0.6f, () =>
+        {
+            foreach (var player in Utilities.GetPlayers())
+            {
+                if (player is not { IsValid: true, IsBot: false, IsHLTV: false }) continue;
+                try { player.ExecuteClientCommand($"playvol {soundRound} {volume}"); } catch { /* a player who just left */ }
+            }
+        });
     }
 
     /// <summary>

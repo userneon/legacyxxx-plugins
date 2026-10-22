@@ -73,3 +73,10 @@ build machine needs the .NET 10 SDK next to the .NET 8 one the other plugins use
 `dotnet build LegacyX-Hud/LegacyX-Hud.csproj -c Release`. The class and method names of PanoramaManager
 (`Panorama.Init/Spawn/Shutdown`, `PanelHandle.SetVariableFor/SetClassFor/CaptureInput/Dispose`) were taken from
 its README; if the compiler disagrees, adjust `LegacyXHud.cs`, nothing else depends on them.
+
+## Round-start sound
+
+Every live round (not warmup, not bots) begins with a short sting, played on each human player's client with `playvol`.
+`LEGACYX_HUD_ROUND_SOUND=false` turns it off, `LEGACYX_HUD_ROUND_SOUND_VOLUME` (0 to 1, default 0.6) sets the level and
+`LEGACYX_HUD_ROUND_SOUND_FILE` changes the sound (default `sounds/legacyx/round_start.vsnd_c`, shipped in the Workshop addon;
+see `legacyxxx-workshop/sounds-src/`). Until the addon holds that file the clients play nothing.

@@ -19,6 +19,11 @@ public sealed partial class LegacyXHud
     private string soundOpen = "sounds/ui/menu_focus.vsnd_c";
     private string soundBack = "sounds/ui/panorama/cards_rollover_01.vsnd_c";
     private string soundPick = "sounds/ui/panorama/itemtile_click_02.vsnd_c";
+    // The round-start sting (LEGACYX_HUD_ROUND_SOUND=false turns it off, _FILE changes the sound, _VOLUME is 0 to 1). The default is the
+    // sound shipped in the LEGACY-X Workshop addon (sounds/legacyx/round_start); before the addon has it, the client plays nothing.
+    private bool roundSound = true;
+    private float roundSoundVolume = 0.6f;
+    private string soundRound = "sounds/legacyx/round_start.vsnd_c";
     private const float LevelClick = 0.35f, LevelOpen = 0.4f, LevelBack = 0.35f, LevelPick = 0.5f;
 
     private void MenuSound(CCSPlayerController player, string sound, float level)
