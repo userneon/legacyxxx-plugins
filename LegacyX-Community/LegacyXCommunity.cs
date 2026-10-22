@@ -371,8 +371,6 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     private readonly Dictionary<ulong, float> emoteLastAt = new();
 
     [ConsoleCommand("css_e", "Plays your emote: .e, or .e <name> for another you own; .emotes lists them")]
-    [ConsoleCommand("css_emote", "Plays your emote: .e, or .e <name> for another you own; .emotes lists them")]
-    [ConsoleCommand("css_emotes", "Lists the emotes you own")]
     public void OnEmote(CCSPlayerController? player, CommandInfo? command)
     {
         if (player == null || !player.IsValid || player.IsBot) return;

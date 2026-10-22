@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>FortniteEmotesNDancesAPI</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.376">
+      <PrivateAssets>none</PrivateAssets>
+      <ExcludeAssets>runtime</ExcludeAssets>
+      <IncludeAssets>compile;build;native;contentfiles;analyzers;buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

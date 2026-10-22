@@ -1469,6 +1469,7 @@ Plugin-д зөвхөн нууцгүй gameplay-ийн анхдагч утга (J
 | `LegacyX-AFKManager` | AFK, C4, spectator, anti-camp | `LEGACYX_AFKMANAGER_ENABLED` |
 | `LegacyX-Community` | Цол, EXP, welcome chat, Tab дахь цол | `LEGACYX_COMMUNITY_*` (WELCOME, SCOREBOARD_RANKS, SCOREBOARD_RANK_TYPE, CLAN_TAG) |
 | `LegacyX-Hud` | Workshop HUD: welcome card, rank card, match дүн, knife vote | `LEGACYX_HUD_ENABLED`, `LEGACYX_HUD_RANK_CARD` |
+| `LegacyX-Emotes` | Shop-оос авсан хөдөлгөөнт emote/бүжгийг л тоглуулна (FortniteEmotesNDances дээр) | `LEGACYX_EMOTES_ENABLED`, `LEGACYX_EMOTES_ROOT_PLAYS_ALL` |
 | `LegacyX-Killfeed` | Kill feed (сайтын дээд талын ticker) | `LEGACYX_KILLFEED_ENABLED` |
 | `LegacyX-MatchZy` | Match lifecycle, EXP, Match Core | `LEGACYX_MATCHZY_ENABLED`, `…_RANK_ENABLED`, `…_MATCH_CORE_ENABLED` |
 | `LegacyX-Spectator` | Spectator болон амьд тоглогчийн chat/voice тусгаарлалт | `LEGACYX_SPECTATOR_COMMS_ENABLED` |

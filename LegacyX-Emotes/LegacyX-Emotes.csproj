@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Must match FortniteEmotesNDances, which needs CounterStrikeSharp on .NET 10. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>LegacyX-Emotes</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.376">
+      <PrivateAssets>none</PrivateAssets>
+      <ExcludeAssets>runtime</ExcludeAssets>
+      <IncludeAssets>compile;build;native;contentfiles;analyzers;buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Compile-time only: the running server already has FortniteEmotesNDancesAPI.dll from the emotes plugin, and one copy must be shared. -->
+    <ProjectReference Include="../third-party/FortniteEmotesAPI/FortniteEmotesNDancesAPI.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+    <ProjectReference Include="../shared/LegacyX.Shared.Configuration/LegacyX.Shared.Configuration.csproj" />
+  </ItemGroup>
+</Project>
