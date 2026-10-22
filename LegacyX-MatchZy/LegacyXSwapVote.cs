@@ -14,6 +14,8 @@ namespace MatchZy;
 public partial class MatchZy
 {
     private const float LegacyXSwapVoteSeconds = 30f;
+    private const float LegacyXSwapCooldownSeconds = 600f;
+    private float legacyXSwapLastAt = -LegacyXSwapCooldownSeconds;
 
     private sealed class SwapGear
     {
@@ -49,6 +51,13 @@ public partial class MatchZy
 
         if (legacyXSwapYes.Count == 0)
         {
+            var wait = legacyXSwapLastAt + LegacyXSwapCooldownSeconds - Server.CurrentTime;
+            if (wait > 0)
+            {
+                var minutes = (int)Math.Ceiling(wait / 60f);
+                PrintToPlayerChat(player, $"Sides were swapped recently. You can vote again in {minutes} min.");
+                return;
+            }
             legacyXSwapTimer?.Kill();
             legacyXSwapTimer = AddTimer(LegacyXSwapVoteSeconds, () =>
             {
@@ -85,6 +94,7 @@ public partial class MatchZy
         legacyXSwapTimer?.Kill();
         legacyXSwapTimer = null;
         legacyXSwapYes.Clear();
+        legacyXSwapLastAt = Server.CurrentTime;
         PerformLegacyXSwap(humans);
     }
 
