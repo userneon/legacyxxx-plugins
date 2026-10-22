@@ -22,6 +22,10 @@ public partial class MatchZy
     public void HandleCoachCommand(CCSPlayerController? player, string side)
     {
         if (!IsPlayerValid(player)) return;
+        // LEGACY-X: coaching is turned off, so nobody can join a coach slot.
+        ReplyToUserCommand(player, "Coaching is turned off on LEGACY-X.");
+        return;
+#pragma warning disable CS0162
         if (isPractice)
         {
             ReplyToUserCommand(player, "Coaching only works in a match.");
@@ -72,6 +76,7 @@ public partial class MatchZy
         if (player.InGameMoneyServices != null) player.InGameMoneyServices.Account = 0;
         ReplyToUserCommand(player, $"You now coach {{white}}{matchZyCoachTeam.teamName}{{grey}}. Type {{white}}.uncoach{{grey}} to stop.");
         PrintToAllChat($"{ChatColors.White}{player.PlayerName}{ChatColors.Grey} now coaches {ChatColors.White}{matchZyCoachTeam.teamName}{ChatColors.Grey}.");
+#pragma warning restore CS0162
     }
 
     public void HandleCoaches()
