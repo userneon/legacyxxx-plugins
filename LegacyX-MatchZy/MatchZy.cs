@@ -125,7 +125,7 @@ namespace MatchZy
                 { ".ur", OnPlayerUnReady },
                 { ".stay", OnTeamStay },
                 { ".switch", OnTeamSwitch },
-                { ".swap", OnTeamSwitch },
+                { ".swap", OnSwapVoteCommand },
                 { ".tech", OnTechCommand },
                 { ".p", OnPauseCommand },
                 { ".pause", OnPauseCommand },

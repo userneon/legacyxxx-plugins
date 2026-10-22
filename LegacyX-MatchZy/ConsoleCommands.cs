@@ -146,7 +146,6 @@ namespace MatchZy
         }
 
         [ConsoleCommand("css_switch", "Switch after knife round")]
-        [ConsoleCommand("css_swap", "Switch after knife round")]
         public void OnTeamSwitch(CCSPlayerController? player, CommandInfo? command)
         {
             if (player == null || !isSideSelectionPhase) return;
