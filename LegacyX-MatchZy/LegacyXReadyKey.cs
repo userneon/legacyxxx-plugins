@@ -24,11 +24,16 @@ public partial class MatchZy
 
     private readonly Dictionary<int, ReadyKeyState> legacyXReadyKeys = new();
 
+    // Private chat nudge (owner request 2026-10-22): each player who has not readied hears it alone, every so often.
+    private const float LegacyXReadyNudgeSeconds = 20f;
+    private readonly Dictionary<int, float> legacyXReadyNudged = new();
+
     private void OnLegacyXReadyKeyTick()
     {
         if (!readyAvailable || matchStarted)
         {
             if (legacyXReadyKeys.Count > 0) legacyXReadyKeys.Clear();
+            if (legacyXReadyNudged.Count > 0) legacyXReadyNudged.Clear();
             return;
         }
 
@@ -72,6 +77,19 @@ public partial class MatchZy
             player.PrintToCenterHtml(html);
         }
 
+        foreach (var player in humans)
+        {
+            var userId = player.UserId!.Value;
+            var isSeated = player.TeamNum >= (byte)CsTeam.Terrorist;
+            if (isSeated && playerReadyStatus.TryGetValue(userId, out var nudgeReady) && nudgeReady) continue;
+            if (legacyXReadyNudged.TryGetValue(userId, out var last) && Server.CurrentTime - last < LegacyXReadyNudgeSeconds) continue;
+            legacyXReadyNudged[userId] = Server.CurrentTime;
+            PrintToPlayerChat(player, isSeated
+                ? $"You are not ready. Press {ChatColors.White}R{ChatColors.Grey} or type {ChatColors.White}.r{ChatColors.Grey} to ready."
+                : $"You are spectating. Join a team, then press {ChatColors.White}R{ChatColors.Grey} or type {ChatColors.White}.r{ChatColors.Grey} to ready.");
+        }
+
+        foreach (var stale in legacyXReadyNudged.Keys.Where(id => humans.All(player => player.UserId != id)).ToList()) legacyXReadyNudged.Remove(stale);
         foreach (var stale in legacyXReadyKeys.Keys.Where(id => seated.All(player => player.UserId != id)).ToList()) legacyXReadyKeys.Remove(stale);
     }
 }
