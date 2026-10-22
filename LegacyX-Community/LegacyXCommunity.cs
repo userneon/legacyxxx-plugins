@@ -5,6 +5,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.Modules.UserMessages;
 using LegacyX.Shared.Configuration;
@@ -278,7 +279,6 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         return clean.Length > 8 ? clean[..8] : clean;
     }
 
-    /// <summary>The rank name as the player's clan tag: shown before the name in Tab, chat and the kill feed.</summary>
     /// <summary>True while LegacyX-MatchZy has a ranked match live (its legacyx_match_live convar): ranks stay out of Tab until it ends.</summary>
     private static bool RankHidden()
     {
@@ -286,6 +286,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         catch { return false; }
     }
 
+    /// <summary>The rank name as the player's clan tag: shown before the name in Tab, chat and the kill feed.</summary>
     private void ApplyRankTag(CCSPlayerController player, string rankName, string clanTag = "")
     {
         // Staff (every LEGACY-X staff role carries @css/generic) show their role instead; LegacyX-Admin sets it.
