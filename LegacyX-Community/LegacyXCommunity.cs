@@ -21,6 +21,8 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public string ChatPrefix { get; set; } = LegacyXChat.Prefix;
     public bool ScoreboardRanks { get; set; } = true;
     public bool Welcome { get; set; } = true;
+    /// <summary>What .discord tells a player; set LEGACYX_COMMUNITY_DISCORD_URL to change it.</summary>
+    public string DiscordUrl { get; set; } = "https://discord.gg/legacyx";
     /// <summary>A player in a LEGACY-X clan shows the clan tag before the rank in Tab: [WOLF | OPERATOR I].</summary>
     public bool ClanTag { get; set; } = true;
     /// <summary>Killing the player who killed you last tells both of you "revenge" in the chat.</summary>
@@ -65,6 +67,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         config.PluginSecret = environment.GetModule("COMMUNITY", "PLUGIN_TOKEN", config.PluginSecret);
         config.ScoreboardRanks = environment.GetModuleBoolean("COMMUNITY", "SCOREBOARD_RANKS", config.ScoreboardRanks);
         config.Welcome = environment.GetModuleBoolean("COMMUNITY", "WELCOME", config.Welcome);
+        config.DiscordUrl = environment.GetModule("COMMUNITY", "DISCORD_URL", config.DiscordUrl);
         config.ClanTag = environment.GetModuleBoolean("COMMUNITY", "CLAN_TAG", config.ClanTag);
         config.Revenge = environment.GetModuleBoolean("COMMUNITY", "REVENGE", config.Revenge);
         scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 12, 0, 12);
@@ -349,6 +352,13 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         foreach (var online in Utilities.GetPlayers()) ApplyScoreboardRank(online);
         RevealScoreboardRanks();
         command.ReplyToCommand($"[{ModuleName}] Tab rank type set to {type} for {scoreboardRanks.Count} ranked player(s). Open Tab to check.");
+    }
+
+    [ConsoleCommand("css_discord", "Shows the LEGACY-X Discord invite")]
+    public void OnDiscord(CCSPlayerController? player, CommandInfo? command)
+    {
+        if (player == null || !player.IsValid) return;
+        Print(player, $"Join our Discord: {Config.DiscordUrl}");
     }
 
     [ConsoleCommand("css_rank", "Shows your LEGACY-X rank, EXP and leaderboard position")]
