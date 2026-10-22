@@ -86,7 +86,7 @@ public partial class MatchZy
             legacyXReadyNudged[userId] = Server.CurrentTime;
             PrintToPlayerChat(player, isSeated
                 ? $"You are not ready. Press {ChatColors.White}R{ChatColors.Grey} or type {ChatColors.White}.r{ChatColors.Grey} to ready."
-                : $"You are spectating. Join a team, then press {ChatColors.White}R{ChatColors.Grey} or type {ChatColors.White}.r{ChatColors.Grey} to ready.");
+                : $"Type {ChatColors.White}.r{ChatColors.Grey} to ready, then choose your team.");
         }
 
         foreach (var stale in legacyXReadyNudged.Keys.Where(id => humans.All(player => player.UserId != id)).ToList()) legacyXReadyNudged.Remove(stale);

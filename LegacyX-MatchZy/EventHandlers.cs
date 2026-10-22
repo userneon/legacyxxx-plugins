@@ -50,6 +50,7 @@ public partial class MatchZy
                     }
                 }
                 OnLegacyXMatchCoreConnect(player);
+                OnLegacyXTeamGateConnect(player);
                 ShowLegacyXWelcome(player);
             // May not be required, but just to be on safe side so that player data is properly updated in dictionaries
             // Update: Commenting the below function as it was being called multiple times on map change.
@@ -83,6 +84,7 @@ public partial class MatchZy
 
             if (!IsPlayerValid(player)) return HookResult.Continue;
             OnLegacyXMatchCoreDisconnect(player!);
+            if (player!.UserId.HasValue) OnLegacyXTeamGateDisconnect(player.UserId.Value);
             if (!player!.UserId.HasValue) return HookResult.Continue;
             int userId = player.UserId.Value;
 

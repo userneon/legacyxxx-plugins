@@ -262,6 +262,11 @@ namespace MatchZy
 
             AddCommandListener("jointeam", (player, info) =>
             {
+                if (int.TryParse(info.ArgByIndex(1), out int gateTeam))
+                {
+                    var gate = LegacyXTeamGateJoin(player, gateTeam);
+                    if (gate != HookResult.Continue) return gate;
+                }
                 // Once the knife round or the match has started, a player on a team cannot walk into spectators.
                 if (matchStarted && player != null && player.IsValid && !player.IsBot
                     && int.TryParse(info.ArgByIndex(1), out int toTeam) && toTeam == (int)CsTeam.Spectator
@@ -347,6 +352,7 @@ namespace MatchZy
             // });
 
             RegisterListener<Listeners.OnTick>(OnLegacyXReadyKeyTick);
+            RegisterLegacyXTeamGate();
             RegisterListener<Listeners.OnMapStart>(mapName => { 
                 AddTimer(1.0f, () => {
                     if (!isMatchSetup)
