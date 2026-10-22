@@ -270,6 +270,14 @@ namespace MatchZy
                     player.PrintToChat(" You cannot switch to spectators during the match.");
                     return HookResult.Stop;
                 }
+                // Nor can a seated player swap sides with the team button once play has begun.
+                if (matchStarted && player != null && player.IsValid && !player.IsBot
+                    && int.TryParse(info.ArgByIndex(1), out int swapTo) && swapTo != player.TeamNum
+                    && player.TeamNum is (int)CsTeam.Terrorist or (int)CsTeam.CounterTerrorist)
+                {
+                    player.PrintToChat(" You cannot change team during the match.");
+                    return HookResult.Stop;
+                }
                 if ((isMatchSetup || isVeto) && player != null && player.IsValid) {
                     if (int.TryParse(info.ArgByIndex(1), out int joiningTeam)) {
                         int playerTeam = (int)GetPlayerTeam(player);
