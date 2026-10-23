@@ -14,28 +14,10 @@
 2. Сертификат: `sudo certbot --nginx -d admin.legacyx.cc`
 3. Шалгах: `dig +short admin.legacyx.cc` нь серверийн IP-г өгнө.
 
-## 2. Өгөгдлийн сан (Supabase → SQL editor), яг энэ дарааллаар
-Бүгд дахин ажиллуулахад аюулгүй. Өмнө нь ажилласан гэдэгт итгэлгүй бол дахин ажиллуулахад болно (**нэг л үл хамаарах зүйл:** 4-р файл, доор тайлбартай).
+## 2. Өгөгдлийн сан (Supabase): **хийгдсэн**
+2026-10-23-нд production (Supabase төсөл "Legacy-x") дээр бүх migration ажилласан: `shop_goods`, `lx_topups` (production-д өмнө нь **байгаагүй**, тиймээс эхэлж хийсэн), `cosmetics_emotes`, `founder` (Genesis), `booster_podium`, дөрвөн давхардсан өнгийг унтраасан (эзэмшигч 0 тул буцаалт хийгдээгүй), `creator_applications`, `site_settings`, `public_chat`. Шалгасан: 6 шинэ хүснэгт, `founder_claim` функц, 4 бүтээгдэхүүн (Genesis 30,000₮ × 500, LX 750 / 1,500 / 3,000), RLS асаалттай.
 
-| # | Файл | Юу хийдэг |
-|---|---|---|
-| 1 | `legacy_x_cosmetics_emotes.sql` | emote төрөл, 8 emote, `game_key` |
-| 2 | `legacy_x_founder.sql` | Genesis багц, banner, title, `founder_claim` |
-| 3 | `legacy_x_genesis_rename.sql` | Founder → Genesis нэр (2-р файл нэр солигдохоос өмнө ажилласан бол; шинэ DB дээр юу ч хийхгүй) |
-| 4 | `legacy_x_booster_podium.sql` | Booster Gold/Silver/Bronze frame |
-| 5 | `legacy_x_cosmetics_retire_duplicates.sql` | 4 давхардсан өнгийг унтраана, LX буцаана. **Нэг л удаа** ажиллуул (хоёр дахь удаа дахин буцаалт өгөхгүй ч үнэ өөрчлөгдсөн бол буцаалтын дүн өөр) |
-| 6 | `legacy_x_creator_applications.sql` | creator хүсэлтийн хүснэгт |
-| 7 | `legacy_x_site_settings.sql` | Staff → Settings-ийн хүснэгт |
-| 8 | `legacy_x_public_chat.sql` | нийтийн чатын хүснэгт |
-
-Эдгээрийг ажиллуулахаас өмнө `legacy_x_shop_goods.sql`, `legacy_x_lx_topups.sql`, `legacy_x_cosmetics_premium.sql` өмнө нь ажилласан байх ёстой (production-д ажилласан).
-
-Шалгах (SQL editor дээр):
-```sql
-select to_regclass('legacy_x.creator_applications'), to_regclass('legacy_x.site_settings'), to_regclass('legacy_x.chat_messages');
-select slug, kind, price_mnt, stock, ends_at from legacy_x.shop_products where kind='founder';
-```
-Эхний мөр 3 хүснэгтийн нэрийг (null биш), хоёр дахь мөр `founder-pack | founder | 30000 | 500 | 2026-11-30 …` өгнө.
+Шинэ (хоосон) өгөгдлийн сан дээр дахин хийх бол `legacyxxx-backend/supabase/launch/2026-10-23_run_in_order.sql`-г SQL editor-д нэг удаа ажиллуулна.
 
 ## 3. Backend (api.legacyx.cc)
 1. Серверийн `.env` дээр нэмнэ (`legacyxxx-backend/.env`):
