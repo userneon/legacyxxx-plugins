@@ -50,11 +50,21 @@ git -C libraries/hl2sdk-cs2 checkout -q "$SDK_SHA"
 grep -q "IsSpawnGroupLoadedForClient" libraries/hl2sdk-cs2/public/eiface.h || die "The SDK does not have the new virtual; stopping."
 
 say "Build (a few minutes)"
-CC=clang CXX=clang++ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -S . -B build >/dev/null
+# CounterStrikeSharp is built with the old std::string ABI (the Source 2 libraries use it), but its CMake sets that
+# only after spdlog is added, and only for GCC. Outside the Steam Runtime spdlog then comes out in the new ABI and the
+# plugin fails to load ("undefined symbol ... set_pattern ... RKSs"). The flag below puts every target on the old ABI.
+ABI="-D_GLIBCXX_USE_CXX11_ABI=0"
+CC=clang CXX=clang++ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="$ABI" -DCMAKE_C_FLAGS="$ABI" -S . -B build >/dev/null
 cmake --build build -j"$(nproc)"
 
 SO="build/addons/counterstrikesharp/bin/linuxsteamrt64/counterstrikesharp.so"
 [[ -s "$SO" ]] || die "The build did not produce $SO."
+
+# The server only finds out at load time that a symbol is missing: check here instead. The Source 2 libraries
+# resolve through the SDK's libtier0 stub (the library's runpath), so nothing may stay undefined.
+unresolved="$(ldd -r "$SO" 2>&1 | grep -i 'undefined symbol' || true)"
+[[ -z "$unresolved" ]] || { printf '%s\n' "$unresolved" | head -10 >&2; die "The build has undefined symbols; not installing it."; }
+if nm -D --undefined-only "$SO" | grep -q 'cxx11.*spdlog\|spdlog.*cxx11\|spdlog.*RKSs'; then die "spdlog is in the wrong ABI; not installing it."; fi
 
 mkdir -p "$OUT_DIR"
 install -m 755 "$SO" "$OUT_DIR/counterstrikesharp.so"
