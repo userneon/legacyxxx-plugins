@@ -1,5 +1,7 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 
 namespace MatchZy;
@@ -12,7 +14,19 @@ namespace MatchZy;
 public partial class MatchZy
 {
     private const float LegacyXReadyTapSeconds = 0.35f;
-    private const int LegacyXReadyRedrawTicks = 24;
+    // The game draws its own "Warmup" text in the same place as PrintToCenterHtml, so the two replaced each other. Redrawing every few
+    // ticks keeps ours on top; if the game's text still shows through, lx_ready_hint alert moves ours to the alert line, off hides it.
+    private const int LegacyXReadyRedrawTicks = 6;
+    private string legacyXReadyHint = "html";
+
+    [ConsoleCommand("lx_ready_hint", "Press R to ready line: lx_ready_hint html|alert|off")]
+    public void OnReadyHintCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player != null) return; // server console / RCON only
+        var wanted = command.ArgCount > 1 ? command.ArgByIndex(1).Trim().ToLowerInvariant() : "";
+        if (wanted is "html" or "alert" or "off") legacyXReadyHint = wanted;
+        command.ReplyToCommand($"[MatchZy] lx_ready_hint is {legacyXReadyHint}. Use html, alert or off.");
+    }
 
     private sealed class ReadyKeyState
     {
@@ -74,7 +88,8 @@ public partial class MatchZy
             if (html == state.LastDraw && Server.TickCount - state.LastDrawTick < LegacyXReadyRedrawTicks) continue;
             state.LastDraw = html;
             state.LastDrawTick = Server.TickCount;
-            player.PrintToCenterHtml(html);
+            if (legacyXReadyHint == "html") player.PrintToCenterHtml(html);
+            else if (legacyXReadyHint == "alert") player.PrintToCenterAlert(mine ? $"You are ready · R to unready · {readyCount}/{needed}" : $"Press R to ready · {readyCount}/{needed} ready");
         }
 
         foreach (var player in humans)
