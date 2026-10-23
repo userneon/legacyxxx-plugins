@@ -75,7 +75,7 @@ cd legacyxxx-plugins
 ```
 - `LEGACYX_COMMUNITY_DISCORD_URL`-д өөрийн Discord урилга.
 - Сервер **дахин асаахгүй** (script restart хийдэггүй): тоглогч байхгүй үед өөрөө restart хий.
-- Дараа нь **бодит тоглолт дээр** `.discord`, ready хориг, team queue, `.swap`, `.e`-г шалга. Round дундуурх `.swap` нь эрсдэлтэй гэдгийг тэр файл заасан.
+- Дараа нь **бодит тоглолт дээр** `.discord`, ready сануулга, team queue, `.swap`-г шалга. Round дундуурх `.swap` нь эрсдэлтэй гэдгийг тэр файл заасан.
 
 ### Game server-ээс HUD, бүжиг, emote-г хасах (2026-10-23)
 HUD (LegacyX-Hud + Workshop addon), бүжиг/emote (LegacyX-Emotes, FortniteEmotesNDances, `.e`) repo-оос устсан. Хутганы талыг одоо дэлгэцийн зүүн талд гарах тоон цэсээр

@@ -6,8 +6,8 @@ using CounterStrikeSharp.API.Modules.Utils;
 namespace MatchZy;
 
 /// <summary>
-/// Who may sit on a team (owner request 2026-10-22). In warmup a player must type .r before choosing a side. Once the match has
-/// started, a player who walks in is put to spectators, and pressing a team button there does not seat them: it puts them in that
+/// Who may sit on a team (owner request 2026-10-22). Anyone may choose a side in warmup; ready is a separate step (the "type .r first"
+/// rule was removed on 2026-10-23). Once the match has started, a player who walks in is put to spectators, and pressing a team button there does not seat them: it puts them in that
 /// team's queue, and the first in line takes the seat the moment one frees up. Matches built from a setup (tournaments, ranked
 /// slots) keep their own rules and are left alone.
 /// </summary>
@@ -30,14 +30,6 @@ public partial class MatchZy
     {
         if (player == null || !player.IsValid || player.IsBot || player.IsHLTV || !player.UserId.HasValue || !LegacyXTeamGateActive) return HookResult.Continue;
         var userId = player.UserId.Value;
-
-        if (readyAvailable && !matchStarted)
-        {
-            if (!IsSeatedTeam(toTeam) && toTeam != 0) return HookResult.Continue;
-            if (playerReadyStatus.TryGetValue(userId, out var ready) && ready) return HookResult.Continue;
-            PrintToPlayerChat(player, $"Type {ChatColors.White}.r{ChatColors.Grey} first, then choose your team.");
-            return HookResult.Stop;
-        }
 
         if (matchStarted && !IsSeatedTeam(player.TeamNum))
         {
