@@ -216,10 +216,12 @@ namespace MatchZy
             // Server.PrintToChatAll($"{chatPrefix} {ChatColors.White}{knifeWinnerName}{ChatColors.Grey} Won the knife. Waiting for them to type {ChatColors.White}.stay{ChatColors.Grey} or {ChatColors.White}.switch{ChatColors.Grey}");
         }
 
-        // After the knife round the winners vote on the side during a 10 second freeze time (LegacyX-Hud draws the Stay / Switch
-        // cards, the mouse picks, and it answers with lx_knife_choice). So there is no warmup here: the game restarts into a
-        // round with a 10 second freeze time, and the vote starts with that round (EventRoundStartHandler).
+        // After the knife round the winners choose the side in chat (.stay / .switch) during a 10 second freeze time; with no
+        // answer in 10 seconds they stay. So there is no warmup here: the game restarts into a round with a 10 second freeze
+        // time, and the vote starts with that round (EventRoundStartHandler).
+        private const float KnifeVoteSeconds = 10f;
         private bool sideVoteAwaitingRound;
+        private CounterStrikeSharp.API.Modules.Timers.Timer? knifeVoteTimer;
         private int liveRestartDelay = 1;
 
         private void StartAfterKnifeWarmup()
@@ -240,14 +242,23 @@ namespace MatchZy
         {
             if (!sideVoteAwaitingRound || !isSideSelectionPhase) return;
             sideVoteAwaitingRound = false;
-            Server.ExecuteCommand($"lx_hud_knife start {knifeWinner}");
+            PrintToAllChat($"{ChatColors.White}{knifeWinnerName}{ChatColors.Grey}: type {ChatColors.White}.stay{ChatColors.Grey} or {ChatColors.White}.switch{ChatColors.Grey} within {KnifeVoteSeconds:0} seconds. No answer means stay.");
+            knifeVoteTimer?.Kill();
+            knifeVoteTimer = AddTimer(KnifeVoteSeconds, KnifeVoteTimeout);
+        }
+
+        private void KnifeVoteTimeout()
+        {
+            knifeVoteTimer = null;
+            if (!isSideSelectionPhase) return;
+            PrintToAllChat(Localizer["matchzy.knife.decidedtostay", knifeWinnerName]);
+            StartLive();
         }
 
         private void SetLiveFlags()
         {
             // Setting match phases bools
             isWarmup = false;
-            if (isSideSelectionPhase) Server.ExecuteCommand("lx_hud_knife stop");
             isSideSelectionPhase = false;
             matchStarted = true;
             isMatchLive = true;
@@ -304,9 +315,11 @@ namespace MatchZy
         {
             unreadyPlayerMessageTimer?.Kill();
             sideSelectionMessageTimer?.Kill();
+            knifeVoteTimer?.Kill();
             pausedStateTimer?.Kill();
             unreadyPlayerMessageTimer = null;
             sideSelectionMessageTimer = null;
+            knifeVoteTimer = null;
             pausedStateTimer = null;
         }
 
