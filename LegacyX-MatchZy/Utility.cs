@@ -242,9 +242,10 @@ namespace MatchZy
         {
             if (!sideVoteAwaitingRound || !isSideSelectionPhase) return;
             sideVoteAwaitingRound = false;
-            PrintToAllChat($"{ChatColors.White}{knifeWinnerName}{ChatColors.Grey}: type {ChatColors.White}.stay{ChatColors.Grey} or {ChatColors.White}.switch{ChatColors.Grey} within {KnifeVoteSeconds:0} seconds. No answer means stay.");
+            PrintToAllChat($"{ChatColors.White}{knifeWinnerName}{ChatColors.Grey}: press {ChatColors.White}1{ChatColors.Grey} to stay or {ChatColors.White}2{ChatColors.Grey} to switch (or type {ChatColors.White}.stay{ChatColors.Grey} / {ChatColors.White}.switch{ChatColors.Grey}) within {KnifeVoteSeconds:0} seconds. No answer means stay.");
             knifeVoteTimer?.Kill();
             knifeVoteTimer = AddTimer(KnifeVoteSeconds, KnifeVoteTimeout);
+            StartLegacyXKnifeMenu();
         }
 
         private void KnifeVoteTimeout()
@@ -316,6 +317,7 @@ namespace MatchZy
             unreadyPlayerMessageTimer?.Kill();
             sideSelectionMessageTimer?.Kill();
             knifeVoteTimer?.Kill();
+            StopLegacyXKnifeMenu();
             pausedStateTimer?.Kill();
             unreadyPlayerMessageTimer = null;
             sideSelectionMessageTimer = null;

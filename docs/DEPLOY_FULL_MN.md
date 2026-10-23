@@ -78,8 +78,8 @@ cd legacyxxx-plugins
 - Дараа нь **бодит тоглолт дээр** `.discord`, ready хориг, team queue, `.swap`, `.e`-г шалга. Round дундуурх `.swap` нь эрсдэлтэй гэдгийг тэр файл заасан.
 
 ### Game server-ээс HUD, бүжиг, emote-г хасах (2026-10-23)
-HUD (LegacyX-Hud + Workshop addon), бүжиг/emote (LegacyX-Emotes, FortniteEmotesNDances, `.e`) repo-оос устсан. Хутганы талыг одоо chat-аар
-(`.stay` / `.switch`, 10 секунд, хариугүй бол stay) сонгоно. Skin-ийг зөвхөн сайтаас солино (`!ws` сайтын холбоосыг харуулна). `!admin` нь chat цэс.
+HUD (LegacyX-Hud + Workshop addon), бүжиг/emote (LegacyX-Emotes, FortniteEmotesNDances, `.e`) repo-оос устсан. Хутганы талыг одоо дэлгэцийн голд гарах цэсээр
+(**1** = stay, **2** = switch товч; эсвэл chat-д `.stay` / `.switch`; 10 секунд, хариугүй бол stay) сонгоно. Skin-ийг зөвхөн сайтаас солино (`!ws` сайтын холбоосыг харуулна). `!admin` нь chat цэс.
 Хуучин DLL-үүд ачаалагдсаар байхгүйн тулд эдгээрийг серверээс хойш нь зөөнө (устгахгүй):
 ```bash
 A=/home/cs2/cs2/game/csgo/addons/counterstrikesharp
