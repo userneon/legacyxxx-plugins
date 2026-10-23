@@ -23,7 +23,7 @@ The module reads `CounterStrikeSharp/.env` through `LegacyX.Shared.Configuration
 
 **Fun commands.** Besides freeze, beacon, shake, blind, drug, speed, god and the rest, `!launch <target> [power]` (100 to 1500, default 600) throws a player up in the air and `!size <target> <0.3-3>` / `!unsize <target>` makes the player's model big or small (the hit box stays the same). All need `@css/slay` and are in the `!admin` menu under Fun, Player FX.
 
-**The `!admin` menu.** `!admin` opens the chat menu (Staff, Players, Server, Bans), as it always did. `LEGACYX_ADMIN_PANORAMA_MENU=true` makes it ask the panel in the game's own UI (LegacyX-Hud) first and fall back to the chat menu if that does not answer.
+**The `!admin` menu.** `!admin` opens the chat menu (Staff, Players, Server, Bans).
 
 **Play access.** On connect the server asks the API (`POST /plugin/players/access`, the `bans:read` token it already has) whether the player is signed in on legacyx.cc and whether they are blocked for leaving ranked matches (3rd leave in 24 hours: 30 minutes, 30 more each time after). If not, the player gets a chat message saying what to do (sign in on the website and press Connect, or when they can play again) and is removed 10 seconds later. Staff (`@css/generic`) are never removed, and nobody is removed when the API cannot be reached. `LEGACYX_ADMIN_REQUIRE_LOGIN=false` and `LEGACYX_ADMIN_ENFORCE_LEAVE_COOLDOWN=false` switch the two parts off (a Fun server may not want the cooldown).
 

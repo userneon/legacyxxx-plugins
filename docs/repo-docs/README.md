@@ -53,15 +53,14 @@ AdminPlus, staff panel, role шилжилт
 | [AdminPlus production setup](04-admin-staff/backend--docs__ADMINPLUS_PRODUCTION_SETUP.md) | `backend/docs/ADMINPLUS_PRODUCTION_SETUP.md` | 5 |
 | [LEGACY-X Staff Panel](04-admin-staff/backend--docs__STAFF_PANEL.md) | `backend/docs/STAFF_PANEL.md` | 52 |
 
-## Skin ба HUD
+## Skin
 
-Skinchanger runbook, Workshop HUD гэрээ ба гарын авлага
+Skinchanger runbook
 
 | Баримт | Repo | Мөр |
 |---|---|---|
 | [LEGACY-X Production Skinchanger Operator Runbook](05-skin-hud/backend--docs__SKINCHANGER_OPERATOR_RUNBOOK.md) | `backend/docs/SKINCHANGER_OPERATOR_RUNBOOK.md` | 55 |
 | [Skinchanger Static Asset Hosting](05-skin-hud/backend--docs__SKINCHANGER_STATIC_ASSET_HOSTING.md) | `backend/docs/SKINCHANGER_STATIC_ASSET_HOSTING.md` | 33 |
-| [Contract between the addon and the plugins](05-skin-hud/workshop--CONTRACT.md) | `workshop/CONTRACT.md` | 137 |
 
 ## Аудит, шалгалт
 
@@ -128,7 +127,6 @@ Repo бүрийн өөрийн docs/MANUAL_MN.md: тухайн repo-г суул�
 | [legacyxxx-backend: гарын авлага](11-manuals/backend--docs__MANUAL_MN.md) | `backend/docs/MANUAL_MN.md` | 248 |
 | [legacyxxx-discord-bot: гарын авлага](11-manuals/discord-bot--docs__MANUAL_MN.md) | `discord-bot/docs/MANUAL_MN.md` | 238 |
 | [legacyxxx-frontend: гарын авлага](11-manuals/frontend--docs__MANUAL_MN.md) | `frontend/docs/MANUAL_MN.md` | 184 |
-| [legacyxxx-workshop: гарын авлага](11-manuals/workshop--docs__MANUAL_MN.md) | `workshop/docs/MANUAL_MN.md` | 163 |
 
 ## Upstream (гадны) баримт
 

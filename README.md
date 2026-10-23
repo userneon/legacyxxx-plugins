@@ -11,7 +11,6 @@ This repository contains **source only** for LEGACY-X CS2 server plugins. It has
 |---|---|---|---|
 | LegacyX-Admin | `LegacyX-Admin/LegacyX-Admin.csproj` | `LegacyX-Admin.dll` | Full admin menus, bans, mute/gag, reports, votes, reservations; bans, unbans, mutes and gags are also recorded through the Root API; optional player `!admin` Call channel alert only |
 | LegacyX-AFKManager | `LegacyX-AFKManager/LegacyX-AFKManager.csproj` | `LegacyX-AFKManager.dll` | MatchZy-aware AFK, C4 and spectator policy |
-| LegacyX-Emotes | `LegacyX-Emotes/LegacyX-Emotes.csproj` | `LegacyX-Emotes.dll` | Lets a player play only the animated emotes (FortniteEmotesNDances) they bought in the Shop |
 | LegacyX-Killfeed | `LegacyX-Killfeed/LegacyX-Killfeed.csproj` | `LegacyX-Killfeed.dll` | Every kill to the Root API for the website's live kill feed |
 | LegacyX-Community | `LegacyX-Community/LegacyX-Community.csproj` | `LegacyX-Community.dll` | Player progress, rank and clan lookup through Root API |
 | LegacyX-MatchZy | `LegacyX-MatchZy/LegacyX-MatchZy.csproj` | `LegacyX-MatchZy.dll` | Competitive match lifecycle and Match Core bridge |
@@ -32,7 +31,6 @@ connection. What each module sends or reads, and the token scope it needs:
 | LegacyX-Community | `/plugin/community/players/:steamId` | `stats:write` |
 | LegacyX-MatchZy | `/plugin/matchzy/events` (rank), `/plugin/match-core/events` | `stats:write`, `matches:write` |
 | LegacyX-Status | `/plugin/servers/heartbeat`, `/plugin/live-match/snapshots` | `servers:write` |
-| LegacyX-Emotes | `/plugin/community/players/:steamId` | `stats:write` |
 | LegacyX-Killfeed | `/plugin/killfeed/events` | `servers:write` |
 | LegacyX-WeaponPaints | `/plugin/skinchanger/loadout` | `skinchanger:read` |
 | LegacyX-AFKManager, LegacyX-Spectator | none | none |
@@ -117,7 +115,6 @@ addons/counterstrikesharp/
   plugins/LegacyX-Admin/            LegacyX-Admin.dll, .deps.json, lang/
   plugins/LegacyX-AFKManager/       LegacyX-AFKManager.dll, .deps.json
   plugins/LegacyX-Community/        LegacyX-Community.dll, .deps.json
-  plugins/LegacyX-Emotes/           LegacyX-Emotes.dll, .deps.json
   plugins/LegacyX-Killfeed/         LegacyX-Killfeed.dll, .deps.json
   plugins/LegacyX-MatchZy/          LegacyX-MatchZy.dll, .deps.json, CsvHelper, Dapper, Microsoft.Data.Sqlite,
                                     MySqlConnector, Newtonsoft.Json, SQLitePCLRaw.*, runtimes/{linux,win}-x64 SQLite, lang/, spawns/

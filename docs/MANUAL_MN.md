@@ -7,7 +7,7 @@
 |---|---|---|
 | [1. Ерөнхий зураглал](#part1) | Системийн бүтэц, гурван машин | Эхлээд |
 | [2. Суулгах ба тохируулах](#part2) | VPS, CS2, token, GSLT, `.env`, update, нөөцлөлт, нүүлгэлт | Шинэ VPS, алдаа засах |
-| [3. Өдөр тутмын командууд](#part3) | Windows build, server restart, HUD, Discord, команд бүрийн үүрэг | Өдөр бүр |
+| [3. Өдөр тутмын командууд](#part3) | server restart, Discord, команд бүрийн үүрэг | Өдөр бүр |
 | [4. Командын бүрэн лавлах](#part4) | Бүх команд: хэрхэн, хэзээ, алдаа ба шалтгаан | Тодорхой команд хайх |
 | [5. Plugin-ууд ба тохиргоо](#part5) | Plugin бүр, `.env` хувьсагч, token, хил хязгаар | Plugin нэмэх, засах |
 | [6. Admin эрх ба in-game командууд](#part6) | Staff эрх яаж ирдэг, `!ban` гэх мэт | Admin тохируулах |
@@ -33,7 +33,6 @@
 
 | Газар | Юу байдаг | Тэмдэглэгээ |
 |---|---|---|
-| **Windows (таны компьютер)** | Workshop addon (HUD) build хийж нийтлэх | Хэсэг 3-ын A |
 | **Game VPS** | CS2 server-үүд, LEGACY-X plugin-ууд | Хэсэг 3-ын B |
 | **Web VPS** | Вэб (Nginx), API (backend), Discord bot | Хэсэг 3-ын C |
 
@@ -55,7 +54,7 @@
 шинэчлэх, алдаа засах**, мөн **вэб, API, Discord bot-ыг нэг командаар шинэчлэх** бүх алхмыг
 эхнээс нь дарааллаар нь тайлбарлана.
 
-**Өдөр тутмын командууд ба тэдгээрийн үүрэг** (Windows build, server restart, HUD асаах/унтраах, Discord): [KOMANDUUD_GARIIN_AVLAGA_MN.md](#part3).
+**Өдөр тутмын командууд ба тэдгээрийн үүрэг** (server restart, Discord): [KOMANDUUD_GARIIN_AVLAGA_MN.md](#part3).
 
 **Бүх командын дэлгэрэнгүй лавлах** (хэрхэн бичих, хэзээ, жишээ, алдаа ба шалтгаан):
 [KOMANDUUD_MN.md](#part4). Хаана юу ажиллуулах, юуг
@@ -418,7 +417,7 @@ sudo AUTOUPDATE_HOUR=4 ./scripts/cs2-host.sh autoupdate on
 | Юу | Файл (Game VPS) | Дараа нь |
 |---|---|---|
 | GSLT, map, тоглогчийн тоо, mode | `/etc/legacyx/cs2/27015.conf` | `sudo systemctl restart cs2@27015` |
-| Plugin тохиргоо (цолны төрөл, skin, AFK, HUD…) | plugin repo-ийн `.env` (`cd /opt/legacyxxx-plugins && sudo nano .env`) | `sudo systemctl restart 'cs2@*'` |
+| Plugin тохиргоо (цолны төрөл, skin, AFK…) | plugin repo-ийн `.env` (`cd /opt/legacyxxx-plugins && sudo nano .env`) | `sudo systemctl restart 'cs2@*'` |
 | Вэб дээрх нэр/mode | `.env` дотор `LEGACYX_27015_SERVER_NAME=…`, `LEGACYX_27015_SERVER_MODE=…` | `sudo systemctl restart cs2@27015` |
 | CounterStrikeSharp (`ServerLanguage`, `!`/`/` trigger) | `/home/cs2/cs2/game/csgo/addons/counterstrikesharp/configs/core.json` | `sudo systemctl restart 'cs2@*'` |
 
@@ -862,58 +861,7 @@ Discord bot-ыг шинэчлэх: 14-р хэсэг.
 ## Хэсэг 3. Өдөр тутмын командууд
 
 Команд бүрийн дор "**Ямар үүрэгтэй**" гэж бичсэн. Зам нь жишээ: өөрийн замаар солино.
-Гурван газар байна: **A. Windows** (Workshop addon), **B. Game server VPS** (CS2), **C. Web VPS** (сайт, API, Discord bot).
-
----
-
-### A. Windows: Workshop addon (HUD)
-
-Нэг удаа, Git суусан байх ёстой (https://git-scm.com/download/win), CS2 → Settings → "Workshop Tools" → Install.
-
-#### A1. Анх татах (нэг л удаа)
-```powershell
-cd $HOME\Documents
-git clone https://github.com/userneon/legacyxxx-workshop.git
-```
-**Үүрэг:** addon-ийн эх файлуудыг (layout, CSS, зураг) компьютерт татна.
-
-#### A2. Шинэчлэх (өөрчлөлт болгонд)
-```powershell
-cd $HOME\Documents\legacyxxx-workshop
-git pull
-```
-**Үүрэг:** GitHub дээрх хамгийн сүүлийн эх файлыг татна. (Зөвхөн татна: game-д хараахан нөлөөлөхгүй.)
-
-#### A3. Build (compile)
-```powershell
-.\tools\build.cmd
-```
-**Үүрэг:** `addon\`-ийг CS2-ийн `content\csgo_addons\legacyx` руу хуулж, Valve-ийн compiler-аар `.vxml_c`, `.vcss_c`, `.vtex_c` болгоно. Эхлээд `validate.py`-аар алдааг шалгана. Workshop-д нийтлэхээс өмнө **заавал** хийнэ.
-
-#### A4. Build + өөрийн game дээр турших
-```powershell
-.\tools\build.cmd -Local
-```
-**Үүрэг:** A3-тай адил, нэмээд compile хийсэн файлуудыг `CS2\game\csgo\panorama` руу хуулна. Ингэснээр таны game **Workshop-гүйгээр** шууд харуулна (зөвхөн ТАНД). Дараа нь **CS2-ыг бүрэн хааж дахин эхлүүл** (Panorama layout-ыг cache хийдэг).
-
-#### A5. Локал туршилтын файлыг цэвэрлэх
-```powershell
-$g = "C:\Program Files (x86)\Steam\steamapps\common\Counter-Strike Global Offensive\game\csgo\panorama"
-Get-ChildItem $g -Recurse -Filter "legacyx*" | Remove-Item -Force
-```
-**Үүрэг:** A4-ийн хуулсан `legacyx` файлуудыг устгана (Valve-ийн файлд хүрэхгүй). Үүнийг хийхгүй бол game Workshop-ийн шинэ хувилбар биш, хуучин локал файлыг харуулсаар байна. CS2 өөр дискэнд бол замыг солино.
-
-#### A6. CS2 өөр дискэнд бол
-```powershell
-.\tools\build.cmd -Cs2 "D:\SteamLibrary\steamapps\common\Counter-Strike Global Offensive"
-```
-**Үүрэг:** CS2-ыг автоматаар олохгүй үед замыг гараар зааж өгнө.
-
-#### A7. Workshop-д нийтлэх (бүх тоглогчдод)
-CS2 Workshop Tools нээгээд `legacyx` addon → **Publish / Update existing item** (ID `3810642940`).
-**Үүрэг:** compile хийсэн хувилбарыг Steam Workshop-д тавина. Тоглогчид дараагийн орох үедээ шинэ хувилбарыг татна. Нийтлэхээс өмнө A3 заавал.
-
-**Дараалал:** `git pull` → `build.cmd -Local` → туршилт → `A5 цэвэрлэх` → `build.cmd` (цэвэр) → Workshop-д нийтлэх.
+Хоёр газар байна: **B. Game server VPS** (CS2), **C. Web VPS** (сайт, API, Discord bot).
 
 ---
 
@@ -933,7 +881,7 @@ sudo ./scripts/cs2-host.sh deploy
 ```bash
 sudo ./scripts/cs2-host.sh update
 ```
-**Үүрэг:** server-үүдийг зогсоож, CS2, Metamod, CounterStrikeSharp, MultiAddonManager, plugin-уудыг шинэчилнэ. Autoupdate аль хэдийн CS2 шинэчлэлийг өөрөө хийдэг.
+**Үүрэг:** server-үүдийг зогсоож, CS2, Metamod, CounterStrikeSharp, plugin-уудыг шинэчилнэ. MultiAddonManager хэрэггүй болсон тул хуучин суулгацыг нь хойш зөөнө (устгахгүй). Autoupdate аль хэдийн CS2 шинэчлэлийг өөрөө хийдэг.
 
 #### B3. Тохиргоо (`.env`) засах
 ```bash
@@ -941,7 +889,7 @@ cd /root/legacyxxx-plugins
 sudo nano .env
 ```
 Хадгал: `Ctrl+O`, Enter, `Ctrl+X`. Дараа нь restart (B4).
-**Үүрэг:** plugin-ийн бүх тохиргоо (server нэр, mode, HUD асаалт, token). Энэ файл нь plugin-ийн уншдаг файлтай холбоостой, тусад нь хуулах шаардлагагүй.
+**Үүрэг:** plugin-ийн бүх тохиргоо (server нэр, mode, token). Энэ файл нь plugin-ийн уншдаг файлтай холбоостой, тусад нь хуулах шаардлагагүй.
 
 #### B4. Server restart
 ```bash
@@ -949,29 +897,11 @@ sudo systemctl restart cs2@27015
 ```
 **Үүрэг:** server-ийг дахин асаана. `.env` өөрчилсөн, addon солисны дараа заавал. Порт бүрт тусдаа (`27016` гэх мэт). Тоглогчид тасрах тул тоглоомгүй үед хий.
 
-#### B5. HUD асаах / унтраах
-```bash
-sed -i 's/^LEGACYX_HUD_ENABLED=false/LEGACYX_HUD_ENABLED=true/' .env     # асаах
-sed -i 's/^LEGACYX_HUD_ENABLED=true/LEGACYX_HUD_ENABLED=false/' .env     # унтраах
-grep HUD_ENABLED .env
-sudo systemctl restart cs2@27015
-```
-**Үүрэг:** `LegacyX-Hud` plugin-ийг (welcome card, rank card, knife vote) асаах эсвэл унтраана. `grep` нь одоогийн утгыг харуулна. Мөр `.env`-д байхгүй бол анхдагч нь `true`.
-
-#### B6. Workshop addon-ийг тоглогчдод татуулах
-```bash
-sudo ./scripts/cs2-host.sh client-addons                    # одоогийнхыг харах
-sudo ./scripts/cs2-host.sh client-addons 3810642940         # тохируулах
-sudo ./scripts/cs2-host.sh client-addons none               # хоослох
-sudo systemctl restart cs2@27015
-```
-**Үүрэг:** тоглогч server-д орохдоо татах Workshop addon-ийн ID. `none` нь addon-гүй болгоно (overflow-ийг шалгахад ашиглана). Өөрчилсний дараа restart.
-
 #### B7. Server-ийн төлөв, log
 ```bash
 sudo ./scripts/cs2-host.sh status
 sudo ./scripts/cs2-host.sh logs 27015
-sudo journalctl -u cs2@27015 --since "15 min ago" --no-pager | grep -i -E "overflow|reliable|disconnect|Hud" | tail -20
+sudo journalctl -u cs2@27015 --since "15 min ago" --no-pager | grep -i -E "overflow|reliable|disconnect" | tail -20
 ```
 **Үүрэг:** server ажиллаж байгаа эсэх, live log, мөн алдаа хайх (overflow гэх мэт).
 
@@ -1028,13 +958,6 @@ tail -n 200 ~/.pm2/logs/legacy-x-discord-error.log
 | `/automod add/remove/allow` | Manage Server | Хориотой үг нэмэх / хасах / зөвшөөрөх |
 
 ---
-
-### E. Overflow алдаа шалгах (товч)
-
-1. `client-addons none` + restart → overflow алга бол addon шалтгаан.
-2. `client-addons 3810642940` + `LEGACYX_HUD_ENABLED=false` + restart → overflow гарвал addon-ийн татагдалт, үгүй бол HUD plugin.
-3. `sudo ./scripts/cs2-host.sh update` → Metamod/MultiAddonManager-ийн шинэ хувилбар.
-4. Тест дууссаны дараа `LEGACYX_HUD_ENABLED=true` + addon-ийг буцааж тавь.
 
 <a id="part4"></a>
 ## Хэсэг 4. Командын бүрэн лавлах
@@ -1468,8 +1391,6 @@ Plugin-д зөвхөн нууцгүй gameplay-ийн анхдагч утга (J
 | `LegacyX-Admin` | Ban, mute, gag, report, vote, цэс; staff эрх API-аас | `LEGACYX_ADMIN_ENABLED`, `LEGACYX_ADMIN_PLUGIN_SECRET` (admin:read), `LEGACYX_ADMIN_AUTH_*`, `LEGACYX_ADMIN_CENTRAL_BANS_*`, `LEGACYX_ADMIN_CENTRAL_PENALTIES_ENABLED` |
 | `LegacyX-AFKManager` | AFK, C4, spectator, anti-camp | `LEGACYX_AFKMANAGER_ENABLED` |
 | `LegacyX-Community` | Цол, EXP, welcome chat, Tab дахь цол | `LEGACYX_COMMUNITY_*` (WELCOME, SCOREBOARD_RANKS, SCOREBOARD_RANK_TYPE, CLAN_TAG) |
-| `LegacyX-Hud` | Workshop HUD: welcome card, rank card, match дүн, knife vote | `LEGACYX_HUD_ENABLED`, `LEGACYX_HUD_RANK_CARD` |
-| `LegacyX-Emotes` | Shop-оос авсан хөдөлгөөнт emote/бүжгийг л тоглуулна (FortniteEmotesNDances дээр) | `LEGACYX_EMOTES_ENABLED`, `LEGACYX_EMOTES_ROOT_PLAYS_ALL` |
 | `LegacyX-Killfeed` | Kill feed (сайтын дээд талын ticker) | `LEGACYX_KILLFEED_ENABLED` |
 | `LegacyX-MatchZy` | Match lifecycle, EXP, Match Core | `LEGACYX_MATCHZY_ENABLED`, `…_RANK_ENABLED`, `…_MATCH_CORE_ENABLED` |
 | `LegacyX-Spectator` | Spectator болон амьд тоглогчийн chat/voice тусгаарлалт | `LEGACYX_SPECTATOR_COMMS_ENABLED` |
@@ -1531,7 +1452,6 @@ Plugin DB-д бичихгүй, нууцгүй. Вэб нь plugin баталга
 | MatchZy | match дуусгавар, EXP (`/plugin/matchzy/events`), lifecycle (`/plugin/match-core/events`) |
 | Status | server төлөв, live score (`/plugin/servers/heartbeat`, `/plugin/live-match/snapshots`) |
 | WeaponPaints | skin job авах, баталгаажуулах |
-| Hud | цол, match дүнг унших (Community-тэй адил) |
 | Killfeed | kill feed илгээх |
 | Spectator, AFKManager | API-гүй, game-local |
 
@@ -1888,18 +1808,17 @@ CounterStrikeSharp shows English unless the server language (`core.json`) or a p
 <a id="part10"></a>
 ## Хэсэг 10. Repo бүрийн README
 
-Таван repo-ийн (`legacyxxx-plugins`, `-backend`, `-frontend`, `-discord-bot`, `-workshop`) болон plugin бүрийн README-г
+Дөрвөн repo-ийн (`legacyxxx-plugins`, `-backend`, `-frontend`, `-discord-bot`) болон plugin бүрийн README-г
 ангилж [`docs/readmes/`](readmes/README.md) хавтсанд цуглуулсан. **Эдгээр нь хуулбар**: жинхэнэ, шинэ хувилбар нь тухайн repo дээр.
 
 | Ангилал | README-ууд |
 |---|---|
-| **Game server plugin-ууд** | [repo](readmes/1-game-server-plugins/00-repo.md), [Admin](readmes/1-game-server-plugins/admin.md), [AFKManager](readmes/1-game-server-plugins/afkmanager.md), [Community](readmes/1-game-server-plugins/community.md), [Hud](readmes/1-game-server-plugins/hud.md), [MatchZy](readmes/1-game-server-plugins/matchzy.md), [Spectator](readmes/1-game-server-plugins/spectator.md), [Status](readmes/1-game-server-plugins/status.md), [WeaponPaints](readmes/1-game-server-plugins/weaponpaints.md), [configs](readmes/1-game-server-plugins/configs.md), [src](readmes/1-game-server-plugins/src.md) |
+| **Game server plugin-ууд** | [repo](readmes/1-game-server-plugins/00-repo.md), [Admin](readmes/1-game-server-plugins/admin.md), [AFKManager](readmes/1-game-server-plugins/afkmanager.md), [Community](readmes/1-game-server-plugins/community.md), [MatchZy](readmes/1-game-server-plugins/matchzy.md), [Spectator](readmes/1-game-server-plugins/spectator.md), [Status](readmes/1-game-server-plugins/status.md), [WeaponPaints](readmes/1-game-server-plugins/weaponpaints.md), [configs](readmes/1-game-server-plugins/configs.md), [src](readmes/1-game-server-plugins/src.md) |
 | **API ба database** | [legacyxxx-backend](readmes/2-api-backend/00-repo.md) |
 | **Вэб сайт** | [legacyxxx-frontend](readmes/3-website-frontend/00-repo.md) |
 | **Discord bot** | [legacyxxx-discord-bot](readmes/4-discord-bot/00-repo.md) |
-| **Тоглоом доторх HUD (Workshop)** | [legacyxxx-workshop](readmes/5-hud-workshop/00-repo.md) |
 
-Шинэчлэх: бүх хуулбарыг (энэ хэсэг ба Хэсэг 11) нэг командаар шинэчилнэ: `python3 scripts/collect-docs.py` (таван repo нэг хавтсанд байх ёстой; `--repos <хавтас>`). Эхлээд repo бүрт `git pull` хийж, дараа нь commit хийнэ.
+Шинэчлэх: бүх хуулбарыг (энэ хэсэг ба Хэсэг 11) нэг командаар шинэчилнэ: `python3 scripts/collect-docs.py` (дөрвөн repo нэг хавтсанд байх ёстой; `--repos <хавтас>`). Эхлээд repo бүрт `git pull` хийж, дараа нь commit хийнэ.
 
 <a id="part11"></a>
 ## Хэсэг 11. Бусад бүх баримт
@@ -1912,12 +1831,12 @@ README-ээс бусад бүх `.md` баримтыг (70) 11 ангилалд 
 | [API, хамгаалалт, гэрээ](repo-docs/README.md#api-хамгаалалт-гэрээ) | `API`, аюулгүй байдал, feature flag, plugin ↔ API гэрээ |
 | [Цол, EXP, match](repo-docs/README.md#цол-exp-match) | Rank систем, сарын reset, leaderboard, match систем, telemetry |
 | [Admin, staff, эрх](repo-docs/README.md#admin-staff-эрх) | AdminPlus, staff panel |
-| [Skin ба HUD](repo-docs/README.md#skin-ба-hud) | Skinchanger runbook, Workshop HUD гэрээ |
+| [Skin](repo-docs/README.md#skin) | Skinchanger runbook |
 | [Аудит, шалгалт](repo-docs/README.md#аудит-шалгалт) | Огноотой аудитууд |
 | [Changelog-ууд](repo-docs/README.md#changelog-ууд) | Plugin, rank, reconnect-ийн түүх |
 | [Вэб дизайн ба ажлын дүрэм](repo-docs/README.md#вэб-дизайн-ба-ажлын-дүрэм) | Frontend-ийн `CLAUDE.md`, design spec |
 | [Бусад](repo-docs/README.md#бусад) | Context, todo, promotion code |
-| [Repo бүрийн гарын авлага](repo-docs/README.md#repo-бүрийн-гарын-авлага) | Backend, frontend, bot, workshop-ийн өөрийн `docs/MANUAL_MN.md` |
+| [Repo бүрийн гарын авлага](repo-docs/README.md#repo-бүрийн-гарын-авлага) | Backend, frontend, bot-ийн өөрийн `docs/MANUAL_MN.md` |
 | [Upstream (гадны) баримт](repo-docs/README.md#upstream-гадны-баримт) | MatchZy, WeaponPaints-ийн гадны баримт |
 
 Bot-ын `faq/` ба `rules/` хавтас баримт биш (bot-ын харуулдаг агуулга) тул оруулаагүй. Шинэчлэх: `python3 scripts/collect-docs.py` (Хэсэг 10). Скрипт шинэ, жагсаалтад ороогүй баримт олбол нэрийг нь хэлнэ.

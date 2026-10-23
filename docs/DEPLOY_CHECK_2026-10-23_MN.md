@@ -1,6 +1,6 @@
 # Шинэчлэлт, шалгалтын жагсаалт (2026-10-22 ~ 2026-10-23)
 
-Энэ нь сүүлийн өдрүүдэд нэмсэн зүйлсийг (Genesis багц, booster frame, emote, stats-ийн дундаж, swap vote, team queue, ready хориг, `.discord`) deploy хийх, дараа нь **сервер дээр бодитоор шалгах** жагсаалт. Тест, build нь өнгөрсөн ч тоглоомын серверийн хэсгийг (`.swap`, queue, emote) бодит тоглолтоор туршаагүй.
+Энэ нь сүүлийн өдрүүдэд нэмсэн зүйлсийг (Genesis багц, booster frame, stats-ийн дундаж, swap vote, team queue, ready хориг, `.discord`) deploy хийх, дараа нь **сервер дээр бодитоор шалгах** жагсаалт. Тест, build нь өнгөрсөн ч тоглоомын серверийн хэсгийг (`.swap`, queue) бодит тоглолтоор туршаагүй.
 
 ## 1. Өгөгдлийн сан (Supabase), яг энэ дарааллаар
 Бүгд дахин ажиллуулахад аюулгүй. `legacy_x_shop_goods.sql`, `legacy_x_lx_topups.sql`, `legacy_x_cosmetics_premium.sql` өмнө нь ажилласан байх ёстой.
@@ -15,7 +15,7 @@
 
 ## 2. Deploy
 - **Backend** (legacyxxx-backend) → дараа нь **frontend** (legacyxxx-frontend). Backend-ийг эхэлж: frontend шинэ талбар (`banners`, `titles`, `boosterPlace`…) хүлээнэ.
-- **Game server:** `legacyxxx-plugins` (LegacyX-MatchZy, LegacyX-Community, шинэ **LegacyX-Emotes**). Шинэ plugin-ы `.env`: `LEGACYX_EMOTES_ENABLED=true` (API нэвтрэх түлхүүр нь Community-гийнхыг дахин ашиглана). `LEGACYX_COMMUNITY_DISCORD_URL` хүсвэл өөрийн урилгаа тавина.
+- **Game server:** `legacyxxx-plugins` (LegacyX-MatchZy, LegacyX-Community). `LEGACYX_COMMUNITY_DISCORD_URL` хүсвэл өөрийн урилгаа тавина.
 - `nginx`: `client_max_body_size 11m;` (клан зургийн хязгаар, өмнөх шийдвэр).
 
 ## 3. Сайт дээр шалгах
@@ -37,16 +37,13 @@
 2. **Ready хориг (warmup):** `.r` бичээгүй хүн team сонгоход "Type .r first…"; `.r` бичсэний дараа сонгож чадна; 20 сек тутам зөвхөн өөрт нь сануулга.
 3. **Match эхэлсний дараа:** орж ирсэн хүн 1.5 сек дараа spectator; T/CT дарахад дараалалд орно ("place N"); суудал чөлөөлөгдөхөд (тоглогч гарахад) дараалалд эхний хүн тэр team-д орж, chat-д зарлагдана; **Change team** товчоор T↔CT шилжих боломжгүй.
 4. **`.swap` vote:** хоёр team-ийн олонх зөвшөөрөхөд side солигдоно; **round дундуур** амьд тоглогчийн буу, мөнгө, хуяг хэвээр үлдэж байгаа эсэх; 10 минутын cooldown; vote 30 сек дуусахад хүчингүй. **Эрсдэл:** `mp_swapteams` round дундуур яг хэзээ хэрэгжиж, тоглогчийг амьд үлдээдэг эсэх батлагдаагүй. Хэрэв эвдэрч байвал vote-ийг зөвхөн freeze time/warmup дээр зөвшөөрөх болгоно.
-5. **`.e` / `.emote`:** өмссөн emote бүх хүнд chat-д гарна, 8 сек cooldown.
-6. **Animated emote (FortniteEmotesNDances):** суулгаад (Metamod, CounterStrikeSharp v361+, MultiAddonManager, Ray-Trace, Workshop `3328582199`), консолд `lx_emotes_sql` → `legacyx-emotes-shop.sql` үүснэ, үнийг засаад Supabase дээр ажиллуулна. Худалдаж аваагүй хүн emote тоглуулахад "You don't own this emote…" гарна; root админ ямар ч emote тоглуулна. API-д холбогдож чадахгүй бол зөвхөн root тоглуулна (хаалттай).
 
 ## 5. Буцаах (rollback)
 - Frontend/backend: өмнөх commit руу буцаана; шинэ SQL-үүд нь зөвхөн нэмэлт (шинэ мөр, шинэ төрөл), хуучин ажиллагааг эвдэхгүй. Эсэргээр: `legacy_x_cosmetics_retire_duplicates.sql` LX буцаасан (буцаах боломжгүй).
-- Plugin: `LegacyX-Emotes.dll`-ийг хасахад emote хориг арилж, FortniteEmotesNDances хүн бүрт нээлттэй болно (**хүнд LX авсан бол** үүнийг хэзээ ч бүү хий).
 - Genesis-ийг түр хаах: Staff → Shop → "Show in the Shop" унтраана (захиалгууд хэвээр, шинэ захиалга авахгүй).
 
 ## 6. Мэдэх эрсдэл
 - Genesis-ийн "paid" гараар: буруу захиалгыг paid болговол буцаах боломжгүй (дугаар, frame олгогдсон). Төлбөрийг шилжүүлгийн утгаар нягтал.
 - "Founder" нь ажилтны role тул нэр Genesis болсон; дотоод ID-ууд `founder` хэвээр.
-- Fortnite emote, зурсан frame-үүдийн эрх, FortniteEmotesNDances-ийн лиценз (заагаагүй) таны хариуцлага.
+- Зурсан frame-үүдийн эрх таны хариуцлага.
 - Commit subject-ууд deploy хийхэд Discord-д автоматаар зарлагддаг (`[skip announce]` нэмбэл зарлахгүй).

@@ -29,7 +29,6 @@ CS2 server дээр ажилладаг plugin-ууд ба тэднийг суу�
 | `legacyxxx-backend` | API, database, Steam нэвтрэлт | [docs/README.md](https://github.com/userneon/legacyxxx-backend/blob/main/docs/README.md) | [MANUAL_MN.md](https://github.com/userneon/legacyxxx-backend/blob/main/docs/MANUAL_MN.md) |
 | `legacyxxx-frontend` | legacyx.cc вэб сайт | [docs/README.md](https://github.com/userneon/legacyxxx-frontend/blob/main/docs/README.md) | [MANUAL_MN.md](https://github.com/userneon/legacyxxx-frontend/blob/main/docs/MANUAL_MN.md) |
 | `legacyxxx-discord-bot` | Discord bot | [docs/README.md](https://github.com/userneon/legacyxxx-discord-bot/blob/main/docs/README.md) | [MANUAL_MN.md](https://github.com/userneon/legacyxxx-discord-bot/blob/main/docs/MANUAL_MN.md) |
-| `legacyxxx-workshop` | Тоглоом доторх HUD (Workshop addon) | [docs/README.md](https://github.com/userneon/legacyxxx-workshop/blob/main/docs/README.md) | [MANUAL_MN.md](https://github.com/userneon/legacyxxx-workshop/blob/main/docs/MANUAL_MN.md) |
 
 ## Дүрэм
 

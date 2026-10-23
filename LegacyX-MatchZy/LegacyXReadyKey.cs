@@ -7,7 +7,7 @@ namespace MatchZy;
 /// <summary>
 /// Ready with the R key (owner request 2026-10-16): while the match waits for players, a short line under the crosshair says
 /// "Press R to ready"; a tap on R readies, another tap un-readies. Typing .ready still works. A tap is a press shorter than
-/// <see cref="LegacyXReadyTapSeconds"/>, so holding R (the Hud menu closes on a hold) never toggles it.
+/// <see cref="LegacyXReadyTapSeconds"/>, so holding R never toggles it.
 /// </summary>
 public partial class MatchZy
 {

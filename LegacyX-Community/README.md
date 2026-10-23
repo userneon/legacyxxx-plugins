@@ -29,8 +29,6 @@ LEGACY-X • Your skins come from legacyx.cc. Type !rs to load them.
 Цол, EXP нь API-аас (цолгүй бол "No rank yet…", API хүрэхгүй бол тэр мөр гарахгүй). Map солигдоход дахин
 гарахгүй (нэг тоглогчид 3 цагт нэг удаа). `LEGACYX_COMMUNITY_WELCOME=false` унтраана.
 
-`.e` тоглогчийн өмссөн emote-г бүх хүнд chat-д харуулна (`.e <нэр>` өөр emote, `.emotes` өөрийн жагсаалт, 8 секундын cooldown). Emote-г сайтын Shop-оос LX-ээр авч өмсөнө; API `/plugin/community/players/:steamId` хариуны `emotes` талбараас уншина.
-
 `.discord` (`!discord`) тоглогчид Discord-ын урилгыг chat-д харуулна. Холбоосыг `LEGACYX_COMMUNITY_DISCORD_URL` өөрчилнө (анхдагч `https://discord.gg/legacyx`).
 
 ## Security

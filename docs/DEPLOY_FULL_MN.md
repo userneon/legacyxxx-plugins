@@ -1,6 +1,6 @@
 # Бүрэн deploy-ын зам: эхнээс нь дарааллаар (2026-10-23)
 
-Энэ нь `DEPLOY_CHECK_2026-10-23_MN.md`-г орлоно: тэр файл Genesis, booster, emote, match-ийн шинэчлэлтийг хамарсан. Энд тэрнээс хойш нэмсэн бүх зүйл (admin сайт, Settings, чат, creator хүсэлт, серверийн карт ба тоглогчийн удирдлага, клан лидер, SteamID-гүй сонголт) нэг дор, **яг хийх дарааллаар** байна. Тус бүр дээр "шалгах" мөр бий: дараагийн алхам руу шалгалтгүй битгий орно.
+Энэ нь `DEPLOY_CHECK_2026-10-23_MN.md`-г орлоно: тэр файл Genesis, booster, match-ийн шинэчлэлтийг хамарсан. Энд тэрнээс хойш нэмсэн бүх зүйл (admin сайт, Settings, чат, creator хүсэлт, серверийн карт ба тоглогчийн удирдлага, клан лидер, SteamID-гүй сонголт) нэг дор, **яг хийх дарааллаар** байна. Тус бүр дээр "шалгах" мөр бий: дараагийн алхам руу шалгалтгүй битгий орно.
 
 Дараалал өөрчлөхгүй: **өгөгдлийн сан → backend → admin сайт → website → тоглоомын сервер.** Яагаад гэвэл шинэ frontend шинэ талбар, шинэ endpoint хүлээнэ. Backend-гүйгээр website гарвал чат, staff цэс, creator хүсэлт алдаа өгнө.
 
@@ -62,7 +62,7 @@ bash ops/deploy-admin.sh
 cd legacyxxx-frontend
 bash ops/deploy.sh
 ```
-(Мөн Genesis, booster, emote зэрэг өмнөх frontend өөрчлөлтүүдийг хамт авна.)
+(Мөн Genesis, booster зэрэг өмнөх frontend өөрчлөлтүүдийг хамт авна.)
 Шалгах:
 - `legacyx.cc/staff` → `admin.legacyx.cc/staff` руу шилжинэ. Sidebar-ын "Staff" нь admin сайтын линк.
 - Баруун доод буланд чатын дугуй товч харагдана.
@@ -73,9 +73,21 @@ bash ops/deploy.sh
 cd legacyxxx-plugins
 ./scripts/deploy.sh <csgo-dir> [<csgo-dir> …]
 ```
-- Шинэ **LegacyX-Emotes** plugin-ы `.env`: `LEGACYX_EMOTES_ENABLED=true`. `LEGACYX_COMMUNITY_DISCORD_URL`-д өөрийн Discord урилга.
+- `LEGACYX_COMMUNITY_DISCORD_URL`-д өөрийн Discord урилга.
 - Сервер **дахин асаахгүй** (script restart хийдэггүй): тоглогч байхгүй үед өөрөө restart хий.
 - Дараа нь **бодит тоглолт дээр** `.discord`, ready хориг, team queue, `.swap`, `.e`-г шалга. Round дундуурх `.swap` нь эрсдэлтэй гэдгийг тэр файл заасан.
+
+### Game server-ээс HUD, бүжиг, emote-г хасах (2026-10-23)
+HUD (LegacyX-Hud + Workshop addon), бүжиг/emote (LegacyX-Emotes, FortniteEmotesNDances, `.e`) repo-оос устсан. Хутганы талыг одоо chat-аар
+(`.stay` / `.switch`, 10 секунд, хариугүй бол stay) сонгоно. Skin-ийг зөвхөн сайтаас солино (`!ws` сайтын холбоосыг харуулна). `!admin` нь chat цэс.
+Хуучин DLL-үүд ачаалагдсаар байхгүйн тулд эдгээрийг серверээс хойш нь зөөнө (устгахгүй):
+```bash
+A=/home/cs2/cs2/game/csgo/addons/counterstrikesharp
+sudo -u cs2 mkdir -p $A/plugins-off
+for d in LegacyX-Hud LegacyX-Emotes FortniteEmotesNDances; do [ -d $A/plugins/$d ] && sudo -u cs2 mv $A/plugins/$d $A/plugins-off/; done
+sudo -u cs2 mv $A/shared/FortniteEmotesNDancesAPI $A/shared/KitsuneMenu $A/plugins-off/ 2>/dev/null || true
+```
+Дараа нь `sudo ./scripts/cs2-host.sh update` (MultiAddonManager-ийг өөрөө хойш зөөнө) ба server restart. `.env`-ээс `LEGACYX_HUD_*`, `LEGACYX_EMOTES_*` мөр хэрэггүй болсон.
 
 ## 8. Бүх зүйл ажиллаж байгааг шалгах (өөрийн Owner акаунтаар)
 | Шалгах | Хүлээх үр дүн |
@@ -99,5 +111,5 @@ cd legacyxxx-plugins
 
 ## 10. Дараа нь санах зүйл
 - "paid" товч гараар (буруу дарсныг буцаахгүй). Genesis-ийн мөнгөн дүнг шалгаад дарна.
-- Тоглоомын серверийн шинэ функцүүдийг (swap, queue, emote) жинхэнэ тоглолтоор туршаагүй: эхний өдөр хянаж бай.
+- Тоглоомын серверийн шинэ функцүүдийг (swap, queue, хутганы талын чат санал) жинхэнэ тоглолтоор туршаагүй: эхний өдөр хянаж бай.
 - Анхдагч тохиргоог Staff → Settings дээр өөрчилж болно (code өөрчлөх хэрэггүй).

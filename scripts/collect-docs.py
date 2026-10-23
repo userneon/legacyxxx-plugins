@@ -15,12 +15,12 @@ import argparse, datetime, pathlib, re, shutil, sys
 
 HERE = pathlib.Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser()
-parser.add_argument('--repos', default=str(HERE.parent), help='folder holding legacyxxx-plugins, -backend, -frontend, -discord-bot, -workshop')
+parser.add_argument('--repos', default=str(HERE.parent), help='folder holding legacyxxx-plugins, -backend, -frontend, -discord-bot')
 args = parser.parse_args()
 H = pathlib.Path(args.repos)
 today = datetime.date.today().isoformat()
 GH = 'https://github.com/userneon'
-for repo in ('plugins', 'backend', 'frontend', 'discord-bot', 'workshop'):
+for repo in ('plugins', 'backend', 'frontend', 'discord-bot'):
     if not (H / f'legacyxxx-{repo}').is_dir():
         sys.exit(f'legacyxxx-{repo} not found in {H}: pass --repos <folder>')
 
@@ -33,12 +33,11 @@ def banner(repo, path):
 # ---------------------------------------------------------------- README of every repo and plugin
 OUT = HERE / 'docs' / 'readmes'
 README_CATS = [
- ('1-game-server-plugins', 'Game server plugin-ууд (legacyxxx-plugins)', 'CS2 server дээр ажилладаг CounterStrikeSharp plugin-ууд: admin, цол, HUD, match, skin, төлөв.', [
+ ('1-game-server-plugins', 'Game server plugin-ууд (legacyxxx-plugins)', 'CS2 server дээр ажилладаг CounterStrikeSharp plugin-ууд: admin, цол, match, skin, төлөв.', [
    ('00-repo', 'legacyxxx-plugins', 'README.md', 'Репо: legacyxxx-plugins'),
    ('admin', 'legacyxxx-plugins', 'LegacyX-Admin/README.md', 'LegacyX-Admin'),
    ('afkmanager', 'legacyxxx-plugins', 'LegacyX-AFKManager/README.md', 'LegacyX-AFKManager'),
    ('community', 'legacyxxx-plugins', 'LegacyX-Community/README.md', 'LegacyX-Community'),
-   ('hud', 'legacyxxx-plugins', 'LegacyX-Hud/README.md', 'LegacyX-Hud'),
    ('matchzy', 'legacyxxx-plugins', 'LegacyX-MatchZy/README.md', 'LegacyX-MatchZy'),
    ('spectator', 'legacyxxx-plugins', 'LegacyX-Spectator/README.md', 'LegacyX-Spectator'),
    ('status', 'legacyxxx-plugins', 'LegacyX-Status/README.md', 'LegacyX-Status'),
@@ -54,9 +53,6 @@ README_CATS = [
  ]),
  ('4-discord-bot', 'Discord bot (legacyxxx-discord-bot)', 'Welcome, дүрэм, FAQ, ticket, automod, шийтгэл, admin дуудлага, update-ийн мэдээ.', [
    ('00-repo', 'legacyxxx-discord-bot', 'README.md', 'Репо: legacyxxx-discord-bot'),
- ]),
- ('5-hud-workshop', 'Тоглоом доторх HUD (legacyxxx-workshop)', 'CS2 Workshop addon: Panorama layout, CSS, зураг.', [
-   ('00-repo', 'legacyxxx-workshop', 'README.md', 'Репо: legacyxxx-workshop'),
  ]),
 ]
 
@@ -85,7 +81,7 @@ CATS = {
  '02-api-security': ('API, хамгаалалт, гэрээ', 'API лавлах, аюулгүй байдал, feature flag, plugin ↔ API гэрээ'),
  '03-rank-match': ('Цол, EXP, match', 'Rank систем, сарын reset, leaderboard, match систем, telemetry'),
  '04-admin-staff': ('Admin, staff, эрх', 'AdminPlus, staff panel, role шилжилт'),
- '05-skin-hud': ('Skin ба HUD', 'Skinchanger runbook, Workshop HUD гэрээ ба гарын авлага'),
+ '05-skin-hud': ('Skin', 'Skinchanger runbook'),
  '06-audits': ('Аудит, шалгалт', 'Тодорхой огнооны аудит, production шалгалт'),
  '07-changelogs': ('Changelog-ууд', 'Plugin, rank, reconnect-ийн өөрчлөлтийн түүх'),
  '08-frontend-design': ('Вэб дизайн ба ажлын дүрэм', 'Frontend-ийн дизайн, token, зураг, `CLAUDE.md`'),
@@ -96,7 +92,7 @@ CATS = {
 MAP = {}
 def put(cat, repo, paths):
     for p in paths: MAP[(repo, p)] = cat
-B, F, W, P = 'legacyxxx-backend', 'legacyxxx-frontend', 'legacyxxx-workshop', 'legacyxxx-plugins'
+B, F, P = 'legacyxxx-backend', 'legacyxxx-frontend', 'legacyxxx-plugins'
 put('01-deploy', B, ['VPS_DEPLOY.md', 'docs/PRODUCTION_DEPLOYMENT.md'])
 put('01-deploy', F, ['docs/IMAGE_DELIVERY.md'])
 put('02-api-security', B, ['API.md', 'docs/API_SECURITY_HARDENING.md', 'docs/FEATURE_FLAGS.md', 'docs/FRONTEND_ENDPOINT_ADAPTER_SPEC.md', 'docs/LEGACY_RLS_HARDENING_2026-08-24.md', 'docs/PLUGIN_READY_CONTRACT_V1.md'])
@@ -104,13 +100,12 @@ put('03-rank-match', B, ['docs/RANK_SYSTEM.md', 'docs/MONTHLY_RANK_RESET.md', 'd
 put('03-rank-match', P, ['LegacyX-MatchZy/RANK_BRIDGE.md'])
 put('04-admin-staff', B, ['docs/ADMINPLUS_API_ONLY.md', 'docs/ADMINPLUS_PRODUCTION_SETUP.md', 'docs/STAFF_PANEL.md'])
 put('05-skin-hud', B, ['docs/SKINCHANGER_OPERATOR_RUNBOOK.md', 'docs/SKINCHANGER_STATIC_ASSET_HOSTING.md'])
-put('05-skin-hud', W, ['CONTRACT.md'])
 put('06-audits', B, ['AUDIT_2026-09-20.md', 'docs/PLUGIN_GAP_AUDIT_2026-08-24.md', 'docs/PRODUCTION_DB_AUDIT.md', 'docs/RANK_EXP_AUDIT_2026-08-24.md', 'docs/ROLE_MIGRATION_AUDIT.md', 'docs/USER_ROLE_MIGRATION_AUDIT_2026-08-24.md', 'docs/SERVER_LIVE_MATCH_AUDIT_2026-08-24.md', 'docs/UNIFIED_MATCH_SYSTEM_AUDIT.md', 'docs/V1_CLEANUP_AUDIT.md'])
 put('07-changelogs', B, ['docs/ADMINPLUS_LEGACYX_CHANGELOG.md', 'docs/COMMUNITY_PROGRESSION_CHANGELOG.md', 'docs/MONTHLY_RANK_RESET_CHANGELOG.md', 'docs/RANK_ADMINPLUS_CHANGELOG.md', 'docs/RECONNECT_CHANGELOG.md'])
 put('07-changelogs', P, ['AFKMANAGER_LEGACYX_CHANGELOG.md', 'COMMUNITY_LEGACYX_CHANGELOG.md', 'MATCHZY_LEGACYX_CHANGELOG.md', 'SPECTATOR_COMMS_LEGACYX_CHANGELOG.md', 'LegacyX-MatchZy/CHANGELOG.md'])
 put('08-frontend-design', F, ['CLAUDE.md', 'docs/design/README.md', 'docs/design/PROMPT.md', 'docs/design/RANK-SYSTEM.md'])
 put('09-other', B, ['MASTER_CONTEXT.md', 'todo.md', 'docs/PROMOTION_CODES.md', 'docs/RECONNECT_LAST_PLAYED.md', 'docs/STEAM_PROFILE_BACKGROUND_FEASIBILITY.md'])
-for _r in (B, F, W, 'legacyxxx-discord-bot'): put('11-manuals', _r, ['docs/MANUAL_MN.md'])
+for _r in (B, F, 'legacyxxx-discord-bot'): put('11-manuals', _r, ['docs/MANUAL_MN.md'])
 put('10-upstream', P, ['README.upstream.md', 'LegacyX-MatchZy/README.upstream.md', 'LegacyX-WeaponPaints/UPSTREAM.md'])
 mz = H / P / 'LegacyX-MatchZy/documentation/docs'
 for f in sorted(mz.glob('*.md')): MAP[(P, f'LegacyX-MatchZy/documentation/docs/{f.name}')] = '10-upstream'
@@ -152,7 +147,7 @@ if missing:
 
 # A document that is new in a repo and in none of the lists above would silently be left out: say so.
 known = {p for (_, p) in MAP} | {p for _, items in [(c[0], c[3]) for c in README_CATS] for (_, r, p, _) in items}
-for repo in ('plugins', 'backend', 'frontend', 'discord-bot', 'workshop'):
+for repo in ('plugins', 'backend', 'frontend', 'discord-bot'):
     root = H / f'legacyxxx-{repo}'
     import subprocess
     files = subprocess.run(['git', '-C', str(root), 'ls-files', '*.md'], capture_output=True, text=True).stdout.split()
