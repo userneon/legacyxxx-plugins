@@ -54,6 +54,21 @@ public static class LegacyXChat
         return Colorize($"{label} {{grey}}| {nameColor}{who}{{grey}}: {{white}}{Clean(text)}");
     }
 
+    /// <summary>
+    /// True for a typed plugin command: a "!", "/" or "." and a letter, then a word of letters, digits or "_", then the end or a space
+    /// (".r", "!admin", "/rs", ".map de_dust2"). "...gg", "!!!" and "." alone are ordinary chat.
+    /// </summary>
+    public static bool IsCommandLine(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+        var line = text.TrimStart();
+        static bool Letter(char c) => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+        if (line.Length < 2 || line[0] is not ('!' or '/' or '.') || !Letter(line[1])) return false;
+        var i = 2;
+        while (i < line.Length && i < 40 && (Letter(line[i]) || (line[i] >= '0' && line[i] <= '9') || line[i] == '_')) i++;
+        return i == line.Length || line[i] == ' ';
+    }
+
     public static string System(string message)
     {
         var body = string.IsNullOrWhiteSpace(message) ? string.Empty : Palette(message.Trim());

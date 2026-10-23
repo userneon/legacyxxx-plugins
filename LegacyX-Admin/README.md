@@ -25,6 +25,8 @@ The module reads `CounterStrikeSharp/.env` through `LegacyX.Shared.Configuration
 
 **The `!admin` menu.** `!admin` opens the chat menu (Staff, Players, Server, Bans).
 
+**Typed commands stay out of chat.** `.r`, `!r`, `!admin` and the like still run, but the game's own chat line for them (`[ALL] Name: .r`) is dropped (a `!`, `/` or `.`, a letter, one word, then the end or a space; `...gg` is ordinary chat).
+
 **Play access.** On connect the server asks the API (`POST /plugin/players/access`, the `bans:read` token it already has) whether the player is signed in on legacyx.cc and whether they are blocked for leaving ranked matches (3rd leave in 24 hours: 30 minutes, 30 more each time after). If not, the player gets a chat message saying what to do (sign in on the website and press Connect, or when they can play again) and is removed 10 seconds later. Staff (`@css/generic`) are never removed, and nobody is removed when the API cannot be reached. `LEGACYX_ADMIN_REQUIRE_LOGIN=false` and `LEGACYX_ADMIN_ENFORCE_LEAVE_COOLDOWN=false` switch the two parts off (a Fun server may not want the cooldown).
 
 Bans (`css_ban`, `css_ipban`, the `!admin` menu) live only in the LEGACY-X database and apply on every server; this server keeps no `banned_user.cfg` or `banned_ip.cfg`. A restart loses nothing, and the website, Discord and the game all show the same list. From the console or RCON, `css_ban` and `css_unban` accept a SteamID64, `STEAM_X:Y:Z` or `[U:1:N]` for players who are not online, and `css_unban` also accepts an IP address.

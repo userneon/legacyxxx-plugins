@@ -6,6 +6,7 @@ using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Events;
 using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Timers;
+using CounterStrikeSharp.API.Modules.UserMessages;
 using CounterStrikeSharp.API.Modules.Utils;
 using LegacyX.Shared.Configuration;
 using System;
@@ -86,6 +87,7 @@ public partial class AdminPlus
 
         AddCommandListener("say", OnPlayerSay, HookMode.Pre);
         AddCommandListener("say_team", OnPlayerSay, HookMode.Pre);
+        HookUserMessage(118, HideCommandChatLine, HookMode.Pre); // 118 = SayText2, the game's own chat line
 
         foreach (var player in Utilities.GetPlayers())
         {
@@ -849,6 +851,24 @@ public partial class AdminPlus
         return HookResult.Handled;
     }
 
+    /// <summary>
+    /// A typed command (.r, !r, !admin) still runs, but its line is not shown in chat (owner request 2026-10-23): the game would print it as
+    /// "[ALL] Name: .r", out of step with "ALL | Name: text". Commands are left to the game's say command (MatchZy reads it), so only the
+    /// game's own chat line is dropped here.
+    /// </summary>
+    private HookResult HideCommandChatLine(UserMessage message)
+    {
+        try
+        {
+            if (!message.ReadString("messagename").StartsWith("Cstrike_Chat", StringComparison.OrdinalIgnoreCase)) return HookResult.Continue;
+            return LegacyXChat.IsCommandLine(message.ReadString("param2")) ? HookResult.Handled : HookResult.Continue;
+        }
+        catch
+        {
+            return HookResult.Continue;
+        }
+    }
+
     private static bool IsPrefixedCommand(string s)
         => !string.IsNullOrEmpty(s) && (s[0] == '!' || s[0] == '/');
 
@@ -987,6 +1007,7 @@ public partial class AdminPlus
             
             RemoveCommandListener("say", OnPlayerSay, HookMode.Pre);
             RemoveCommandListener("say_team", OnPlayerSay, HookMode.Pre);
+            UnhookUserMessage(118, HideCommandChatLine, HookMode.Pre);
             
         }
         catch (Exception ex)

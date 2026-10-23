@@ -31,6 +31,25 @@ public class ChatTests
         Assert.Equal(" \u0004TEAM \u0008| \u0001[OPERATOR I] Bat\u0008: \u0001push b", LegacyXChat.Player(true, "Bat", "push b", "OPERATOR I"));
     }
 
+    [Theory]
+    [InlineData(".r", true)]
+    [InlineData("!r", true)]
+    [InlineData("  !admin", true)]
+    [InlineData("/rs", true)]
+    [InlineData(".map de_dust2", true)]
+    [InlineData(".stay", true)]
+    [InlineData("...gg", false)]
+    [InlineData("!!!", false)]
+    [InlineData(".", false)]
+    [InlineData("hello .r", false)]
+    [InlineData(".r2d2!", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void TypedCommandsAreToldApartFromChat(string? text, bool expected)
+    {
+        Assert.Equal(expected, LegacyXChat.IsCommandLine(text));
+    }
+
     [Fact]
     public void PlayerNamesWearTheirTeamColor()
     {
