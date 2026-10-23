@@ -834,8 +834,8 @@ public partial class AdminPlus
         if (_selectedReportTarget != null) return HookResult.Continue;
         if (_menuStates.TryGetValue(player.Slot, out var menu) && menu.InputMode) return HookResult.Continue;
         var team = string.Equals(info.GetArg(0), "say_team", StringComparison.OrdinalIgnoreCase);
-        // No rank or staff role in chat (owner request): just ALL | Name: text.
-        var line = LegacyXChat.Player(team, player.PlayerName ?? player.SteamID.ToString(), text);
+        // No rank or staff role in chat (owner request): just ALL | Name: text, the name in its team's color.
+        var line = LegacyXChat.Player(team, player.PlayerName ?? player.SteamID.ToString(), text, teamNum: player.TeamNum);
         var alive = player.PawnIsAlive;
         foreach (var recipient in Utilities.GetPlayers())
         {

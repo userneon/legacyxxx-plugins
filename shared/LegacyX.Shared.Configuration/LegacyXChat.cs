@@ -35,16 +35,23 @@ public static class LegacyXChat
         ("{blue}", White), ("{darkblue}", White),
     };
 
+    // The name wears its team's chat color (owner request 2026-10-23): CT blue, T yellow, anyone else white. Same codes as
+    // CounterStrikeSharp's ChatColors.Blue and ChatColors.Yellow, whose own notes say "Blue for CT, Yellow for T".
+    private const char CounterTerrorist = '\x0B';
+    private const char Terrorist = '\x09';
+
     /// <summary>
-    /// A player's chat line as "ALL | Name: text" or "TEAM | Name: text". Control characters are cut from the name and
-    /// the text, so nobody can paste a color code into chat.
+    /// A player's chat line as "ALL | Name: text" or "TEAM | Name: text", the name in the color of the team they are on
+    /// (<paramref name="teamNum"/>: 3 CT, 2 T). Control characters are cut from the name and the text, so nobody can
+    /// paste a color code into chat.
     /// </summary>
-    public static string Player(bool team, string name, string text, string tag = "")
+    public static string Player(bool team, string name, string text, string tag = "", int teamNum = 0)
     {
         static string Clean(string value) => new string((value ?? string.Empty).Where(c => c >= ' ' && c != '\u007F').ToArray()).Trim();
         var who = Clean(tag).Length > 0 ? $"[{Clean(tag)}] {Clean(name)}" : Clean(name);
         var label = team ? "{green}TEAM" : "{grey}ALL";
-        return Colorize($"{label} {{grey}}| {{white}}{who}{{grey}}: {{white}}{Clean(text)}");
+        var nameColor = teamNum switch { 3 => CounterTerrorist, 2 => Terrorist, _ => White };
+        return Colorize($"{label} {{grey}}| {nameColor}{who}{{grey}}: {{white}}{Clean(text)}");
     }
 
     public static string System(string message)

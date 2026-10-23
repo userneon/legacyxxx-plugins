@@ -32,6 +32,15 @@ public class ChatTests
     }
 
     [Fact]
+    public void PlayerNamesWearTheirTeamColor()
+    {
+        Assert.Equal(" \u0008ALL \u0008| \u000BTemuujin\u0008: \u0001gg", LegacyXChat.Player(false, "Temuujin", "gg", teamNum: 3));
+        Assert.Equal(" \u0004TEAM \u0008| \u0009Bat\u0008: \u0001push b", LegacyXChat.Player(true, "Bat", "push b", teamNum: 2));
+        Assert.Equal(" \u0008ALL \u0008| \u0001Watcher\u0008: \u0001gg", LegacyXChat.Player(false, "Watcher", "gg", teamNum: 1));
+        Assert.Equal(" \u0008ALL \u0008| \u000BEvil\u0008: \u0001red", LegacyXChat.Player(false, "\u0007Evil", "\u0007red", teamNum: 3));
+    }
+
+    [Fact]
     public void PlayerLinesCannotCarryColorCodes()
     {
         Assert.Equal(" \u0008ALL \u0008| \u0001Evil\u0008: \u0001red", LegacyXChat.Player(false, "\u0007Evil", "\u0007red"));
