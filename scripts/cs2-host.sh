@@ -23,6 +23,10 @@
 #       wait for AUTOUPDATE_HOUR (default 5, local time). Log: journalctl -u legacyx-cs2-autoupdate
 #       A new CS2 build is announced on Discord when found ("CS2 update released") and again once CounterStrikeSharp
 #       and the plugin signatures work with it and the servers are back ("CS2 update finished").
+#   sudo ./scripts/cs2-host.sh css-hotfix
+#       builds CounterStrikeSharp from source against the SDK that fixes the player-join crash after CS2 1.41.9.2
+#       (scripts/build-css-hotfix.sh) and installs it. Servers must be stopped. Every later update keeps it only
+#       while the installed CounterStrikeSharp release is the one it was built for; the next release replaces it.
 #   sudo ./scripts/cs2-host.sh client-addons [id,id,...]
 #       Workshop addon IDs every player downloads on connect (MultiAddonManager mm_client_extra_addons),
 #       e.g. the custom Panorama UI. No IDs prints the current value; "none" clears it. Restart the servers after.
@@ -148,8 +152,38 @@ install_counterstrikesharp() {
   [[ -d "$CSGO_DIR/addons/counterstrikesharp" ]] || die "CounterStrikeSharp did not install."
   mkdir -p "$STATE_DIR"
   printf '%s\n' "$tag" > "$STATE_DIR/css-version"
+  apply_css_override
 }
- 
+
+# A CounterStrikeSharp built here (scripts/build-css-hotfix.sh) replaces the release's engine library only while
+# that release is the one it was built from. When a newer release is installed it is the official fix: the
+# local build is dropped. `install` unlinks the old file first, so a running server keeps what it mapped.
+apply_css_override() {
+  local dir="$STATE_DIR/css-override" built have
+  [[ -f "$dir/counterstrikesharp.so" && -f "$dir/tag" ]] || return 0
+  built="$(cat "$dir/tag")"
+  have="$(cat "$STATE_DIR/css-version" 2>/dev/null || true)"
+  if [[ "$built" == "$have" ]]; then
+    install -o "$CS2_USER" -g "$CS2_USER" -m 755 "$dir/counterstrikesharp.so" \
+      "$CSGO_DIR/addons/counterstrikesharp/bin/linuxsteamrt64/counterstrikesharp.so"
+    say "Using the CounterStrikeSharp built here for $built (player-join crash fix)"
+  else
+    rm -rf "$dir"
+    say "CounterStrikeSharp $have is installed: the local build for $built is dropped"
+  fi
+}
+
+cmd_css_hotfix() {
+  need_root
+  local port
+  for port in $(ports); do
+    if systemctl is-active --quiet "cs2@$port"; then die "cs2@$port is running: stop it first (sudo systemctl stop cs2@$port)."; fi
+  done
+  STATE_DIR="$STATE_DIR" bash "$REPO/scripts/build-css-hotfix.sh"
+  apply_css_override
+  say "Start a server when you are ready: sudo systemctl start cs2@<port>"
+}
+
 # MultiAddonManager (Source2ZE): a Metamod plugin that makes clients download Workshop addons on connect
 # (mm_client_extra_addons) and can mount server-side ones (mm_extra_addons). Not fatal if it cannot be
 # installed: the servers run fine without it, only Workshop addons (custom Panorama UI) are missing.
@@ -663,6 +697,7 @@ case "${1:-}" in
   deploy) shift; cmd_deploy "$@" ;;
   env) cmd_env ;;
   autoupdate) shift; cmd_autoupdate "$@" ;;
+  css-hotfix) cmd_css_hotfix ;;
   client-addons) shift; cmd_client_addons "$@" ;;
   remove) shift; cmd_remove "$@" ;;
   status) cmd_status ;;
