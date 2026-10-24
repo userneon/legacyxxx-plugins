@@ -525,7 +525,7 @@
   "Help.Console.Clean.Usage": "css_clean - Cleans weapons on ground",
   "Help.Console.Asay.Usage": "css_asay <message> - Sends message only to admins",
   "Help.Console.Csay.Usage": "css_csay <message> - Shows message on center screen",
-  "Help.Console.Hsay.Usage": "css_hsay <message> - Shows message on HUD",
+  "Help.Console.Hsay.Usage": "css_hsay <message> - Shows a message in the on-screen alert line",
   "Help.Console.Psay.Usage": "css_psay <target> <message> - Private message to specific player",
   "Help.Console.Say.Usage": "css_say <message> - Sends message to everyone",
   "Help.Console.Addadmin.Usage": "css_addadmin <steamid64> <group> <immunity> - Adds new admin",
