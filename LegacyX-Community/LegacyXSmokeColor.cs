@@ -56,7 +56,7 @@ public sealed partial class LegacyXCommunity
         });
         RegisterListener<Listeners.OnMapStart>(_ => { smokeShades.Clear(); smokesThrown.Clear(); });
         // !rs reloads skins from the site; the smoke colour is read again with it, so a colour changed on the site shows at once.
-        AddCommandListener("css_rs", (player, _) =>
+        AddCommandListener("css_rs", (player, command) =>
         {
             if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
             var now = DateTime.UtcNow;
