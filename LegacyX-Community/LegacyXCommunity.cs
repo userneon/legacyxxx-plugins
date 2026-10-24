@@ -84,6 +84,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         Console.WriteLine($"[{ModuleName}] Loaded — rank and EXP command ready.");
         if (!Config.Enabled) return;
         if (Config.ThirdPerson) RegisterThirdPerson();
+        RegisterSmokeColor();
         RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
         {
             var player = @event.Userid;
@@ -161,6 +162,9 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
             return;
         }
         var (status, profile) = await FetchProfileAsync(steamId.ToString());
+        // The worn Smoke colour rides along with the profile; a player the site does not know has none.
+        if (profile is { } colored) { var hex = StringOrNull(colored, "smoke_color"); Server.NextFrame(() => StoreSmokeColor(steamId, hex)); }
+        else if (status == System.Net.HttpStatusCode.NotFound) Server.NextFrame(() => StoreSmokeColor(steamId, null));
         if (welcome) Server.NextFrame(() => ScheduleWelcome(player, WelcomeRankLine(status, profile)));
         if (!Config.ScoreboardRanks) return;
         if (status == System.Net.HttpStatusCode.NotFound)
