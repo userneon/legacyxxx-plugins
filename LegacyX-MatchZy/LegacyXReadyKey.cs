@@ -39,7 +39,7 @@ public partial class MatchZy
     private readonly Dictionary<int, ReadyKeyState> legacyXReadyKeys = new();
 
     // Private chat nudge (owner request 2026-10-22): each player who has not readied hears it alone, every so often.
-    private const float LegacyXReadyNudgeSeconds = 20f;
+    private const float LegacyXReadyNudgeSeconds = 45f;
     private readonly Dictionary<int, float> legacyXReadyNudged = new();
 
     private void OnLegacyXReadyKeyTick()
@@ -97,6 +97,8 @@ public partial class MatchZy
             var userId = player.UserId!.Value;
             var isSeated = player.TeamNum >= (byte)CsTeam.Terrorist;
             if (isSeated && playerReadyStatus.TryGetValue(userId, out var nudgeReady) && nudgeReady) continue;
+            // A seated player has "Press R to ready" on screen; only someone who has not chosen a team needs telling in chat.
+            if (isSeated && legacyXReadyHint != "off") continue;
             if (legacyXReadyNudged.TryGetValue(userId, out var last) && Server.CurrentTime - last < LegacyXReadyNudgeSeconds) continue;
             legacyXReadyNudged[userId] = Server.CurrentTime;
             PrintToPlayerChat(player, isSeated

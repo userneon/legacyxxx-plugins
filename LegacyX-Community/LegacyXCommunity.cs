@@ -207,7 +207,6 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
             var name = new string(player.PlayerName.Where(c => c >= ' ' && c != '{' && c != '}').ToArray()).Trim();
             player.PrintToChat(LegacyXChat.System(name.Length > 0 ? $"Welcome to LEGACY-X, {{white}}{name}{{grey}}." : "Welcome to LEGACY-X."));
             if (rankLine != null) player.PrintToChat(LegacyXChat.System(rankLine));
-            player.PrintToChat(LegacyXChat.System("Your skins come from {white}legacyx.cc{grey} and load by themselves. Type {white}!rs{grey} to reload them after a change."));
         });
     }
 

@@ -74,6 +74,8 @@ namespace MatchZy
         private void SendUnreadyPlayersMessage()
         {
             if (!isWarmup || matchStarted) return;
+            // The "Press R to ready" line already shows who is ready and how many are needed, so the same list is not repeated in chat.
+            if (legacyXReadyHint != "off") return;
             List<string> unreadyPlayers = new();
 
             foreach (var key in playerReadyStatus.Keys)
