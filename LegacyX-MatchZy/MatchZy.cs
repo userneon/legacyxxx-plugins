@@ -356,6 +356,15 @@ namespace MatchZy
             RegisterLegacyXKnifeMenu();
             RegisterListener<Listeners.OnMapStart>(mapName => { 
                 AddTimer(1.0f, () => {
+                    // A map change that MatchZy did not start itself (an admin's !map, a vote) while a match was running: the old match
+                    // does not carry over to the new map. Back to warmup, so "Press R to ready" shows and the match can start again.
+                    // The next map of a series and a backup restore on another map set their own state and are left alone.
+                    if (!isRoundRestorePending && (matchStarted || isMatchLive || isKnifeRound || isSideSelectionPhase))
+                    {
+                        Log("[OnMapStart] The map changed during a match: back to warmup.");
+                        ResetMatch();
+                        return;
+                    }
                     if (!isMatchSetup)
                     {
                         AutoStart();
