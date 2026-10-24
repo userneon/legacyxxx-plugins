@@ -11,8 +11,10 @@ namespace LegacyXCommunity;
 /// </summary>
 public sealed partial class LegacyXCommunity
 {
-    // SteamID64 -> RGB 0-255; players with no colour worn are not in it.
-    private readonly Dictionary<ulong, (float R, float G, float B)> smokeColors = new();
+    // SteamID64 -> RGB 0-255 and, for a two-colour (gradient) smoke, the second RGB; players with no colour worn are not in it.
+    private readonly Dictionary<ulong, ((float R, float G, float B) First, (float R, float G, float B)? Second)> smokeColors = new();
+    // Smokes thrown so far by each player on this map: a two-colour smoke alternates, the first grenade in the first colour, the next in the second.
+    private readonly Dictionary<ulong, int> smokesThrown = new();
 
     private void RegisterSmokeColor()
     {
@@ -29,25 +31,32 @@ public sealed partial class LegacyXCommunity
                 var controller = new CCSPlayerPawn(thrower.Handle).Controller.Value;
                 if (controller == null || !controller.IsValid) return;
                 if (!smokeColors.TryGetValue(controller.SteamID, out var color)) return;
-                projectile.SmokeColor.X = color.R;
-                projectile.SmokeColor.Y = color.G;
-                projectile.SmokeColor.Z = color.B;
+                var count = smokesThrown.GetValueOrDefault(controller.SteamID);
+                smokesThrown[controller.SteamID] = count + 1;
+                var shade = color.Second is { } second && count % 2 == 1 ? second : color.First;
+                projectile.SmokeColor.X = shade.R;
+                projectile.SmokeColor.Y = shade.G;
+                projectile.SmokeColor.Z = shade.B;
             });
         });
         RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
-            if (@event.Userid is { } left) smokeColors.Remove(left.SteamID);
+            if (@event.Userid is { } left) { smokeColors.Remove(left.SteamID); smokesThrown.Remove(left.SteamID); }
             return HookResult.Continue;
         });
     }
 
-    /// <summary>Keeps (or drops) a player's worn smoke colour; only a plain #rrggbb counts. Main thread.</summary>
-    private void StoreSmokeColor(ulong steamId, string? hex)
+    private static (float R, float G, float B)? ParseSmokeColor(string? hex) =>
+        hex is { Length: 7 } && hex[0] == '#' && int.TryParse(hex.AsSpan(1), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var rgb)
+            ? ((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF)
+            : null;
+
+    /// <summary>Keeps (or drops) a player's worn smoke colour and its optional second colour; only a plain #rrggbb counts. Main thread.</summary>
+    private void StoreSmokeColor(ulong steamId, string? hex, string? hex2 = null)
     {
-        if (hex is { Length: 7 } && hex[0] == '#'
-            && int.TryParse(hex.AsSpan(1), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var rgb))
+        if (ParseSmokeColor(hex) is { } first)
         {
-            smokeColors[steamId] = ((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+            smokeColors[steamId] = (first, ParseSmokeColor(hex2));
             return;
         }
         smokeColors.Remove(steamId);
