@@ -1,6 +1,9 @@
 using System.Globalization;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Utils;
 
 namespace LegacyXCommunity;
 
@@ -15,6 +18,9 @@ public sealed partial class LegacyXCommunity
     private readonly Dictionary<ulong, ((float R, float G, float B) First, (float R, float G, float B)? Second)> smokeColors = new();
     // Smokes thrown so far by each player on this map: a two-colour smoke alternates, the first grenade in the first colour, the next in the second.
     private readonly Dictionary<ulong, int> smokesThrown = new();
+    // The colour each smoke in flight was given (by the projectile's entity index), so its glow matches it where it bursts.
+    private readonly Dictionary<uint, (float R, float G, float B)> smokeShades = new();
+    private const float SmokeGlowSeconds = 17f;
 
     private void RegisterSmokeColor()
     {
@@ -37,8 +43,16 @@ public sealed partial class LegacyXCommunity
                 projectile.SmokeColor.X = shade.R;
                 projectile.SmokeColor.Y = shade.G;
                 projectile.SmokeColor.Z = shade.B;
+                smokeShades[projectile.Index] = shade;
             });
         });
+        // A coloured light where the smoke bursts, in the same colour, for as long as the cloud lasts (experiment, 2026-10-24).
+        RegisterEventHandler<EventSmokegrenadeDetonate>((@event, _) =>
+        {
+            if (smokeShades.Remove((uint)@event.Entityid, out var shade) && Config.SmokeGlow) SpawnSmokeGlow(@event.X, @event.Y, @event.Z, shade);
+            return HookResult.Continue;
+        });
+        RegisterListener<Listeners.OnMapStart>(_ => { smokeShades.Clear(); smokesThrown.Clear(); });
         RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
             if (@event.Userid is { } left) { smokeColors.Remove(left.SteamID); smokesThrown.Remove(left.SteamID); }
@@ -60,5 +74,33 @@ public sealed partial class LegacyXCommunity
             return;
         }
         smokeColors.Remove(steamId);
+    }
+
+    private void SpawnSmokeGlow(float x, float y, float z, (float R, float G, float B) shade)
+    {
+        try
+        {
+            var light = Utilities.CreateEntityByName<CBarnLight>("light_omni2");
+            if (light == null || !light.IsValid) return;
+            light.Enabled = true;
+            light.Color = System.Drawing.Color.FromArgb(255, (int)shade.R, (int)shade.G, (int)shade.B);
+            light.Brightness = 6f;
+            light.Range = 360f;
+            light.Teleport(new Vector(x, y, z + 40f), new QAngle(0, 0, 0), new Vector(0, 0, 0));
+            light.DispatchSpawn();
+            AddTimer(SmokeGlowSeconds, () => { if (light.IsValid) light.Remove(); });
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"[{ModuleName}] Smoke glow failed: {exception.Message}");
+        }
+    }
+
+    [ConsoleCommand("lx_smoke_glow", "Coloured light where a coloured smoke bursts: lx_smoke_glow 0|1")]
+    public void OnSmokeGlowCommand(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player != null) return; // server console / RCON only
+        if (command.ArgCount > 1 && command.ArgByIndex(1) is "0" or "1") Config.SmokeGlow = command.ArgByIndex(1) == "1";
+        command.ReplyToCommand($"[{ModuleName}] lx_smoke_glow is {(Config.SmokeGlow ? 1 : 0)}.");
     }
 }

@@ -29,6 +29,7 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public bool Revenge { get; set; } = true;
     /// <summary>.tp turns on a third person view. Off by default: it is for Fun servers (LEGACYX_27016_COMMUNITY_THIRDPERSON=true), never ranked play.</summary>
     public bool ThirdPerson { get; set; }
+    public bool SmokeGlow { get; set; } = true;
 }
 
 public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
@@ -73,6 +74,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         config.ClanTag = environment.GetModuleBoolean("COMMUNITY", "CLAN_TAG", config.ClanTag);
         config.Revenge = environment.GetModuleBoolean("COMMUNITY", "REVENGE", config.Revenge);
         config.ThirdPerson = environment.GetModuleBoolean("COMMUNITY", "THIRDPERSON", false);
+        config.SmokeGlow = environment.GetModuleBoolean("COMMUNITY", "SMOKEGLOW", true);
         scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 12, 0, 12);
         scoreboardIconOffset = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_ICON_OFFSET", 18, 0, 18);
         Config = config;
