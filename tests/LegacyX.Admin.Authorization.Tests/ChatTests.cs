@@ -28,7 +28,7 @@ public class ChatTests
     public void PlayerLinesReadAllOrTeamBarNameAndText()
     {
         Assert.Equal(" \u0008ALL \u0008| \u0001Temuujin\u0008: \u0001gg", LegacyXChat.Player(false, "Temuujin", "gg"));
-        Assert.Equal(" \u0004TEAM \u0008| \u0001[OPERATOR I] Bat\u0008: \u0001push b", LegacyXChat.Player(true, "Bat", "push b", "OPERATOR I"));
+        Assert.Equal(" \u0008TEAM \u0008| \u0001[OPERATOR I] Bat\u0008: \u0001push b", LegacyXChat.Player(true, "Bat", "push b", "OPERATOR I"));
     }
 
     [Theory]
@@ -54,7 +54,7 @@ public class ChatTests
     public void PlayerNamesWearTheirTeamColor()
     {
         Assert.Equal(" \u0008ALL \u0008| \u000BTemuujin\u0008: \u0001gg", LegacyXChat.Player(false, "Temuujin", "gg", teamNum: 3));
-        Assert.Equal(" \u0004TEAM \u0008| \u0009Bat\u0008: \u0001push b", LegacyXChat.Player(true, "Bat", "push b", teamNum: 2));
+        Assert.Equal(" \u0008TEAM \u0008| \u0009Bat\u0008: \u0001push b", LegacyXChat.Player(true, "Bat", "push b", teamNum: 2));
         Assert.Equal(" \u0008ALL \u0008| \u0001Watcher\u0008: \u0001gg", LegacyXChat.Player(false, "Watcher", "gg", teamNum: 1));
         Assert.Equal(" \u0008ALL \u0008| \u000BEvil\u0008: \u0001red", LegacyXChat.Player(false, "\u0007Evil", "\u0007red", teamNum: 3));
     }
@@ -81,14 +81,13 @@ public class ChatTests
     }
 
     [Fact]
-    public void A_staff_role_keeps_its_color_in_a_system_line_and_other_codes_still_turn_white()
+    public void A_staff_role_is_named_in_plain_text_before_a_name()
     {
-        var line = LegacyXChat.System("{white}" + LegacyXChat.Role("OWNER") + "777{grey} restarted the round.\u0002 " + LegacyXChat.Role("manager") + "A " + LegacyXChat.Role("Admin") + "B");
-        Assert.Contains("\u000EOwner\u0001 777", line);
-        Assert.Contains("\u000FManager\u0001 A", line);
-        Assert.Contains("\u000BAdmin\u0001 B", line);
-        Assert.DoesNotContain('\u0002', line);
+        Assert.Equal("Owner ", LegacyXChat.Role("OWNER"));
+        Assert.Equal("Manager ", LegacyXChat.Role("manager"));
+        Assert.Equal("Admin ", LegacyXChat.Role("Admin"));
         Assert.Equal(string.Empty, LegacyXChat.Role("Player"));
         Assert.Equal(string.Empty, LegacyXChat.Role(null));
+        Assert.Contains("Owner 777", LegacyXChat.System("{white}" + LegacyXChat.Role("OWNER") + "777{grey} restarted the round."));
     }
 }

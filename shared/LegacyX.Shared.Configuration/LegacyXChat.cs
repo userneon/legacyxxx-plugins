@@ -40,23 +40,12 @@ public static class LegacyXChat
     private const char CounterTerrorist = '\x0B';
     private const char Terrorist = '\x09';
 
-    // A staff role in front of a name in an announcement ("Owner 777 restarted the round"): Owner violet, Manager red, Admin blue,
-    // the site's staff colors (violet, red, sky) as far as chat has them. Role() writes a private marker, not the chat code, so
-    // the palette still turns every color a module brings on its own into white; System() swaps the markers for the codes last.
-    private const char RoleOwnerMark = '\uE001', RoleManagerMark = '\uE002', RoleAdminMark = '\uE003';
-
-    /// <summary>"Owner " in its color and then back to white, to put before a name ("Owner 777"); empty for no role.</summary>
+    /// <summary>"Owner " to put before a name ("Owner 777"), in the line's own colour; empty for anyone who is not Owner, Manager or Admin.</summary>
     public static string Role(string? role)
     {
         var name = (role ?? string.Empty).Trim().ToUpperInvariant();
-        var mark = name switch { "OWNER" => RoleOwnerMark, "MANAGER" => RoleManagerMark, "ADMIN" => RoleAdminMark, _ => '\0' };
-        if (mark == '\0') return string.Empty;
-        return $"{mark}{char.ToUpperInvariant(name[0])}{name[1..].ToLowerInvariant()}{RoleEndMark}";
+        return name is "OWNER" or "MANAGER" or "ADMIN" ? $"{char.ToUpperInvariant(name[0])}{name[1..].ToLowerInvariant()} " : string.Empty;
     }
-    private const char RoleEndMark = '\uE000';
-
-    private static string RoleCodes(string text) => text
-        .Replace(RoleOwnerMark, '\x0E').Replace(RoleManagerMark, '\x0F').Replace(RoleAdminMark, '\x0B').Replace(RoleEndMark.ToString(), White + " ");
 
     /// <summary>The chat color of a team's names: CT blue, T yellow, anyone else white.</summary>
     public static char TeamColor(int teamNum) => teamNum switch { 3 => CounterTerrorist, 2 => Terrorist, _ => White };
@@ -70,7 +59,7 @@ public static class LegacyXChat
     {
         static string Clean(string value) => new string((value ?? string.Empty).Where(c => c >= ' ' && c != '\u007F').ToArray()).Trim();
         var who = Clean(tag).Length > 0 ? $"[{Clean(tag)}] {Clean(name)}" : Clean(name);
-        var label = team ? "{green}TEAM" : "{grey}ALL";
+        var label = team ? "{grey}TEAM" : "{grey}ALL";
         var nameColor = TeamColor(teamNum);
         return Colorize($"{label} {{grey}}| {nameColor}{who}{{grey}}: {{white}}{Clean(text)}");
     }
@@ -93,7 +82,7 @@ public static class LegacyXChat
     public static string System(string message)
     {
         var body = string.IsNullOrWhiteSpace(message) ? string.Empty : Palette(message.Trim());
-        return RoleCodes(Colorize(Prefix) + body).TrimEnd();
+        return (Colorize(Prefix) + body).TrimEnd();
     }
 
     public static string MatchConnect(string address) => System($"Connect with {{white}}connect {address}");
