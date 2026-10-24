@@ -85,7 +85,7 @@ install_steamcmd() {
   if [[ ! -x "$STEAMCMD_DIR/steamcmd.sh" ]]; then
     say "steamcmd"
     as_cs2 mkdir -p "$STEAMCMD_DIR"
-    curl -fsSL https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz | as_cs2 tar -xz -C "$STEAMCMD_DIR"
+    curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz | as_cs2 tar -xz -C "$STEAMCMD_DIR"
   fi
 }
  
@@ -111,17 +111,17 @@ patch_gameinfo() {
 install_metamod() {
   say "Metamod:Source 2.0"
   local name
-  name="$(curl -fsSL https://mms.alliedmods.net/mmsdrop/2.0/mmsource-latest-linux)"
+  name="$(curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors https://mms.alliedmods.net/mmsdrop/2.0/mmsource-latest-linux)"
   [[ "$name" =~ ^mmsource-[A-Za-z0-9.+-]+-linux\.tar\.gz$ ]] || die "Unexpected Metamod file name: $name"
   # tar runs as the cs2 user: it needs to own addons/ (an earlier root run can leave it root-owned, and then tar fails with
   # "Cannot open: File exists" / "Cannot utime" and, under set -e, nothing after it runs, patch_gameinfo included).
   as_cs2 mkdir -p "$CSGO_DIR/addons" 2>/dev/null || mkdir -p "$CSGO_DIR/addons"
   chown -R "$CS2_USER:$CS2_USER" "$CSGO_DIR/addons"
-  curl -fsSL "https://mms.alliedmods.net/mmsdrop/2.0/$name" | as_cs2 tar -xz --overwrite -C "$CSGO_DIR"
+  curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors "https://mms.alliedmods.net/mmsdrop/2.0/$name" | as_cs2 tar -xz --overwrite -C "$CSGO_DIR"
   patch_gameinfo
 }
  
-latest_css_release() { curl -fsSL https://api.github.com/repos/roflmuffin/CounterStrikeSharp/releases/latest; }
+latest_css_release() { curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors https://api.github.com/repos/roflmuffin/CounterStrikeSharp/releases/latest; }
 release_tag() { grep -oE '"tag_name": *"[^"]*"' | head -n1 | sed 's/.*"\([^"]*\)"$/\1/'; }
  
 install_counterstrikesharp() {
@@ -133,7 +133,7 @@ install_counterstrikesharp() {
   tag="$(printf '%s' "$release" | release_tag || true)"
   [[ -n "$url" ]] || die "Could not find the CounterStrikeSharp Linux release."
   tmp="$(mktemp -d)"
-  curl -fsSL "$url" -o "$tmp/css.zip"
+  curl -fsSL --retry 5 --retry-delay 3 --retry-all-errors "$url" -o "$tmp/css.zip"
   unzip -oq "$tmp/css.zip" -d "$tmp/css"
   # The zip holds addons/…; merge it into csgo without touching configs that already exist.
   cp -an "$tmp/css/addons/." "$CSGO_DIR/addons/" 2>/dev/null || true
