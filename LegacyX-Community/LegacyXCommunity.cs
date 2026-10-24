@@ -30,6 +30,8 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     /// <summary>.tp turns on a third person view. Off by default: it is for Fun servers (LEGACYX_27016_COMMUNITY_THIRDPERSON=true), never ranked play.</summary>
     public bool ThirdPerson { get; set; }
     public bool SmokeGlow { get; set; } = true;
+    /// <summary>A one-line Discord invite in everyone's chat every this many minutes (0 = never).</summary>
+    public int DiscordAdMinutes { get; set; } = 10;
 }
 
 public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
@@ -75,6 +77,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         config.Revenge = environment.GetModuleBoolean("COMMUNITY", "REVENGE", config.Revenge);
         config.ThirdPerson = environment.GetModuleBoolean("COMMUNITY", "THIRDPERSON", false);
         config.SmokeGlow = environment.GetModuleBoolean("COMMUNITY", "SMOKEGLOW", true);
+        config.DiscordAdMinutes = environment.GetModuleInt("COMMUNITY", "DISCORD_AD_MINUTES", config.DiscordAdMinutes, 0, 120);
         scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 12, 0, 12);
         scoreboardIconOffset = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_ICON_OFFSET", 18, 0, 18);
         Config = config;
@@ -87,6 +90,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         if (!Config.Enabled) return;
         if (Config.ThirdPerson) RegisterThirdPerson();
         RegisterSmokeColor();
+        RegisterDiscordAd();
         RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
         {
             var player = @event.Userid;
