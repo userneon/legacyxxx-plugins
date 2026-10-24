@@ -40,6 +40,9 @@ public static class LegacyXChat
     private const char CounterTerrorist = '\x0B';
     private const char Terrorist = '\x09';
 
+    /// <summary>The chat color of a team's names: CT blue, T yellow, anyone else white.</summary>
+    public static char TeamColor(int teamNum) => teamNum switch { 3 => CounterTerrorist, 2 => Terrorist, _ => White };
+
     /// <summary>
     /// A player's chat line as "ALL | Name: text" or "TEAM | Name: text", the name in the color of the team they are on
     /// (<paramref name="teamNum"/>: 3 CT, 2 T). Control characters are cut from the name and the text, so nobody can
@@ -50,7 +53,7 @@ public static class LegacyXChat
         static string Clean(string value) => new string((value ?? string.Empty).Where(c => c >= ' ' && c != '\u007F').ToArray()).Trim();
         var who = Clean(tag).Length > 0 ? $"[{Clean(tag)}] {Clean(name)}" : Clean(name);
         var label = team ? "{green}TEAM" : "{grey}ALL";
-        var nameColor = teamNum switch { 3 => CounterTerrorist, 2 => Terrorist, _ => White };
+        var nameColor = TeamColor(teamNum);
         return Colorize($"{label} {{grey}}| {nameColor}{who}{{grey}}: {{white}}{Clean(text)}");
     }
 

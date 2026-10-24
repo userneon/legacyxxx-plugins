@@ -220,7 +220,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         if (lastKiller.TryGetValue(killer.SteamID, out var theirKiller) && theirKiller == victim.SteamID)
         {
             lastKiller.Remove(killer.SteamID);
-            var line = RevengeLine(ChatName(killer), duelKills.GetValueOrDefault((killer.SteamID, victim.SteamID)), ChatName(victim), duelKills.GetValueOrDefault((victim.SteamID, killer.SteamID)));
+            var line = RevengeLine(ChatName(killer), killer.TeamNum, duelKills.GetValueOrDefault((killer.SteamID, victim.SteamID)), ChatName(victim), victim.TeamNum, duelKills.GetValueOrDefault((victim.SteamID, killer.SteamID)));
             killer.PrintToChat(line);
             victim.PrintToChat(line);
         }
@@ -229,9 +229,10 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     }
 
     // The one chat line that is red on purpose (owner's format "LEGACY-X | name N vs name N"): LegacyXChat turns red into white, so the
-    // CS2 codes are used here directly. \x07 red, \x08 grey, \x01 white.
-    internal static string RevengeLine(string killer, int killerKills, string victim, int victimKills) =>
-        $" \x07LEGACY-X \x08| \x01{killer} \x07{killerKills} \x08vs \x01{victim} \x07{victimKills}";
+    // CS2 codes are used here directly. \x07 red, \x08 grey. Each name is in its team's color and a colon sets it apart from its number
+    // ("Bat: 3 vs Temuujin: 2"), so a name that ends in digits is not read as part of the count (owner request 2026-10-24).
+    internal static string RevengeLine(string killer, int killerTeam, int killerKills, string victim, int victimTeam, int victimKills) =>
+        $" \x07LEGACY-X \x08| {LegacyXChat.TeamColor(killerTeam)}{killer}\x08: \x07{killerKills} \x08vs {LegacyXChat.TeamColor(victimTeam)}{victim}\x08: \x07{victimKills}";
 
     /// <summary>A player's name safe to put in a chat line (no colour braces, no control characters).</summary>
     private static string ChatName(CCSPlayerController player)
