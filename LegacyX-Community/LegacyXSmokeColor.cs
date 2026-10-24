@@ -21,6 +21,8 @@ public sealed partial class LegacyXCommunity
     // The colour each smoke in flight was given (by the projectile's entity index), so its glow matches it where it bursts.
     private readonly Dictionary<uint, (float R, float G, float B)> smokeShades = new();
     private const float SmokeGlowSeconds = 17f;
+    // When each player last had their colour read again by !rs: at most once every few seconds, so !rs spam is not API load.
+    private readonly Dictionary<ulong, DateTime> smokeRefreshAt = new();
 
     private void RegisterSmokeColor()
     {
@@ -53,9 +55,19 @@ public sealed partial class LegacyXCommunity
             return HookResult.Continue;
         });
         RegisterListener<Listeners.OnMapStart>(_ => { smokeShades.Clear(); smokesThrown.Clear(); });
+        // !rs reloads skins from the site; the smoke colour is read again with it, so a colour changed on the site shows at once.
+        AddCommandListener("css_rs", (player, _) =>
+        {
+            if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+            var now = DateTime.UtcNow;
+            if (smokeRefreshAt.TryGetValue(player.SteamID, out var last) && now - last < TimeSpan.FromSeconds(5)) return HookResult.Continue;
+            smokeRefreshAt[player.SteamID] = now;
+            _ = LoadScoreboardRankAsync(player);
+            return HookResult.Continue;
+        }, HookMode.Post);
         RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
-            if (@event.Userid is { } left) { smokeColors.Remove(left.SteamID); smokesThrown.Remove(left.SteamID); }
+            if (@event.Userid is { } left) { smokeRefreshAt.Remove(left.SteamID); smokeColors.Remove(left.SteamID); smokesThrown.Remove(left.SteamID); }
             return HookResult.Continue;
         });
     }
