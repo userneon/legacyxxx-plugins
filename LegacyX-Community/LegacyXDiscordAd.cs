@@ -17,7 +17,8 @@ public sealed partial class LegacyXCommunity
         if (Config.DiscordAdMinutes <= 0 || string.IsNullOrWhiteSpace(Config.DiscordUrl)) return;
         AddTimer(Config.DiscordAdMinutes * 60f, () =>
         {
-            var line = LegacyXChat.System($"Join our Discord: {{white}}{Config.DiscordUrl.Replace("https://", "")}{{grey}}");
+            // Discord's own blue (chat has no exact #5865F2; \x0C, dark blue, is the nearest) on the invite line; the invite itself stays white.
+            var line = LegacyXChat.Colorize(LegacyXChat.Prefix) + $"\x0CJoin our Discord: \x01{Config.DiscordUrl.Replace("https://", "")}";
             foreach (var player in Utilities.GetPlayers().Where(player => player.IsValid && !player.IsBot && !player.IsHLTV)) player.PrintToChat(line);
         }, TimerFlags.REPEAT);
     }
