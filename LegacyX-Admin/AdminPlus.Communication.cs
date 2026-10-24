@@ -35,7 +35,7 @@ public partial class AdminPlus
     private readonly HashSet<string> _allowedChatCommands = new(StringComparer.OrdinalIgnoreCase)
     {
         "rtv", "nominate", "timeleft", "rank", "top", "help", "rules",
-        "admins", "hideadmin", "admin", "adminmenu", "banlist", "menu", "rs", "ws", "wp", "knife", "glove", "agent",
+        "admins", "hideadmin", "admin", "adminmenu", "banlist", "rs", "ws", "wp", "knife", "glove", "agent",
         "kf", "ajan", "report", "calladmin", "spec", "join", "jointeam",
         "version", "css_version"
     };
