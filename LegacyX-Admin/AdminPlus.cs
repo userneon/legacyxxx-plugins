@@ -581,6 +581,19 @@ public partial class AdminPlus : BasePlugin
 
     internal string GetExecutorName(CCSPlayerController? caller) => caller?.PlayerName ?? "Console";
 
+    /// <summary>
+    /// A staff member's name for an announcement in chat: "Owner 777" (the role in its color), so everyone sees who acted and with what
+    /// authority. Anyone without a staff role, and the console, stay as they are. Logs, Discord and penalty records keep the plain name.
+    /// </summary>
+    internal string StaffLabel(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return name;
+        foreach (var player in OnlineHumans())
+            if (player.PlayerName == name && adminStaffRoles.TryGetValue(player.SteamID, out var role))
+                return LegacyXChat.Role(role) + name;
+        return name;
+    }
+
     internal List<CCSPlayerController> GetPlayersFromTeamInput(string input)
     {
         try

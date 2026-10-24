@@ -497,9 +497,9 @@ public partial class AdminPlus
         string targetName = SanitizeName(target.PlayerName);
 
         if (duration == 0)
-            PlayerExtensions.PrintToAll(Localizer["PermaSILENCE", executorName, targetName, reason]);
+            PlayerExtensions.PrintToAll(Localizer["PermaSILENCE", StaffLabel(executorName), targetName, reason]);
         else
-            PlayerExtensions.PrintToAll(Localizer["SILENCE", executorName, targetName, duration, reason]);
+            PlayerExtensions.PrintToAll(Localizer["SILENCE", StaffLabel(executorName), targetName, duration, reason]);
 
         LogAction($"{executorName} silenced {targetName} ({target.SteamID}) for {duration} minutes. Reason: {reason}");
     }
@@ -533,7 +533,7 @@ public partial class AdminPlus
         string executorName = GetExecutorName(caller);
         string targetName = SanitizeName(target.PlayerName);
 
-        PlayerExtensions.PrintToAll(Localizer["Unsilence", executorName, targetName]);
+        PlayerExtensions.PrintToAll(Localizer["Unsilence", StaffLabel(executorName), targetName]);
         LogAction($"{executorName} unsilenced {targetName} ({target.SteamID})");
     }
 
@@ -636,9 +636,9 @@ public partial class AdminPlus
         string targetName = SanitizeName(target.PlayerName);
 
         if (duration == 0)
-            PlayerExtensions.PrintToAll(Localizer[$"Perma{type}Reason", executorName, targetName, reason]);
+            PlayerExtensions.PrintToAll(Localizer[$"Perma{type}Reason", StaffLabel(executorName), targetName, reason]);
         else
-            PlayerExtensions.PrintToAll(Localizer[$"{type}Reason", executorName, targetName, duration, reason]);
+            PlayerExtensions.PrintToAll(Localizer[$"{type}Reason", StaffLabel(executorName), targetName, duration, reason]);
 
         LogAction($"{executorName} {type.ToLower()}ed {targetName} ({target.SteamID}) for {duration} minutes. Reason: {reason}");
     }
@@ -666,7 +666,7 @@ public partial class AdminPlus
         string executorName = GetExecutorName(caller);
         string targetName = SanitizeName(target.PlayerName);
 
-        PlayerExtensions.PrintToAll(Localizer[$"Un{type.ToLower()}", executorName, targetName]);
+        PlayerExtensions.PrintToAll(Localizer[$"Un{type.ToLower()}", StaffLabel(executorName), targetName]);
         LogAction($"{executorName} un{type.ToLower()}ed {targetName} ({target.SteamID})");
     }
 

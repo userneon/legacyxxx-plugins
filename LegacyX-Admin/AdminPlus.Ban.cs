@@ -188,7 +188,7 @@ public partial class AdminPlus
         if (bannedCount > 0)
         {
             string durationText = minutes == 0 ? Localizer["Duration.Forever"] : Localizer["Duration.Temporary", minutes];
-            PlayerExtensions.PrintToAll(Localizer["Team.Ban.Success", executorName, teamName, durationText, reason]);
+            PlayerExtensions.PrintToAll(Localizer["Team.Ban.Success", StaffLabel(executorName), teamName, durationText, reason]);
             PlayerExtensions.PrintToAll(Localizer["Team.Ban.PlayerCount", bannedCount]);
 
             LogAction($"{executorName} banned {bannedCount} players from {teamName} for {minutes} minutes. Reason: {reason}");
@@ -265,9 +265,9 @@ public partial class AdminPlus
         string executorName = GetExecutorName(caller);
 
         if (minutes == 0)
-            PlayerExtensions.PrintToAll(Localizer["Player.Ban.Success", executorName, safeName, Localizer["Duration.Forever"], reason]);
+            PlayerExtensions.PrintToAll(Localizer["Player.Ban.Success", StaffLabel(executorName), safeName, Localizer["Duration.Forever"], reason]);
         else
-            PlayerExtensions.PrintToAll(Localizer["Player.Ban.Success", executorName, safeName, Localizer["Duration.Temporary", minutes], reason]);
+            PlayerExtensions.PrintToAll(Localizer["Player.Ban.Success", StaffLabel(executorName), safeName, Localizer["Duration.Temporary", minutes], reason]);
 
         LogAction($"{executorName} banned {safeName} ({steamId}) [IP:{ip}] for {minutes} minutes. Reason: {reason}");
         ReportBan(steamId, minutes, reason, caller);
@@ -352,9 +352,9 @@ public partial class AdminPlus
         string executorName = GetExecutorName(caller);
 
         if (target != null)
-            PlayerExtensions.PrintToAll(Localizer["IpBan.AddedNick", executorName, displayName, reason]);
+            PlayerExtensions.PrintToAll(Localizer["IpBan.AddedNick", StaffLabel(executorName), displayName, reason]);
         else
-            PlayerExtensions.PrintToAll(Localizer["IpBan.AddedIp", executorName, ip, reason]);
+            PlayerExtensions.PrintToAll(Localizer["IpBan.AddedIp", StaffLabel(executorName), ip, reason]);
 
         LogAction($"{executorName} IP banned {displayName} ({ip}). Reason: {reason}");
         
@@ -445,7 +445,7 @@ public partial class AdminPlus
             {
                 if (lifted is > 0)
                 {
-                    PlayerExtensions.PrintToAll(Localizer["Unban.Success", executorName, banKey]);
+                    PlayerExtensions.PrintToAll(Localizer["Unban.Success", StaffLabel(executorName), banKey]);
                     LogAction($"{executorName} unbanned {banKey}");
                     _ = Discord.SendBanLog(playerName, banKey, executorName, reason, "N/A", true, this);
                 }
@@ -576,7 +576,7 @@ public partial class AdminPlus
                     RememberIpBan(ip, 0, safeName, reason);
                     ReportIpBan(ip, 0, reason, admin);
 
-                    PlayerExtensions.PrintToAll(Localizer["IpBan.AddedIp", admin.PlayerName, ip, reason]);
+                    PlayerExtensions.PrintToAll(Localizer["IpBan.AddedIp", StaffLabel(admin.PlayerName), ip, reason]);
                     LogAction($"{admin.PlayerName} ip-banned {safeName} ({ip}). Reason: {reason}");
                 }
                 else
@@ -586,9 +586,9 @@ public partial class AdminPlus
                     ReportBan(steamId.ToString(), minutes, reason, admin);
 
                     if (minutes == 0)
-                        PlayerExtensions.PrintToAll(Localizer["Player.Ban.Success", admin.PlayerName, safeName, Localizer["Duration.Forever"], reason]);
+                        PlayerExtensions.PrintToAll(Localizer["Player.Ban.Success", StaffLabel(admin.PlayerName), safeName, Localizer["Duration.Forever"], reason]);
                     else
-                        PlayerExtensions.PrintToAll(Localizer["Player.Ban.Success", admin.PlayerName, safeName, Localizer["Duration.Temporary", minutes], reason]);
+                        PlayerExtensions.PrintToAll(Localizer["Player.Ban.Success", StaffLabel(admin.PlayerName), safeName, Localizer["Duration.Temporary", minutes], reason]);
 
                     LogAction($"{admin.PlayerName} banned {safeName} ({steamId}) [IP:{ip}] for {minutes} minutes. Reason: {reason}");
                 }

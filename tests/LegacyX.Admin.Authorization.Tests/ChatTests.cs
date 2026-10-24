@@ -79,4 +79,16 @@ public class ChatTests
         Assert.Equal(" plain", LegacyXChat.Colorize("plain"));
         Assert.Equal(" {notacolor}", LegacyXChat.Colorize("{notacolor}"));
     }
+
+    [Fact]
+    public void A_staff_role_keeps_its_color_in_a_system_line_and_other_codes_still_turn_white()
+    {
+        var line = LegacyXChat.System("{white}" + LegacyXChat.Role("OWNER") + "777{grey} restarted the round.\u0002 " + LegacyXChat.Role("manager") + "A " + LegacyXChat.Role("Admin") + "B");
+        Assert.Contains("\u000EOwner\u0001 777", line);
+        Assert.Contains("\u000FManager\u0001 A", line);
+        Assert.Contains("\u000BAdmin\u0001 B", line);
+        Assert.DoesNotContain('\u0002', line);
+        Assert.Equal(string.Empty, LegacyXChat.Role("Player"));
+        Assert.Equal(string.Empty, LegacyXChat.Role(null));
+    }
 }

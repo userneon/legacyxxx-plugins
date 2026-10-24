@@ -680,7 +680,7 @@ public partial class AdminPlus
                     if (CheckImmunity(admin, p)) { admin.Print(Localizer["Punish.ImmunityBlocked"]); return; }
                     p.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_KICKED);
                     string reason = Localizer["Ban.NoReason"];
-                    PlayerExtensions.PrintToAll(Localizer["Player.Kick.Success", admin.PlayerName, SanitizeName(p.PlayerName), reason]);
+                    PlayerExtensions.PrintToAll(Localizer["Player.Kick.Success", StaffLabel(admin.PlayerName), SanitizeName(p.PlayerName), reason]);
                     LogAction($"{admin.PlayerName} kicked {SanitizeName(p.PlayerName)}. Reason: {reason}");
                 }
                 else
@@ -824,9 +824,9 @@ public partial class AdminPlus
             ApplyPunishment(target, "GAG", duration, "", admin);
 
             if (duration == 0)
-                PlayerExtensions.PrintToAll(Localizer["PermaSILENCE", executorName, targetName]);
+                PlayerExtensions.PrintToAll(Localizer["PermaSILENCE", StaffLabel(executorName), targetName]);
             else
-                PlayerExtensions.PrintToAll(Localizer["SILENCE", executorName, targetName, duration]);
+                PlayerExtensions.PrintToAll(Localizer["SILENCE", StaffLabel(executorName), targetName, duration]);
 
             LogAction($"{executorName} silenced {targetName} ({target.SteamID}) for {duration} minutes.");
         }
@@ -835,9 +835,9 @@ public partial class AdminPlus
             ApplyPunishment(target, type, duration, "", admin);
 
             if (duration == 0)
-                PlayerExtensions.PrintToAll(Localizer[$"Perma{type}", executorName, targetName]);
+                PlayerExtensions.PrintToAll(Localizer[$"Perma{type}", StaffLabel(executorName), targetName]);
             else
-                PlayerExtensions.PrintToAll(Localizer[$"{type}", executorName, targetName, duration]);
+                PlayerExtensions.PrintToAll(Localizer[$"{type}", StaffLabel(executorName), targetName, duration]);
 
             LogAction($"{executorName} {type.ToLower()}ed {targetName} ({target.SteamID}) for {duration} minutes.");
         }
@@ -919,7 +919,7 @@ public partial class AdminPlus
                     return;
                 }
 
-                PlayerExtensions.PrintToAll(Localizer["Map.Changed", admin.PlayerName, map]);
+                PlayerExtensions.PrintToAll(Localizer["Map.Changed", StaffLabel(admin.PlayerName), map]);
                 AddTimer(2.0f, () =>
                 {
                     try 
@@ -1097,16 +1097,16 @@ public partial class AdminPlus
 
             RememberIpBan(target.IpAddress, 0, safeName, reason);
             ReportIpBan(target.IpAddress, 0, reason, admin);
-            PlayerExtensions.PrintToAll(Localizer["IpBan.AddedNick", admin.PlayerName, safeName, reason]);
+            PlayerExtensions.PrintToAll(Localizer["IpBan.AddedNick", StaffLabel(admin.PlayerName), safeName, reason]);
             LogAction($"{admin.PlayerName} ip-banned {safeName} ({target.IpAddress}). Reason: {reason}");
         }
         else
         {
             RememberSteamBan(steamId, expiry, safeName, target.IpAddress, reason);
             if (minutes == 0)
-                PlayerExtensions.PrintToAll(Localizer["PermabannedReason", admin.PlayerName, safeName, reason]);
+                PlayerExtensions.PrintToAll(Localizer["PermabannedReason", StaffLabel(admin.PlayerName), safeName, reason]);
             else
-                PlayerExtensions.PrintToAll(Localizer["BannedReason", admin.PlayerName, safeName, minutes, reason]);
+                PlayerExtensions.PrintToAll(Localizer["BannedReason", StaffLabel(admin.PlayerName), safeName, minutes, reason]);
             LogAction($"{admin.PlayerName} banned {safeName} ({steamId}) [IP:{target.IpAddress}] for {minutes} minutes. Reason: {reason}");
             ReportBan(steamId, minutes, reason, admin);
         }

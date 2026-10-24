@@ -225,7 +225,7 @@ public partial class AdminPlus
 
     private void Announce(string key1, string keyN, string admin, string label, params object[] extra)
     {
-        var args = new object[] { admin, label }.Concat(extra).ToArray();
+        var args = new object[] { StaffLabel(admin), label }.Concat(extra).ToArray();
         string msg = Localizer[keyN, args];
         if (!string.IsNullOrEmpty(label) && !label.Equals(Localizer["Team.ALL"], StringComparison.OrdinalIgnoreCase) && extra.Length > 0)
             msg = Localizer[key1, args];

@@ -161,7 +161,7 @@ public partial class AdminPlus
         string executorName = GetExecutorNameCommand(caller);
         string targetName = target.PlayerName;
 
-        PlayerExtensions.PrintToAll(Localizer["Player.Kick.Success", executorName, EscapeForStringFormat(targetName), reason]);
+        PlayerExtensions.PrintToAll(Localizer["Player.Kick.Success", StaffLabel(executorName), EscapeForStringFormat(targetName), reason]);
 
         if (caller == null)
 
@@ -420,7 +420,7 @@ public partial class AdminPlus
         string executorName = GetExecutorNameCommand(caller);
         string targetName = t.PlayerName;
         
-        PlayerExtensions.PrintToAll(Localizer["Player.Rename.Success", executorName, EscapeForStringFormat(targetName), EscapeForStringFormat(SanitizeName(newName))]);
+        PlayerExtensions.PrintToAll(Localizer["Player.Rename.Success", StaffLabel(executorName), EscapeForStringFormat(targetName), EscapeForStringFormat(SanitizeName(newName))]);
 
         AddTimer(0.1f, () => {
             _ = Discord.SendAdminActionLog("rename", targetName, t.SteamID, executorName, caller?.SteamID ?? 0, $"New name: {newName}", this);
@@ -779,7 +779,7 @@ public partial class AdminPlus
 
         if (kickedCount > 0)
         {
-            PlayerExtensions.PrintToAll(Localizer["Team.Kick.Success", executorName, teamName, reason]);
+            PlayerExtensions.PrintToAll(Localizer["Team.Kick.Success", StaffLabel(executorName), teamName, reason]);
             PlayerExtensions.PrintToAll(Localizer["Team.Kick.PlayerCount", kickedCount]);
         }
     }
@@ -827,7 +827,7 @@ public partial class AdminPlus
 
         if (affectedCount > 0)
         {
-            PlayerExtensions.PrintToAll(Localizer["Team.Money.Success", executorName, teamName, moneyAmount]);
+            PlayerExtensions.PrintToAll(Localizer["Team.Money.Success", StaffLabel(executorName), teamName, moneyAmount]);
             PlayerExtensions.PrintToAll(Localizer["Team.Money.PlayerCount", affectedCount]);
         }
     }
@@ -883,7 +883,7 @@ public partial class AdminPlus
 
         if (affectedCount > 0)
         {
-            PlayerExtensions.PrintToAll(Localizer["Team.Armor.Success", executorName, teamName, armorAmount]);
+            PlayerExtensions.PrintToAll(Localizer["Team.Armor.Success", StaffLabel(executorName), teamName, armorAmount]);
             PlayerExtensions.PrintToAll(Localizer["Team.Armor.PlayerCount", affectedCount]);
         }
     }
@@ -942,7 +942,7 @@ public partial class AdminPlus
         }
 
         string executorName = GetExecutorNameCommand(caller);
-        PlayerExtensions.PrintToAll(Localizer["Map.WorkshopChanged", executorName, workshopId]);
+        PlayerExtensions.PrintToAll(Localizer["Map.WorkshopChanged", StaffLabel(executorName), workshopId]);
         Server.ExecuteCommand($"host_workshop_map {workshopId}");
     }
 
@@ -1098,7 +1098,7 @@ public partial class AdminPlus
         }
 
         Server.ExecuteCommand("mp_restartgame 1");
-        PlayerExtensions.PrintToAll(Localizer["Round.Restarted", executorName]);
+        PlayerExtensions.PrintToAll(Localizer["Round.Restarted", StaffLabel(executorName)]);
     }
 
     private void CmdPlayers(CCSPlayerController? caller, CommandInfo info)
@@ -1127,7 +1127,7 @@ public partial class AdminPlus
             Server.ExecuteCommand($"host_workshop_map {workshopId}");
 
             var executorName = GetExecutorNameCommand(caller);
-            PlayerExtensions.PrintToAll(Localizer["Map.WorkshopChanged", executorName, workshopId]);
+            PlayerExtensions.PrintToAll(Localizer["Map.WorkshopChanged", StaffLabel(executorName), workshopId]);
             return;
         }
 
