@@ -27,9 +27,11 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public bool ClanTag { get; set; } = true;
     /// <summary>Killing the player who killed you last tells both of you "revenge" in the chat.</summary>
     public bool Revenge { get; set; } = true;
+    /// <summary>.tp turns on a third person view. Off by default: it is for Fun servers (LEGACYX_27016_COMMUNITY_THIRDPERSON=true), never ranked play.</summary>
+    public bool ThirdPerson { get; set; }
 }
 
-public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
+public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(4) };
     public required LegacyXCommunityConfig Config { get; set; }
@@ -70,6 +72,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
         config.DiscordUrl = environment.GetModule("COMMUNITY", "DISCORD_URL", config.DiscordUrl);
         config.ClanTag = environment.GetModuleBoolean("COMMUNITY", "CLAN_TAG", config.ClanTag);
         config.Revenge = environment.GetModuleBoolean("COMMUNITY", "REVENGE", config.Revenge);
+        config.ThirdPerson = environment.GetModuleBoolean("COMMUNITY", "THIRDPERSON", false);
         scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 12, 0, 12);
         scoreboardIconOffset = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_ICON_OFFSET", 18, 0, 18);
         Config = config;
@@ -80,6 +83,7 @@ public sealed class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunit
     {
         Console.WriteLine($"[{ModuleName}] Loaded — rank and EXP command ready.");
         if (!Config.Enabled) return;
+        if (Config.ThirdPerson) RegisterThirdPerson();
         RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
         {
             var player = @event.Userid;

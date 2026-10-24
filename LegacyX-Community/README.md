@@ -29,6 +29,8 @@ LEGACY-X • Your skins come from legacyx.cc. Type !rs to load them.
 Цол, EXP нь API-аас (цолгүй бол "No rank yet…", API хүрэхгүй бол тэр мөр гарахгүй). Map солигдоход дахин
 гарахгүй (нэг тоглогчид 3 цагт нэг удаа). `LEGACYX_COMMUNITY_WELCOME=false` унтраана.
 
+**Third person (`.tp`, Fun серверт л).** `.tp` (эсвэл `.thirdperson`) гэж бичихэд камер тоглогчийн ард гарч, дахин бичихэд хэвийн болно. Cheats асаахгүй: `point_viewcontrol` камерыг тоглогчид өгч, tick бүрт ард нь зөөнө. Үхэх, round солигдох, map солигдоход өөрөө унтарна. Анхдагчаар **унтраастай**: Fun порт дээр л `LEGACYX_27016_COMMUNITY_THIRDPERSON=true` гэж асаана (ranked-д хана нөгөө талаас харах давуу тал өгдөг). Камер хана дундуур орж болно. Жинхэнэ серверт туршаагүй: хэрэв камер ард гарахгүй, эсвэл хөдөлж чадахгүй бол мэдээлнэ үү.
+
 `.discord` (`!discord`) тоглогчид Discord-ын урилгыг chat-д харуулна. Холбоосыг `LEGACYX_COMMUNITY_DISCORD_URL` өөрчилнө (анхдагч `https://discord.gg/legacyx`).
 
 ## Security
