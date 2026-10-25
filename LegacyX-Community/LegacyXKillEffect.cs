@@ -8,7 +8,7 @@ namespace LegacyXCommunity;
 /// Kill effects bought on legacyx.cc (Shop → Kill effects, owner request 2026-10-25): where the player's victim falls, a short effect in
 /// the worn colour plays, with a flash of light. <c>kill_effect</c> is the #rrggbb, <c>kill_effect_fx</c> the shape: ring (spreads over
 /// the floor), pillar (a beam up into the sky), burst (rays outward), spiral (rises round the body), lightning (a bolt from above),
-/// rainbow (a ring cycling through colours). Over the victim's head (owner request 2026-10-25): halo, crown, cross, xmark (an X),
+/// rainbow (a ring cycling through colours). Pillar and lightning stay below wall height (130–140 units). Over the victim's head (owner request 2026-10-25): halo, crown, cross, xmark (an X),
 /// heart (these three face the killer) and soul (a light rising out of the body into the sky). It is gone within a second, never plays for a team kill or a suicide, and changes nothing
 /// about the kill. It is built from the same short beams as the grenade trail; lx_kill_effect 0 switches it off on a server.
 /// </summary>
@@ -72,8 +72,9 @@ public sealed partial class LegacyXCommunity
         switch (look.Shape)
         {
             case "pillar":
-                SpawnTrailSegment(P(0, 0, 0), P(0, 0, 420), color, 12f, 0.7f);
-                SpawnTrailSegment(P(0, 0, 0), P(0, 0, 420), System.Drawing.Color.White, 3f, 0.7f);
+                // Kept below a wall's height, so it never shows over cover where a kill happened.
+                SpawnTrailSegment(P(0, 0, 0), P(0, 0, 130), color, 12f, 0.7f);
+                SpawnTrailSegment(P(0, 0, 0), P(0, 0, 130), System.Drawing.Color.White, 3f, 0.7f);
                 Ring(18, 2, 3f, 0.7f);
                 break;
             case "burst":
@@ -99,10 +100,11 @@ public sealed partial class LegacyXCommunity
             case "lightning":
             {
                 var random = new Random();
-                var from = P(0, 0, 480);
-                for (var i = 1; i <= 8; i++)
+                // From just over head height, not the sky: a bolt over cover would show where a kill happened.
+                var from = P(0, 0, 140);
+                for (var i = 1; i <= 7; i++)
                 {
-                    var to = i == 8 ? P(0, 0, 0) : P(random.Next(-40, 41), random.Next(-40, 41), 480 - i * 60);
+                    var to = i == 7 ? P(0, 0, 0) : P(random.Next(-22, 23), random.Next(-22, 23), 140 - i * 20);
                     SpawnTrailSegment(from, to, color, 5f, 0.35f);
                     SpawnTrailSegment(from, to, System.Drawing.Color.White, 1.5f, 0.35f);
                     from = to;
