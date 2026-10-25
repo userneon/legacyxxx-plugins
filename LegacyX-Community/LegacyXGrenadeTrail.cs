@@ -10,7 +10,8 @@ namespace LegacyXCommunity;
 /// <list type="bullet">
 /// <item><b>Grenade trail</b> (owner request 2026-10-25): a line in the worn colour follows every grenade the player throws (HE,
 /// flash, smoke, molotov, incendiary, decoy). <c>grenade_trail</c> is the #rrggbb, <c>grenade_trail_fx</c> the shape: line (thick),
-/// dash, double, helix, comet, rainbow (cycles through colours, ignores the colour), and with effects along the way (owner request
+/// dash, double, helix, comet, rainbow (cycles through colours, ignores the colour), zigzag (two lines zigzagging to either side and
+/// crossing on the way), and with effects along the way (owner request
 /// 2026-10-25): flare (drops burning flares that light the ground they pass), sparks (sparks fly off the line), starfall (twinkling
 /// stars scatter round it) and inferno (all three on a thick line).</item>
 /// <item><b>Grenade light</b> (sold separately): a coloured light that flies with the grenade and lights the walls it passes
@@ -22,7 +23,7 @@ namespace LegacyXCommunity;
 public sealed partial class LegacyXCommunity
 {
     private static readonly HashSet<string> GrenadeProjectiles = new() { "hegrenade_projectile", "flashbang_projectile", "smokegrenade_projectile", "molotov_projectile", "incgrenade_projectile", "decoy_projectile" };
-    private static readonly HashSet<string> TrailShapes = new() { "line", "dash", "double", "helix", "comet", "rainbow", "flare", "sparks", "starfall", "inferno" };
+    private static readonly HashSet<string> TrailShapes = new() { "line", "dash", "double", "helix", "comet", "rainbow", "zigzag", "flare", "sparks", "starfall", "inferno" };
     private readonly Dictionary<ulong, (System.Drawing.Color Color, string Shape)> trailLooks = new();
     private readonly Dictionary<ulong, System.Drawing.Color> grenadeLights = new();
     private const float TrailTickSeconds = 0.04f;
@@ -108,6 +109,20 @@ public sealed partial class LegacyXCommunity
                 var left = new Vector(to.X + sx * r * (float)Math.Cos(turn), to.Y + sy * r * (float)Math.Cos(turn), to.Z + r * (float)Math.Sin(turn));
                 var right = new Vector(to.X - sx * r * (float)Math.Cos(turn), to.Y - sy * r * (float)Math.Cos(turn), to.Z - r * (float)Math.Sin(turn));
                 if (tick > 1) { SpawnTrailSegment(lastLeft, left, color, 3.2f, 1.3f); SpawnTrailSegment(lastRight, right, color, 3.2f, 1.3f); }
+                lastLeft = left;
+                lastRight = right;
+                break;
+            }
+            case "zigzag":
+            {
+                // Two lines that zigzag to either side of the flight, mirrored, so they cross every few ticks.
+                var (sx, sy) = Side(from, to);
+                var phase = tick % 6 / 3f; // 0..2
+                var wave = 1f - Math.Abs(phase - 1f) * 2f; // -1..1, a sharp triangle
+                const float reach = 10f;
+                var left = new Vector(to.X + sx * reach * wave, to.Y + sy * reach * wave, to.Z);
+                var right = new Vector(to.X - sx * reach * wave, to.Y - sy * reach * wave, to.Z);
+                if (tick > 1) { SpawnTrailSegment(lastLeft, left, color, 3.5f, 1.3f); SpawnTrailSegment(lastRight, right, color, 3.5f, 1.3f); }
                 lastLeft = left;
                 lastRight = right;
                 break;
