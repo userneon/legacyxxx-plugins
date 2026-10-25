@@ -926,7 +926,7 @@ public partial class AdminPlus
             _ => CsTeam.None
         };
         if (team == CsTeam.None) { SendErrorMessage(caller, "NoTeam", Localizer["NoTeam"]); return; }
-        foreach (var t in players) t.ChangeTeam(team);
+        foreach (var t in players) MoveTeamWhenAllowed(t, team);
         PlayerExtensions.PrintToAll(Localizer["css_team", admin, label, TeamDisplay(team == CsTeam.Terrorist ? TargetScope.TeamT : team == CsTeam.CounterTerrorist ? TargetScope.TeamCT : TargetScope.TeamSpec)]);
         
         AdminPlus.LogAction($"{admin} changed team for {label} to {TeamDisplay(team == CsTeam.Terrorist ? TargetScope.TeamT : team == CsTeam.CounterTerrorist ? TargetScope.TeamCT : TargetScope.TeamSpec)}");
@@ -939,7 +939,7 @@ public partial class AdminPlus
         { SendErrorMessage(caller, "NoMatchingClient", Localizer["NoMatchingClient"]); return; }
         var t = players[0];
         var newTeam = t.Team == CsTeam.CounterTerrorist ? CsTeam.Terrorist : CsTeam.CounterTerrorist;
-        t.ChangeTeam(newTeam);
+        MoveTeamWhenAllowed(t, newTeam);
         PlayerExtensions.PrintToAll(Localizer["css_swap", admin, label]);
         
         AdminPlus.LogAction($"{admin} swapped {label} to {TeamDisplay(newTeam == CsTeam.Terrorist ? TargetScope.TeamT : TargetScope.TeamCT)}");

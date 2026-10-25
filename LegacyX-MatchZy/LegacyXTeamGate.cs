@@ -2,6 +2,7 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
+using LegacyX.TeamWindow;
 
 namespace MatchZy;
 
@@ -42,7 +43,7 @@ public partial class MatchZy
             legacyXQueueCt.Remove(userId);
             var queue = toTeam == (int)CsTeam.Terrorist ? legacyXQueueT : legacyXQueueCt;
             queue.Add(userId);
-            PrintToPlayerChat(player, $"You are in the {(toTeam == (int)CsTeam.Terrorist ? "T" : "CT")} queue, place {ChatColors.White}{queue.Count}{ChatColors.Grey}. You join when a seat is free.");
+            PrintToPlayerChat(player, $"You are in the {(toTeam == (int)CsTeam.Terrorist ? "T" : "CT")} queue, place {ChatColors.White}{queue.Count}{ChatColors.Grey}. You join when a seat is free, {LegacyXTeamWindow.WaitHint}.");
             return HookResult.Stop;
         }
         return HookResult.Continue;
@@ -81,6 +82,8 @@ public partial class MatchZy
     private void FillFromQueue(List<int> queue, CsTeam team)
     {
         if (queue.Count == 0) return;
+        // Never in the middle of a round: a queued player takes the seat in freeze time, buy time or a pause.
+        if (!LegacyXTeamWindow.IsOpen()) return;
         var seated = Utilities.GetPlayers().Count(p => IsPlayerValid(p) && !p.IsHLTV && p.TeamNum == (byte)team);
         var perTeam = matchConfig.PlayersPerTeam > 0 ? matchConfig.PlayersPerTeam : 5;
         while (queue.Count > 0 && seated < perTeam)
