@@ -179,8 +179,8 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         }
         var (status, profile) = await FetchProfileAsync(steamId.ToString());
         // The worn Smoke colour rides along with the profile; a player the site does not know has none.
-        if (profile is { } colored) { var hex = StringOrNull(colored, "smoke_color"); var hex2 = StringOrNull(colored, "smoke_color2"); var trail = StringOrNull(colored, "grenade_trail"); Server.NextFrame(() => { StoreSmokeColor(steamId, hex, hex2); StoreGrenadeTrail(steamId, trail); }); }
-        else if (status == System.Net.HttpStatusCode.NotFound) Server.NextFrame(() => { StoreSmokeColor(steamId, null); StoreGrenadeTrail(steamId, null); });
+        if (profile is { } colored) { var hex = StringOrNull(colored, "smoke_color"); var hex2 = StringOrNull(colored, "smoke_color2"); var trail = StringOrNull(colored, "grenade_trail"); var trailFx = StringOrNull(colored, "grenade_trail_fx"); var glow = StringOrNull(colored, "grenade_light"); Server.NextFrame(() => { StoreSmokeColor(steamId, hex, hex2); StoreGrenadeLooks(steamId, trail, trailFx, glow); }); }
+        else if (status == System.Net.HttpStatusCode.NotFound) Server.NextFrame(() => { StoreSmokeColor(steamId, null); StoreGrenadeLooks(steamId, null, null, null); });
         if (welcome) Server.NextFrame(() => ScheduleWelcome(player, WelcomeRankLine(status, profile)));
         if (!Config.ScoreboardRanks) return;
         if (status == System.Net.HttpStatusCode.NotFound)
