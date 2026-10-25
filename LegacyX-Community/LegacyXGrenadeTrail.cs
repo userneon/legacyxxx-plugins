@@ -10,7 +10,9 @@ namespace LegacyXCommunity;
 /// <list type="bullet">
 /// <item><b>Grenade trail</b> (owner request 2026-10-25): a line in the worn colour follows every grenade the player throws (HE,
 /// flash, smoke, molotov, incendiary, decoy). <c>grenade_trail</c> is the #rrggbb, <c>grenade_trail_fx</c> the shape: line (thick),
-/// dash, double, helix, comet, rainbow (cycles through colours, ignores the colour).</item>
+/// dash, double, helix, comet, rainbow (cycles through colours, ignores the colour), and with effects along the way (owner request
+/// 2026-10-25): flare (drops burning flares that light the ground they pass), sparks (sparks fly off the line), starfall (twinkling
+/// stars scatter round it) and inferno (all three on a thick line).</item>
 /// <item><b>Grenade light</b> (sold separately): a coloured light that flies with the grenade and lights the walls it passes
 /// (<c>grenade_light</c>, #rrggbb).</item>
 /// </list>
@@ -20,7 +22,7 @@ namespace LegacyXCommunity;
 public sealed partial class LegacyXCommunity
 {
     private static readonly HashSet<string> GrenadeProjectiles = new() { "hegrenade_projectile", "flashbang_projectile", "smokegrenade_projectile", "molotov_projectile", "incgrenade_projectile", "decoy_projectile" };
-    private static readonly HashSet<string> TrailShapes = new() { "line", "dash", "double", "helix", "comet", "rainbow" };
+    private static readonly HashSet<string> TrailShapes = new() { "line", "dash", "double", "helix", "comet", "rainbow", "flare", "sparks", "starfall", "inferno" };
     private readonly Dictionary<ulong, (System.Drawing.Color Color, string Shape)> trailLooks = new();
     private readonly Dictionary<ulong, System.Drawing.Color> grenadeLights = new();
     private const float TrailTickSeconds = 0.04f;
@@ -94,7 +96,7 @@ public sealed partial class LegacyXCommunity
         switch (look.Shape)
         {
             case "dash":
-                if (tick % 3 != 0) SpawnTrailSegment(from, to, color, 3.5f, 1.2f);
+                if (tick % 3 != 0) SpawnTrailSegment(from, to, color, 5f, 1.3f);
                 break;
             case "double":
             case "helix":
@@ -102,23 +104,85 @@ public sealed partial class LegacyXCommunity
                 // Two strands beside the flight path: side by side (double) or turning round it (helix).
                 var (sx, sy) = Side(from, to);
                 var turn = look.Shape == "helix" ? tick * 0.7 : 0;
-                var r = 5f;
+                var r = 7f;
                 var left = new Vector(to.X + sx * r * (float)Math.Cos(turn), to.Y + sy * r * (float)Math.Cos(turn), to.Z + r * (float)Math.Sin(turn));
                 var right = new Vector(to.X - sx * r * (float)Math.Cos(turn), to.Y - sy * r * (float)Math.Cos(turn), to.Z - r * (float)Math.Sin(turn));
-                if (tick > 1) { SpawnTrailSegment(lastLeft, left, color, 2.2f, 1.2f); SpawnTrailSegment(lastRight, right, color, 2.2f, 1.2f); }
+                if (tick > 1) { SpawnTrailSegment(lastLeft, left, color, 3.2f, 1.3f); SpawnTrailSegment(lastRight, right, color, 3.2f, 1.3f); }
                 lastLeft = left;
                 lastRight = right;
                 break;
             }
             case "comet":
-                SpawnTrailSegment(from, to, color, 7f, 0.45f);
+                SpawnTrailSegment(from, to, color, 10f, 0.5f);
                 break;
             case "rainbow":
-                SpawnTrailSegment(from, to, Hue(tick * 14 % 360), 4f, 1.3f);
+                SpawnTrailSegment(from, to, Hue(tick * 14 % 360), 6f, 1.4f);
+                break;
+            case "flare":
+                SpawnTrailSegment(from, to, color, 5f, 1.3f);
+                if (tick % 5 == 0) { SpawnFlare(to, color, 1.1f); Twinkle(to, System.Drawing.Color.White, 5f, 1.1f); }
+                break;
+            case "sparks":
+                SpawnTrailSegment(from, to, color, 5f, 1.3f);
+                if (tick % 2 == 0) { Spark(to, color); Spark(to, System.Drawing.Color.White); }
+                break;
+            case "starfall":
+                SpawnTrailSegment(from, to, color, 4f, 1.3f);
+                if (tick % 3 == 0) Twinkle(Scatter(to, 22f), tick % 6 == 0 ? System.Drawing.Color.White : color, 4f + Random.Shared.NextSingle() * 4f, 0.7f);
+                break;
+            case "inferno":
+                SpawnTrailSegment(from, to, color, 8f, 0.9f);
+                SpawnTrailSegment(from, to, System.Drawing.Color.White, 2f, 0.6f);
+                if (tick % 2 == 0) Spark(to, color);
+                if (tick % 3 == 0) Twinkle(Scatter(to, 18f), color, 5f, 0.6f);
+                if (tick % 6 == 0) SpawnFlare(to, color, 0.9f);
                 break;
             default:
-                SpawnTrailSegment(from, to, color, 4f, 1.3f);
+                SpawnTrailSegment(from, to, color, 6f, 1.4f);
                 break;
+        }
+    }
+
+    /// <summary>A point a little way off `at` in a random direction (up to `radius` units).</summary>
+    private static Vector Scatter(Vector at, float radius)
+    {
+        float Next() => (Random.Shared.NextSingle() * 2f - 1f) * radius;
+        return new Vector(at.X + Next(), at.Y + Next(), at.Z + Next());
+    }
+
+    /// <summary>A spark flying off the line: a short thin beam outward in a random direction, gone in a moment.</summary>
+    private void Spark(Vector at, System.Drawing.Color color)
+    {
+        var end = Scatter(at, 20f);
+        SpawnTrailSegment(at, new Vector(end.X, end.Y, end.Z - 6f), color, 1.5f, 0.3f);
+    }
+
+    /// <summary>A twinkling star: three short beams crossing at `at`.</summary>
+    private void Twinkle(Vector at, System.Drawing.Color color, float size, float seconds)
+    {
+        SpawnTrailSegment(new Vector(at.X - size, at.Y, at.Z), new Vector(at.X + size, at.Y, at.Z), color, 1.4f, seconds);
+        SpawnTrailSegment(new Vector(at.X, at.Y - size, at.Z), new Vector(at.X, at.Y + size, at.Z), color, 1.4f, seconds);
+        SpawnTrailSegment(new Vector(at.X, at.Y, at.Z - size), new Vector(at.X, at.Y, at.Z + size), color, 1.4f, seconds);
+    }
+
+    /// <summary>A burning flare left behind in the air: a small light that lights the ground and walls near it for a moment.</summary>
+    private void SpawnFlare(Vector at, System.Drawing.Color color, float seconds)
+    {
+        try
+        {
+            var light = Utilities.CreateEntityByName<CBarnLight>("light_omni2");
+            if (light == null || !light.IsValid) return;
+            light.Enabled = true;
+            light.Color = color;
+            light.Brightness = 3f;
+            light.Range = 140f;
+            light.Teleport(at, new QAngle(0, 0, 0), new Vector(0, 0, 0));
+            light.DispatchSpawn();
+            AddTimer(seconds, () => { if (light.IsValid) light.Remove(); });
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"[{ModuleName}] Grenade flare failed: {exception.Message}");
         }
     }
 
