@@ -93,6 +93,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         if (!Config.Enabled) return;
         if (Config.ThirdPerson) RegisterThirdPerson();
         RegisterSmokeColor();
+        RegisterGrenadeTrail();
         RegisterDiscordAd();
         RegisterMoneyLines();
         // The game's own "left the game" line is not shown (owner request 2026-10-24); this one wears the LEGACY-X prefix. It must be a
@@ -178,8 +179,8 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         }
         var (status, profile) = await FetchProfileAsync(steamId.ToString());
         // The worn Smoke colour rides along with the profile; a player the site does not know has none.
-        if (profile is { } colored) { var hex = StringOrNull(colored, "smoke_color"); var hex2 = StringOrNull(colored, "smoke_color2"); Server.NextFrame(() => StoreSmokeColor(steamId, hex, hex2)); }
-        else if (status == System.Net.HttpStatusCode.NotFound) Server.NextFrame(() => StoreSmokeColor(steamId, null));
+        if (profile is { } colored) { var hex = StringOrNull(colored, "smoke_color"); var hex2 = StringOrNull(colored, "smoke_color2"); var trail = StringOrNull(colored, "grenade_trail"); Server.NextFrame(() => { StoreSmokeColor(steamId, hex, hex2); StoreGrenadeTrail(steamId, trail); }); }
+        else if (status == System.Net.HttpStatusCode.NotFound) Server.NextFrame(() => { StoreSmokeColor(steamId, null); StoreGrenadeTrail(steamId, null); });
         if (welcome) Server.NextFrame(() => ScheduleWelcome(player, WelcomeRankLine(status, profile)));
         if (!Config.ScoreboardRanks) return;
         if (status == System.Net.HttpStatusCode.NotFound)
