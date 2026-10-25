@@ -32,6 +32,8 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public bool SmokeGlow { get; set; } = true;
     /// <summary>A one-line Discord invite in everyone's chat every this many minutes (0 = never).</summary>
     public int DiscordAdMinutes { get; set; } = 10;
+    /// <summary>The game's money lines in chat: "prefix" (one short LEGACY-X line), "hide" or "game" (left as they are); LEGACYX_&lt;port&gt;_COMMUNITY_MONEY_LINES per server.</summary>
+    public string MoneyLines { get; set; } = "prefix";
 }
 
 public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
@@ -78,6 +80,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         config.ThirdPerson = environment.GetModuleBoolean("COMMUNITY", "THIRDPERSON", false);
         config.SmokeGlow = environment.GetModuleBoolean("COMMUNITY", "SMOKEGLOW", true);
         config.DiscordAdMinutes = environment.GetModuleInt("COMMUNITY", "DISCORD_AD_MINUTES", config.DiscordAdMinutes, 0, 120);
+        config.MoneyLines = environment.GetModule("COMMUNITY", "MONEY_LINES", config.MoneyLines).Trim().ToLowerInvariant();
         scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 12, 0, 12);
         scoreboardIconOffset = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_ICON_OFFSET", 18, 0, 18);
         Config = config;
@@ -91,6 +94,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         if (Config.ThirdPerson) RegisterThirdPerson();
         RegisterSmokeColor();
         RegisterDiscordAd();
+        RegisterMoneyLines();
         RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
         {
             var player = @event.Userid;
