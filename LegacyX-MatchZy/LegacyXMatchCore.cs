@@ -97,13 +97,14 @@ public partial class MatchZy
             .GroupBy(entry => entry.TeamKey!)
             .ToDictionary(group => group.Key, group => group.OrderBy(entry => CoreSteamId(entry.Player)).ToList());
 
-        if (!roster.TryGetValue("team1", out var team1) || !roster.TryGetValue("team2", out var team2) || team1.Count != 5 || team2.Count != 5)
+        if (!roster.TryGetValue("team1", out var team1) || !roster.TryGetValue("team2", out var team2) || team1.Count is < 2 or > 5 || team2.Count is < 2 or > 5)
         {
-            Log("[LegacyXMatchCore] Match Core creation refused because the active roster is not exactly 5v5.");
+            // Ranked counts any lobby with 2 to 5 humans a side (RANK-SYSTEM.md section 3), so Match Core takes the same.
+            Log("[LegacyXMatchCore] Match Core creation refused because a team does not have 2 to 5 players.");
             // Say so to the players: otherwise they play the whole match and wonder why no EXP or rank changed.
             var teamOne = roster.TryGetValue("team1", out var one) ? one.Count : 0;
             var teamTwo = roster.TryGetValue("team2", out var two) ? two.Count : 0;
-            PrintToAllChat($"This match is {{white}}not ranked{{grey}}: ranked needs exactly 5v5 (now {teamOne}v{teamTwo}). No EXP or rank will change.");
+            PrintToAllChat($"This match is {{white}}not ranked{{grey}}: ranked needs 2 to 5 players on each team (now {teamOne}v{teamTwo}). No EXP or rank will change.");
             return;
         }
 
@@ -318,16 +319,20 @@ public partial class MatchZy
             reason = string.Empty;
             return true;
         }
-        if (matchCoreSlotsByOriginal.Count != 10 || matchCoreSlotsByOriginal.Values.Any(slot => string.IsNullOrWhiteSpace(slot.ActiveSteamId)))
+        var slots = matchCoreSlotsByOriginal.Count;
+        if (slots < 4 || matchCoreSlotsByOriginal.Values.Any(slot => string.IsNullOrWhiteSpace(slot.ActiveSteamId)))
         {
-            reason = "All 10 players must be back to resume.";
+            reason = $"All {slots} players must be back to resume.";
             return false;
         }
+        // The sides must hold the same numbers the match started with (team1 and team2 may have swapped sides at half time).
+        var team1Slots = matchCoreSlotsByOriginal.Values.Count(slot => slot.TeamKey == "team1");
+        var team2Slots = slots - team1Slots;
         var (ctPlayers, _) = GetTeamPlayerCount((int)CsTeam.CounterTerrorist, false);
         var (tPlayers, _) = GetTeamPlayerCount((int)CsTeam.Terrorist, false);
-        if (ctPlayers != 5 || tPlayers != 5)
+        if (!((ctPlayers == team1Slots && tPlayers == team2Slots) || (ctPlayers == team2Slots && tPlayers == team1Slots)))
         {
-            reason = "Resuming needs 5 CT and 5 T.";
+            reason = $"Resuming needs {team1Slots}v{team2Slots} as the match started.";
             return false;
         }
         if (!matchCoreRemoteSlotsReady)
