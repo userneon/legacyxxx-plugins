@@ -96,6 +96,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         RegisterGrenadeTrail();
         RegisterKillEffects();
         RegisterFlashEffects();
+        RegisterHeEffects();
         RegisterDiscordAd();
         RegisterMoneyLines();
         // The game's own "left the game" line is not shown (owner request 2026-10-24); this one wears the LEGACY-X prefix. It must be a
@@ -181,8 +182,8 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         }
         var (status, profile) = await FetchProfileAsync(steamId.ToString());
         // The worn Smoke colour rides along with the profile; a player the site does not know has none.
-        if (profile is { } colored) { var hex = StringOrNull(colored, "smoke_color"); var hex2 = StringOrNull(colored, "smoke_color2"); var trail = StringOrNull(colored, "grenade_trail"); var trailFx = StringOrNull(colored, "grenade_trail_fx"); var glow = StringOrNull(colored, "grenade_light"); var kill = StringOrNull(colored, "kill_effect"); var killFx = StringOrNull(colored, "kill_effect_fx"); var flash = StringOrNull(colored, "flash_effect"); var flashFx = StringOrNull(colored, "flash_effect_fx"); Server.NextFrame(() => { StoreSmokeColor(steamId, hex, hex2); StoreGrenadeLooks(steamId, trail, trailFx, glow); StoreKillEffect(steamId, kill, killFx); StoreFlashEffect(steamId, flash, flashFx); }); }
-        else if (status == System.Net.HttpStatusCode.NotFound) Server.NextFrame(() => { StoreSmokeColor(steamId, null); StoreGrenadeLooks(steamId, null, null, null); StoreKillEffect(steamId, null, null); StoreFlashEffect(steamId, null, null); });
+        if (profile is { } colored) { var hex = StringOrNull(colored, "smoke_color"); var hex2 = StringOrNull(colored, "smoke_color2"); var trail = StringOrNull(colored, "grenade_trail"); var trailFx = StringOrNull(colored, "grenade_trail_fx"); var glow = StringOrNull(colored, "grenade_light"); var kill = StringOrNull(colored, "kill_effect"); var killFx = StringOrNull(colored, "kill_effect_fx"); var flash = StringOrNull(colored, "flash_effect"); var flashFx = StringOrNull(colored, "flash_effect_fx"); var he = StringOrNull(colored, "he_effect"); var heFx = StringOrNull(colored, "he_effect_fx"); Server.NextFrame(() => { StoreSmokeColor(steamId, hex, hex2); StoreGrenadeLooks(steamId, trail, trailFx, glow); StoreKillEffect(steamId, kill, killFx); StoreFlashEffect(steamId, flash, flashFx); StoreHeEffect(steamId, he, heFx); }); }
+        else if (status == System.Net.HttpStatusCode.NotFound) Server.NextFrame(() => { StoreSmokeColor(steamId, null); StoreGrenadeLooks(steamId, null, null, null); StoreKillEffect(steamId, null, null); StoreFlashEffect(steamId, null, null); StoreHeEffect(steamId, null, null); });
         if (welcome) Server.NextFrame(() => ScheduleWelcome(player, WelcomeRankLine(status, profile)));
         if (!Config.ScoreboardRanks) return;
         if (status == System.Net.HttpStatusCode.NotFound)
