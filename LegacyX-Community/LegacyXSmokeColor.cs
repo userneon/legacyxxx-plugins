@@ -55,21 +55,46 @@ public sealed partial class LegacyXCommunity
             return HookResult.Continue;
         });
         RegisterListener<Listeners.OnMapStart>(_ => { smokeShades.Clear(); smokesThrown.Clear(); });
-        // !rs reloads skins from the site; the smoke colour is read again with it, so a colour changed on the site shows at once.
-        AddCommandListener("css_rs", (player, command) =>
+        // !rs reloads skins from the site; the smoke colour, grenade looks and kill effect are read again with it, so a change made on
+        // the site shows at once. Heard both as the css_rs command and as the chat line itself (!rs, /rs, .rs): a chat trigger does not
+        // always reach a command listener, and !rs then refreshed the skins but not these.
+        AddCommandListener("css_rs", (player, _) => { RefreshLooks(player); return HookResult.Continue; }, HookMode.Post);
+        foreach (var say in new[] { "say", "say_team" })
         {
-            if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
+            AddCommandListener(say, (player, command) =>
+            {
+                var text = command.ArgCount > 1 ? command.GetArg(1).Trim().Trim('"').Trim() : "";
+                if (text.Length == 3 && text[0] is '!' or '/' or '.' && text.EndsWith("rs", StringComparison.OrdinalIgnoreCase)) RefreshLooks(player);
+                return HookResult.Continue;
+            }, HookMode.Post);
+        }
+        // Without !rs too: what a player wears is read again at the start of a round, at most once a minute each.
+        RegisterEventHandler<EventRoundStart>((_, _) =>
+        {
             var now = DateTime.UtcNow;
-            if (smokeRefreshAt.TryGetValue(player.SteamID, out var last) && now - last < TimeSpan.FromSeconds(5)) return HookResult.Continue;
-            smokeRefreshAt[player.SteamID] = now;
-            _ = LoadScoreboardRankAsync(player);
+            foreach (var player in Utilities.GetPlayers())
+            {
+                if (player.IsBot || !player.IsValid) continue;
+                if (smokeRefreshAt.TryGetValue(player.SteamID, out var last) && now - last < TimeSpan.FromSeconds(60)) continue;
+                RefreshLooks(player);
+            }
             return HookResult.Continue;
-        }, HookMode.Post);
+        });
         RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
             if (@event.Userid is { } left) { smokeRefreshAt.Remove(left.SteamID); smokeColors.Remove(left.SteamID); smokesThrown.Remove(left.SteamID); }
             return HookResult.Continue;
         });
+    }
+
+    /// <summary>Reads the player's profile again (smoke colour, grenade trail and light, kill effect); at most once every 5 s per player.</summary>
+    private void RefreshLooks(CCSPlayerController? player)
+    {
+        if (player == null || !player.IsValid || player.IsBot) return;
+        var now = DateTime.UtcNow;
+        if (smokeRefreshAt.TryGetValue(player.SteamID, out var last) && now - last < TimeSpan.FromSeconds(5)) return;
+        smokeRefreshAt[player.SteamID] = now;
+        _ = LoadScoreboardRankAsync(player);
     }
 
     private static (float R, float G, float B)? ParseSmokeColor(string? hex) =>
