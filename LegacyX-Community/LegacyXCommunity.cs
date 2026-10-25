@@ -95,6 +95,19 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         RegisterSmokeColor();
         RegisterDiscordAd();
         RegisterMoneyLines();
+        // The game's own "left the game" line is not shown (owner request 2026-10-24); this one wears the LEGACY-X prefix. It must be a
+        // Pre hook: DontBroadcast set after the event went out (Post) does nothing, so both lines showed.
+        RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
+        {
+            if (@event.Userid is { } player && player.IsValid && !player.IsBot && !player.IsHLTV)
+            {
+                info.DontBroadcast = true;
+                var name = new string(player.PlayerName.Where(c => c >= ' ' && c != '\u007F').ToArray()).Trim();
+                var line = LegacyXChat.System($"{{white}}{name}{{grey}} disconnected.");
+                foreach (var other in Utilities.GetPlayers().Where(other => other.IsValid && !other.IsBot && other.Slot != player.Slot)) other.PrintToChat(line);
+            }
+            return HookResult.Continue;
+        }, HookMode.Pre);
         RegisterEventHandler<EventPlayerConnectFull>((@event, info) =>
         {
             var player = @event.Userid;
@@ -128,14 +141,6 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
             {
                 scoreboardRanks.Remove(player.SteamID);
                 scoreboardOpen.Remove(player.Slot);
-                // The game's own "left the game" line is not shown (owner request 2026-10-24); this one wears the LEGACY-X prefix.
-                if (!player.IsBot && !player.IsHLTV)
-                {
-                    info.DontBroadcast = true;
-                    var name = new string(player.PlayerName.Where(c => c >= ' ' && c != '\u007F').ToArray()).Trim();
-                    var line = LegacyXChat.System($"{{white}}{name}{{grey}} disconnected.");
-                    foreach (var other in Utilities.GetPlayers().Where(other => other.IsValid && !other.IsBot && other.Slot != player.Slot)) other.PrintToChat(line);
-                }
             }
             return HookResult.Continue;
         });
