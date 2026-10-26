@@ -21,6 +21,8 @@ public sealed partial class LegacyXCommunity
     // The colour each smoke in flight was given (by the projectile's entity index), so its glow matches it where it bursts.
     private readonly Dictionary<uint, (float R, float G, float B)> smokeShades = new();
     private const float SmokeGlowSeconds = 17f;
+    // The colour is held for this many quarter seconds after the throw: longer than any smoke lasts.
+    private const int SmokeHoldTicks = 100;
     // When each player last had their colour read again by !rs: at most once every few seconds, so !rs spam is not API load.
     private readonly Dictionary<ulong, DateTime> smokeRefreshAt = new();
 
@@ -42,10 +44,17 @@ public sealed partial class LegacyXCommunity
                 var count = smokesThrown.GetValueOrDefault(controller.SteamID);
                 smokesThrown[controller.SteamID] = count + 1;
                 var shade = color.Second is { } second && count % 2 == 1 ? second : color.First;
-                projectile.SmokeColor.X = shade.R;
-                projectile.SmokeColor.Y = shade.G;
-                projectile.SmokeColor.Z = shade.B;
                 smokeShades[projectile.Index] = shade;
+                // Set it now and keep setting it while the cloud lives: the game writes its own colour back as the smoke runs out, which
+                // turned a coloured cloud to the default one near its end.
+                HoldSmokeColor(projectile, shade);
+                var held = 0;
+                AddTimer(0.25f, () =>
+                {
+                    held++;
+                    if (!projectile.IsValid || held > SmokeHoldTicks) return;
+                    HoldSmokeColor(projectile, shade);
+                }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT | CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
             });
         });
         // A coloured light where the smoke bursts, in the same colour, for as long as the cloud lasts (experiment, 2026-10-24).
@@ -111,6 +120,14 @@ public sealed partial class LegacyXCommunity
             return;
         }
         smokeColors.Remove(steamId);
+    }
+
+    private static void HoldSmokeColor(CSmokeGrenadeProjectile projectile, (float R, float G, float B) shade)
+    {
+        projectile.SmokeColor.X = shade.R;
+        projectile.SmokeColor.Y = shade.G;
+        projectile.SmokeColor.Z = shade.B;
+        Utilities.SetStateChanged(projectile, "CSmokeGrenadeProjectile", "m_vSmokeColor");
     }
 
     private void SpawnSmokeGlow(float x, float y, float z, (float R, float G, float B) shade)
