@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
 
@@ -85,6 +86,27 @@ public sealed partial class LegacyXCommunity
                 break;
         }
         FlashLight(at, look.Shape == "prism" ? System.Drawing.Color.White : color, 0.35f);
+    }
+
+    /// <summary>A short burst of coloured light that lights the floor and walls around the burst.</summary>
+    private void FlashLight(Vector at, System.Drawing.Color color, float seconds)
+    {
+        try
+        {
+            var light = Utilities.CreateEntityByName<CBarnLight>("light_omni2");
+            if (light == null || !light.IsValid) return;
+            light.Enabled = true;
+            light.Color = color;
+            light.Brightness = 6f;
+            light.Range = 260f;
+            light.Teleport(at, new QAngle(0, 0, 0), new Vector(0, 0, 0));
+            light.DispatchSpawn();
+            AddTimer(seconds, () => { if (light.IsValid) light.Remove(); });
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"[{ModuleName}] Flash effect light failed: {exception.Message}");
+        }
     }
 
     /// <summary>Keeps (or drops) a player's worn flash effect; only a plain #rrggbb counts (prism needs none). Main thread.</summary>

@@ -55,7 +55,7 @@ public sealed partial class LegacyXCommunity
             return HookResult.Continue;
         });
         RegisterListener<Listeners.OnMapStart>(_ => { smokeShades.Clear(); smokesThrown.Clear(); });
-        // !rs reloads skins from the site; the smoke colour, grenade looks and kill effect are read again with it, so a change made on
+        // !rs reloads skins from the site; the smoke colour, grenade looks and flash effect are read again with it, so a change made on
         // the site shows at once. Heard both as the css_rs command and as the chat line itself (!rs, /rs, .rs): a chat trigger does not
         // always reach a command listener, and !rs then refreshed the skins but not these.
         AddCommandListener("css_rs", (player, _) => { RefreshLooks(player); return HookResult.Continue; }, HookMode.Post);
@@ -87,7 +87,7 @@ public sealed partial class LegacyXCommunity
         });
     }
 
-    /// <summary>Reads the player's profile again (smoke colour, grenade trail and light, kill effect); at most once every 5 s per player.</summary>
+    /// <summary>Reads the player's profile again (smoke colour, grenade trail and light, flash effect); at most once every 5 s per player.</summary>
     private void RefreshLooks(CCSPlayerController? player)
     {
         if (player == null || !player.IsValid || player.IsBot) return;
