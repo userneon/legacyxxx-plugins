@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Timers;
@@ -17,6 +18,8 @@ namespace LegacyXCommunity;
 /// legacyxxx-workshop, sent to players on connect through MultiAddonManager): ribbon, lightning, pulse and stardust are particle
 /// effects tinted with the player's colour (control point 16, see the workshop's CONTRACT.md) that follow the grenade, with a spark burst
 /// where it bounces; a thin beam line goes under them so a player without the addon still sees a trail.</item>
+/// <item><b>Per grenade</b> (owner request 2026-10-26): a trail and a light can be worn on one kind of grenade only: HE, flash, smoke, fire
+/// (molotov and incendiary) and decoy. The profile's <c>grenade_slots</c> holds what each wears; the default trail is the fallback.</item>
 /// <item><b>Grenade light</b> (sold separately): a coloured light that flies with the grenade and lights the walls it passes
 /// (<c>grenade_light</c>, #rrggbb).</item>
 /// </list>
@@ -39,8 +42,15 @@ public sealed partial class LegacyXCommunity
     private const int ParticleColourPoint = 16;
     /// <summary>Who threw each grenade with a premium trail, by the grenade's entity index: its bounces get a burst in their colour.</summary>
     private readonly Dictionary<uint, System.Drawing.Color> burstOnBounce = new();
-    private readonly Dictionary<ulong, (System.Drawing.Color Color, string Shape)> trailLooks = new();
-    private readonly Dictionary<ulong, System.Drawing.Color> grenadeLights = new();
+    /// <summary>Which of the five grenade slots a projectile belongs to (owner request 2026-10-26): the molotov and the incendiary share "fire".</summary>
+    private static readonly Dictionary<string, string> NadeSlot = new()
+    {
+        ["hegrenade_projectile"] = "he", ["flashbang_projectile"] = "flash", ["smokegrenade_projectile"] = "smoke",
+        ["molotov_projectile"] = "fire", ["incgrenade_projectile"] = "fire", ["decoy_projectile"] = "decoy",
+    };
+    private static readonly string[] NadeSlots = { "he", "flash", "smoke", "fire", "decoy" };
+    private readonly Dictionary<(ulong SteamId, string Nade), (System.Drawing.Color Color, string Shape)> trailLooks = new();
+    private readonly Dictionary<(ulong SteamId, string Nade), System.Drawing.Color> grenadeLights = new();
     private const float TrailTickSeconds = 0.04f;
     private const int TrailMaxTicks = 150; // 6 s at most per grenade
     private bool trailEnabled = true;
@@ -80,14 +90,15 @@ public sealed partial class LegacyXCommunity
                 if (thrower == null || !thrower.IsValid) return;
                 var controller = new CCSPlayerPawn(thrower.Handle).Controller.Value;
                 if (controller == null || !controller.IsValid) return;
-                var hasTrail = trailLooks.TryGetValue(controller.SteamID, out var look);
-                var hasLight = grenadeLights.TryGetValue(controller.SteamID, out var light);
+                var nade = NadeSlot.GetValueOrDefault(entity.DesignerName, "he");
+                var hasTrail = trailLooks.TryGetValue((controller.SteamID, nade), out var look);
+                var hasLight = grenadeLights.TryGetValue((controller.SteamID, nade), out var light);
                 if (hasTrail || hasLight) FollowGrenade(projectile, hasTrail ? look : null, hasLight ? light : null);
             });
         });
         RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
-            if (@event.Userid is { } left) { trailLooks.Remove(left.SteamID); grenadeLights.Remove(left.SteamID); }
+            if (@event.Userid is { } left) foreach (var nade in NadeSlots) { trailLooks.Remove((left.SteamID, nade)); grenadeLights.Remove((left.SteamID, nade)); }
             return HookResult.Continue;
         });
         AddCommand("lx_grenade_trail", "Grenade trails and lights on this server: lx_grenade_trail 0|1", (player, command) =>
@@ -351,14 +362,37 @@ public sealed partial class LegacyXCommunity
         }
     }
 
-    /// <summary>Keeps (or drops) a player's worn grenade trail (colour and shape) and grenade light; only a plain #rrggbb counts. Main thread.</summary>
-    private void StoreGrenadeLooks(ulong steamId, string? trailHex, string? trailShape, string? lightHex)
+    /// <summary>One grenade slot's trail and light as the profile sends them (all plain strings, copied out of the JSON before it is gone).</summary>
+    private readonly record struct GrenadeSlot(string? TrailHex, string? TrailShape, string? LightHex);
+
+    /// <summary>
+    /// Keeps (or drops) what a player wears on each kind of grenade; only a plain #rrggbb counts. `slots` are the five slots the profile
+    /// sends; without them (an older API) the one default trail and light apply to every grenade. Main thread.
+    /// </summary>
+    private void StoreGrenadeLooks(ulong steamId, string? trailHex, string? trailShape, string? lightHex, IReadOnlyDictionary<string, GrenadeSlot>? slots = null)
     {
-        var shape = trailShape is not null && TrailShapes.Contains(trailShape) ? trailShape : "line";
-        if (ParseSmokeColor(trailHex) is { } rgb) trailLooks[steamId] = (System.Drawing.Color.FromArgb(255, (int)rgb.R, (int)rgb.G, (int)rgb.B), shape);
-        else if (shape == "rainbow") trailLooks[steamId] = (System.Drawing.Color.White, shape);
-        else trailLooks.Remove(steamId);
-        if (ParseSmokeColor(lightHex) is { } glow) grenadeLights[steamId] = System.Drawing.Color.FromArgb(255, (int)glow.R, (int)glow.G, (int)glow.B);
-        else grenadeLights.Remove(steamId);
+        foreach (var nade in NadeSlots)
+        {
+            var slot = slots != null && slots.TryGetValue(nade, out var own) ? own : new GrenadeSlot(trailHex, trailShape, lightHex);
+            var shape = slot.TrailShape is not null && TrailShapes.Contains(slot.TrailShape) ? slot.TrailShape : "line";
+            if (ParseSmokeColor(slot.TrailHex) is { } rgb) trailLooks[(steamId, nade)] = (System.Drawing.Color.FromArgb(255, (int)rgb.R, (int)rgb.G, (int)rgb.B), shape);
+            else if (shape == "rainbow") trailLooks[(steamId, nade)] = (System.Drawing.Color.White, shape);
+            else trailLooks.Remove((steamId, nade));
+            if (ParseSmokeColor(slot.LightHex) is { } glow) grenadeLights[(steamId, nade)] = System.Drawing.Color.FromArgb(255, (int)glow.R, (int)glow.G, (int)glow.B);
+            else grenadeLights.Remove((steamId, nade));
+        }
+    }
+
+    /// <summary>The profile's grenade_slots object as plain strings, or null when the API does not send one.</summary>
+    private static Dictionary<string, GrenadeSlot>? ReadGrenadeSlots(JsonElement profile)
+    {
+        if (!profile.TryGetProperty("grenade_slots", out var slots) || slots.ValueKind != JsonValueKind.Object) return null;
+        var result = new Dictionary<string, GrenadeSlot>();
+        foreach (var nade in NadeSlots)
+        {
+            if (!slots.TryGetProperty(nade, out var one) || one.ValueKind != JsonValueKind.Object) continue;
+            result[nade] = new GrenadeSlot(StringOrNull(one, "trail"), StringOrNull(one, "trail_fx"), StringOrNull(one, "light"));
+        }
+        return result;
     }
 }
