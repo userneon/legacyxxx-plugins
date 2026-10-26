@@ -16,13 +16,13 @@ public sealed partial class LegacyXCommunity
 {
     // SteamID64 -> RGB 0-255 and, for a two-colour (gradient) smoke, the second RGB; players with no colour worn are not in it.
     private readonly Dictionary<ulong, ((float R, float G, float B) First, (float R, float G, float B)? Second)> smokeColors = new();
-    // Smokes thrown so far by each player on this map: a two-colour smoke alternates, the first grenade in the first colour, the next in the second.
-    private readonly Dictionary<ulong, int> smokesThrown = new();
     // The colour each smoke in flight was given (by the projectile's entity index), so its glow matches it where it bursts.
     private readonly Dictionary<uint, (float R, float G, float B)> smokeShades = new();
     private const float SmokeGlowSeconds = 17f;
     // The colour is held for this many quarter seconds after the throw: longer than any smoke lasts.
     private const int SmokeHoldTicks = 100;
+    // A two-colour smoke reaches its second colour after this many quarter seconds (about 20 s: the whole life of the cloud).
+    private const int SmokeBlendTicks = 80;
     // When each player last had their colour read again by !rs: at most once every few seconds, so !rs spam is not API load.
     private readonly Dictionary<ulong, DateTime> smokeRefreshAt = new();
 
@@ -41,19 +41,20 @@ public sealed partial class LegacyXCommunity
                 var controller = new CCSPlayerPawn(thrower.Handle).Controller.Value;
                 if (controller == null || !controller.IsValid) return;
                 if (!smokeColors.TryGetValue(controller.SteamID, out var color)) return;
-                var count = smokesThrown.GetValueOrDefault(controller.SteamID);
-                smokesThrown[controller.SteamID] = count + 1;
-                var shade = color.Second is { } second && count % 2 == 1 ? second : color.First;
-                smokeShades[projectile.Index] = shade;
+                var first = color.First;
+                smokeShades[projectile.Index] = first;
                 // Set it now and keep setting it while the cloud lives: the game writes its own colour back as the smoke runs out, which
-                // turned a coloured cloud to the default one near its end.
-                HoldSmokeColor(projectile, shade);
+                // turned a coloured cloud to the default one near its end. A two-colour smoke slides from the first colour to the second
+                // across its life, so one cloud shows both.
+                HoldSmokeColor(projectile, first);
                 var held = 0;
                 AddTimer(0.25f, () =>
                 {
                     held++;
                     if (!projectile.IsValid || held > SmokeHoldTicks) return;
-                    HoldSmokeColor(projectile, shade);
+                    var mix = color.Second is { } second ? Math.Min(1f, held / (float)SmokeBlendTicks) : 0f;
+                    var to = color.Second ?? first;
+                    HoldSmokeColor(projectile, (first.R + (to.R - first.R) * mix, first.G + (to.G - first.G) * mix, first.B + (to.B - first.B) * mix));
                 }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT | CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
             });
         });
@@ -63,7 +64,7 @@ public sealed partial class LegacyXCommunity
             if (smokeShades.Remove((uint)@event.Entityid, out var shade) && Config.SmokeGlow) SpawnSmokeGlow(@event.X, @event.Y, @event.Z, shade);
             return HookResult.Continue;
         });
-        RegisterListener<Listeners.OnMapStart>(_ => { smokeShades.Clear(); smokesThrown.Clear(); });
+        RegisterListener<Listeners.OnMapStart>(_ => { smokeShades.Clear(); });
         // !rs reloads skins from the site; the smoke colour, grenade looks and flash effect are read again with it, so a change made on
         // the site shows at once. Heard both as the css_rs command and as the chat line itself (!rs, /rs, .rs): a chat trigger does not
         // always reach a command listener, and !rs then refreshed the skins but not these.
@@ -91,7 +92,7 @@ public sealed partial class LegacyXCommunity
         });
         RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
-            if (@event.Userid is { } left) { smokeRefreshAt.Remove(left.SteamID); smokeColors.Remove(left.SteamID); smokesThrown.Remove(left.SteamID); }
+            if (@event.Userid is { } left) { smokeRefreshAt.Remove(left.SteamID); smokeColors.Remove(left.SteamID); }
             return HookResult.Continue;
         });
     }
