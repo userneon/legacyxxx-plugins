@@ -3,7 +3,7 @@
 # all from one shared install, each as its own systemd service named by its port.
 #
 #   sudo ./scripts/cs2-host.sh install --env legacyx-srv-HOST.env [--package legacyx-cs2.zip]
-#       steamcmd, the CS2 dedicated server, Metamod:Source, CounterStrikeSharp, the LEGACY-X plugins
+#       steamcmd, the CS2 dedicated server, Metamod:Source, CounterStrikeSharp, MultiAddonManager, the LEGACY-X plugins
 #       and the .env from create-game-server.mjs (legacyxxx-backend). Safe to run again.
 #   sudo ./scripts/cs2-host.sh add <port> <GSLT> [competitive|wingman|casual|deathmatch] [map] [maxplayers] [site-mode] [name…]
 #       a server on <port>: config, firewall, systemd service, started now and at boot. site-mode picks the
@@ -11,7 +11,7 @@
 #       the name shown there; both are written to the .env as LEGACYX_<port>_SERVER_MODE / _NAME.
 #       GSLT: a Steam game server login token, one per server (steamcommunity.com/dev/managegameservers, app 730).
 #   sudo ./scripts/cs2-host.sh update [--package legacyx-cs2.zip]
-#       stops the servers, updates CS2, Metamod, CounterStrikeSharp and the plugins, starts them again.
+#       stops the servers, updates CS2, Metamod, CounterStrikeSharp, MultiAddonManager and the plugins, starts them again.
 #   sudo ./scripts/cs2-host.sh deploy
 #       git pull of this repository first, then update: new plugin commits live now, not at 05:00.
 #   sudo ./scripts/cs2-host.sh env
@@ -27,6 +27,9 @@
 #       builds CounterStrikeSharp from source against the SDK that fixes the player-join crash after CS2 1.41.9.2
 #       (scripts/build-css-hotfix.sh) and installs it. Servers must be stopped. Every later update keeps it only
 #       while the installed CounterStrikeSharp release is the one it was built for; the next release replaces it.
+#   sudo ./scripts/cs2-host.sh client-addons [id,id,...]
+#       Workshop addon IDs every player downloads on connect (MultiAddonManager mm_client_extra_addons): LEGACY-X's particle
+#       effects are 3810642940. No IDs prints the current value; "none" clears it. Restart the servers after.
 #   sudo ./scripts/cs2-host.sh remove <port>        stops and deletes that server's service and config
 #   sudo ./scripts/cs2-host.sh name <port> "<website name>" ["<in-game name>"]
 #       two separate names for one server: the website's (e.g. "Match 1") and the one players see in the server
@@ -181,18 +184,84 @@ cmd_css_hotfix() {
   say "Start a server when you are ready: sudo systemctl start cs2@<port>"
 }
 
-# MultiAddonManager only existed to make clients download the HUD's Workshop addon, and that HUD is gone: players download
-# nothing on connect. An install that still has it gets it moved aside (not deleted) so Metamod stops loading it.
-remove_multiaddonmanager() {
-  local found=0 spot="$STATE_DIR/removed/multiaddonmanager-$(date +%Y%m%d-%H%M%S)" path
-  for path in "$CSGO_DIR/addons/multiaddonmanager" "$CSGO_DIR/addons/metamod/multiaddonmanager.vdf" "$CSGO_DIR/cfg/multiaddonmanager"; do
-    [[ -e "$path" ]] || continue
-    found=1
-    mkdir -p "$spot"
-    mv "$path" "$spot/$(printf '%s' "${path#"$CSGO_DIR/"}" | tr / _)"
+# MultiAddonManager (Source2ZE): a Metamod plugin that makes clients download Workshop addons on connect
+# (mm_client_extra_addons) and can mount server-side ones (mm_extra_addons). Since 2026-10-26 it sends LEGACY-X's Workshop addon of particle
+# effects (premium grenade trails, legacyxxx-workshop). Not fatal if it cannot be installed: the servers run fine without it, only those effects are missing.
+latest_mam_release() { curl -fsSL https://api.github.com/repos/Source2ZE/MultiAddonManager/releases/latest; }
+ 
+install_multiaddonmanager() {
+  say "MultiAddonManager"
+  local release url tag tmp file
+  # The map-change settings go in first and whatever happens next (GitHub down, a package with another layout): a server that already
+  # has MultiAddonManager must never keep the defaults that resend the Workshop addon at every map change.
+  if [[ -n "$(find "$CSGO_DIR/addons" -iname 'multiaddonmanager*' -print -quit 2>/dev/null)" ]]; then ensure_mam_client_cache; fi
+  release="$(latest_mam_release)" || { say "MultiAddonManager: GitHub not reachable, skipped."; return 0; }
+  # Release assets are named per Steam runtime (e.g. ...-steamrt3.tar.gz, ...-steamrt4.tar.gz, ...-windows.zip).
+  # steamrt3 needs the oldest glibc, so it loads everywhere; MAM_ASSET_PATTERN picks another (e.g. steamrt4).
+  local pat all
+  all="$(printf '%s' "$release" | { grep -oiE '"browser_download_url": *"[^"]*"' || true; } | sed 's/.*"\(https[^"]*\)"/\1/')"
+  for pat in "${MAM_ASSET_PATTERN:-steamrt3}" linux steamrt4; do
+    url="$(printf '%s\n' "$all" | { grep -iE "${pat}[^/]*\.(tar\.gz|zip)$" || true; } | head -n1)"
+    [[ -n "$url" ]] && break
   done
-  rm -f "$STATE_DIR/mam-version"
-  [[ $found -eq 0 ]] || say "MultiAddonManager is no longer used: moved to $spot (restart the servers to unload it)"
+  tag="$(printf '%s' "$release" | release_tag || true)"
+  if [[ -z "$url" ]]; then say "MultiAddonManager: no Linux package in the latest release, skipped."; return 0; fi
+  tmp="$(mktemp -d)"
+  file="$tmp/mam.${url##*.}"
+  [[ "$url" == *.tar.gz ]] && file="$tmp/mam.tar.gz"
+  if ! curl -fsSL "$url" -o "$file"; then rm -rf "$tmp"; say "MultiAddonManager: download failed, skipped."; return 0; fi
+  mkdir -p "$tmp/pkg"
+  if [[ "$file" == *.tar.gz ]]; then tar -xzf "$file" -C "$tmp/pkg"; else unzip -oq "$file" -d "$tmp/pkg"; fi
+  # The package is laid out for game/csgo (addons/, cfg/). Program files are replaced on every run;
+  # cfg/ keeps whatever is already there (our mm_client_extra_addons line).
+  [[ -d "$tmp/pkg/addons" ]] && cp -a "$tmp/pkg/addons/." "$CSGO_DIR/addons/"
+  [[ -d "$tmp/pkg/cfg" ]] && cp -an "$tmp/pkg/cfg/." "$CSGO_DIR/cfg/" 2>/dev/null || true
+  chown -R "$CS2_USER:$CS2_USER" "$CSGO_DIR/addons" "$CSGO_DIR/cfg"
+  rm -rf "$tmp"
+  if [[ -z "$(find "$CSGO_DIR/addons" -iname 'multiaddonmanager*' -print -quit 2>/dev/null)" ]]; then
+    say "MultiAddonManager: the package had an unexpected layout, check $CSGO_DIR/addons by hand."
+    return 0
+  fi
+  ensure_mam_client_cache
+  mkdir -p "$STATE_DIR"
+  printf '%s\n' "$tag" > "$STATE_DIR/mam-version"
+  say "MultiAddonManager ${tag:-installed} (in the console: meta list)"
+}
+ 
+# Without this a player who already has the Workshop addon is sent it again on every map change: the client drops out and comes
+# back ("loop shutdown"), and the HUD and the microphone are dead until the addon is back. With it, MultiAddonManager remembers
+# which SteamIDs already have the addons, so a map change keeps them in place. Written to MultiAddonManager's own cfg on every run.
+ensure_mam_client_cache() {
+  local cfg="$CSGO_DIR/cfg/multiaddonmanager/multiaddonmanager.cfg" name value
+  mkdir -p "$(dirname "$cfg")"
+  touch "$cfg"
+  for pair in "mm_cache_clients_with_addons 1" "mm_cache_clients_duration 0" "mm_block_disconnect_messages 1"; do
+    name="${pair%% *}"; value="${pair##* }"
+    sed -i "/^[[:space:]]*${name}[[:space:]]/d" "$cfg"
+    printf '%s "%s"\n' "$name" "$value" >> "$cfg"
+  done
+  chown -R "$CS2_USER:$CS2_USER" "$(dirname "$cfg")"
+}
+
+# Workshop addon IDs that every client downloads on connect. Written to MultiAddonManager's own cfg.
+cmd_client_addons() {
+  need_root
+  local cfg="$CSGO_DIR/cfg/multiaddonmanager/multiaddonmanager.cfg" ids="${1:-}"
+  if [[ -z "$ids" ]]; then
+    grep -E '^[[:space:]]*mm_client_extra_addons' "$cfg" 2>/dev/null || echo "mm_client_extra_addons is not set."
+    return 0
+  fi
+  [[ "$ids" == none ]] && ids=""
+  [[ -z "$ids" || "$ids" =~ ^[0-9]+(,[0-9]+)*$ ]] || die "Usage: $0 client-addons 3807024759[,id,...] | none"
+  [[ -d "$CSGO_DIR/addons" ]] || die "Run install first."
+  mkdir -p "$(dirname "$cfg")"
+  touch "$cfg"
+  sed -i '/^[[:space:]]*mm_client_extra_addons/d' "$cfg"
+  printf 'mm_client_extra_addons "%s"\n' "$ids" >> "$cfg"
+  chown -R "$CS2_USER:$CS2_USER" "$(dirname "$cfg")"
+  ensure_mam_client_cache
+  say "mm_client_extra_addons \"$ids\" written to $cfg"
+  say "Takes effect after a restart: sudo systemctl restart cs2@<port> (clients that join later download it)."
 }
  
 install_legacyx() {
@@ -329,7 +398,7 @@ cmd_install() {
   update_cs2
   install_metamod
   install_counterstrikesharp
-  remove_multiaddonmanager
+  install_multiaddonmanager
   install_legacyx "$package" "$env_file"
   fix_gamedata || true
   mkdir -p "$CONF_DIR"
@@ -420,7 +489,7 @@ cmd_update() {
   update_cs2
   install_metamod
   install_counterstrikesharp
-  remove_multiaddonmanager
+  install_multiaddonmanager
   if [[ -n "$package" ]] || command -v dotnet >/dev/null; then
     install_legacyx "$package" ""
   else
@@ -629,6 +698,7 @@ case "${1:-}" in
   env) cmd_env ;;
   autoupdate) shift; cmd_autoupdate "$@" ;;
   css-hotfix) cmd_css_hotfix ;;
+  client-addons) shift; cmd_client_addons "$@" ;;
   remove) shift; cmd_remove "$@" ;;
   status) cmd_status ;;
   logs) [[ -n "${2:-}" ]] || die "Usage: $0 logs <port>"; journalctl -u "cs2@$2" -f ;;

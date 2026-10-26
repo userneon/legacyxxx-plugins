@@ -13,7 +13,10 @@ namespace LegacyXCommunity;
 /// dash, double, helix, comet, rainbow (cycles through colours, ignores the colour), zigzag (two lines zigzagging to either side and
 /// crossing on the way), and with effects along the way (owner request
 /// 2026-10-25): flare (drops burning flares that light the ground they pass), sparks (sparks fly off the line), starfall (twinkling
-/// stars scatter round it) and inferno (all three on a thick line).</item>
+/// stars scatter round it) and inferno (all three on a thick line). Premium shapes from the Workshop addon (owner request 2026-10-26,
+/// legacyxxx-workshop, sent to players on connect through MultiAddonManager): ribbon, lightning, pulse and stardust are particle
+/// effects tinted with the player's colour (control point 16, see the workshop's CONTRACT.md) that follow the grenade, with a spark burst
+/// where it bounces; a thin beam line goes under them so a player without the addon still sees a trail.</item>
 /// <item><b>Grenade light</b> (sold separately): a coloured light that flies with the grenade and lights the walls it passes
 /// (<c>grenade_light</c>, #rrggbb).</item>
 /// </list>
@@ -23,7 +26,19 @@ namespace LegacyXCommunity;
 public sealed partial class LegacyXCommunity
 {
     private static readonly HashSet<string> GrenadeProjectiles = new() { "hegrenade_projectile", "flashbang_projectile", "smokegrenade_projectile", "molotov_projectile", "incgrenade_projectile", "decoy_projectile" };
-    private static readonly HashSet<string> TrailShapes = new() { "line", "dash", "double", "helix", "comet", "rainbow", "zigzag", "flare", "sparks", "starfall", "inferno" };
+    private static readonly HashSet<string> TrailShapes = new() { "line", "dash", "double", "helix", "comet", "rainbow", "zigzag", "flare", "sparks", "starfall", "inferno", "ribbon", "lightning", "pulse", "stardust" };
+    /// <summary>The Workshop addon's particle effect for each premium shape (legacyxxx-workshop CONTRACT.md).</summary>
+    private static readonly Dictionary<string, string> TrailParticles = new()
+    {
+        ["ribbon"] = "particles/legacyx/trail_ribbon.vpcf",
+        ["lightning"] = "particles/legacyx/trail_lightning.vpcf",
+        ["pulse"] = "particles/legacyx/trail_pulse.vpcf",
+        ["stardust"] = "particles/legacyx/trail_stardust.vpcf",
+    };
+    private const string BounceBurstParticle = "particles/legacyx/bounce_burst.vpcf";
+    private const int ParticleColourPoint = 16;
+    /// <summary>Who threw each grenade with a premium trail, by the grenade's entity index: its bounces get a burst in their colour.</summary>
+    private readonly Dictionary<uint, System.Drawing.Color> burstOnBounce = new();
     private readonly Dictionary<ulong, (System.Drawing.Color Color, string Shape)> trailLooks = new();
     private readonly Dictionary<ulong, System.Drawing.Color> grenadeLights = new();
     private const float TrailTickSeconds = 0.04f;
@@ -32,6 +47,28 @@ public sealed partial class LegacyXCommunity
 
     private void RegisterGrenadeTrail()
     {
+        // The addon's effects must be precached when the map loads, or spawning them does nothing.
+        RegisterListener<Listeners.OnServerPrecacheResources>(manifest =>
+        {
+            foreach (var effect in TrailParticles.Values) manifest.AddResource(effect);
+            manifest.AddResource(BounceBurstParticle);
+        });
+        RegisterEventHandler<EventGrenadeBounce>((@event, _) =>
+        {
+            if (!trailEnabled || burstOnBounce.Count == 0) return HookResult.Continue;
+            var thrower = @event.Userid;
+            if (thrower == null || !thrower.IsValid) return HookResult.Continue;
+            // The event names the thrower, not the grenade: burst on the nearest of their grenades that is still flying.
+            foreach (var (index, color) in burstOnBounce)
+            {
+                var grenade = Utilities.GetEntityFromIndex<CBaseCSGrenadeProjectile>((int)index);
+                if (grenade == null || !grenade.IsValid || grenade.AbsOrigin is not { } at) continue;
+                if (grenade.Thrower.Value?.Handle != thrower.PlayerPawn.Value?.Handle) continue;
+                SpawnParticle(BounceBurstParticle, new Vector(at.X, at.Y, at.Z), color, 2f);
+                break;
+            }
+            return HookResult.Continue;
+        });
         RegisterListener<Listeners.OnEntitySpawned>(entity =>
         {
             if (!trailEnabled || !GrenadeProjectiles.Contains(entity.DesignerName)) return;
@@ -70,11 +107,27 @@ public sealed partial class LegacyXCommunity
         var ticks = 0;
         var still = 0;
         var light = lightColor is { } shade ? SpawnGrenadeLight(last, shade) : null;
+        // A premium shape: its particle effect rides with the grenade, and its bounces burst in the same colour.
+        CParticleSystem? effect = null;
+        var grenadeIndex = projectile.Index;
+        if (trail is { } premium && TrailParticles.TryGetValue(premium.Shape, out var effectName))
+        {
+            effect = SpawnParticle(effectName, last, premium.Color, TrailMaxTicks * TrailTickSeconds + 1f);
+            burstOnBounce[grenadeIndex] = premium.Color;
+        }
         CounterStrikeSharp.API.Modules.Timers.Timer? timer = null;
         void Stop()
         {
             timer?.Kill();
             if (light != null && light.IsValid) light.Remove();
+            burstOnBounce.Remove(grenadeIndex);
+            // Stop emitting, then remove once the last particles have faded.
+            if (effect != null && effect.IsValid)
+            {
+                effect.AcceptInput("Stop");
+                var fading = effect;
+                AddTimer(1.5f, () => { if (fading.IsValid) fading.Remove(); });
+            }
         }
         timer = AddTimer(TrailTickSeconds, () =>
         {
@@ -82,6 +135,7 @@ public sealed partial class LegacyXCommunity
             if (!projectile.IsValid || projectile.AbsOrigin is not { } now || ticks > TrailMaxTicks) { Stop(); return; }
             var to = new Vector(now.X, now.Y, now.Z);
             if (light != null && light.IsValid) light.Teleport(to, new QAngle(0, 0, 0), new Vector(0, 0, 0));
+            if (effect != null && effect.IsValid) effect.Teleport(to, new QAngle(0, 0, 0), new Vector(0, 0, 0));
             var moved = Math.Abs(to.X - last.X) + Math.Abs(to.Y - last.Y) + Math.Abs(to.Z - last.Z);
             // Resting on the ground: a few still ticks and the trail (and light) are done.
             if (moved < 1f) { if (++still > 5) Stop(); return; }
@@ -152,9 +206,44 @@ public sealed partial class LegacyXCommunity
                 if (tick % 3 == 0) Twinkle(Scatter(to, 18f), color, 5f, 0.6f);
                 if (tick % 6 == 0) SpawnFlare(to, color, 0.9f);
                 break;
+            case "ribbon":
+            case "lightning":
+            case "pulse":
+            case "stardust":
+                // The particle effect is the trail; this thin line is what a player without the Workshop addon sees.
+                SpawnTrailSegment(from, to, color, 2f, 0.9f);
+                break;
             default:
                 SpawnTrailSegment(from, to, color, 6f, 1.4f);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// One of the Workshop addon's effects at `at`, tinted with `color` through control point 16 (legacyxxx-workshop CONTRACT.md), removed
+    /// after `seconds` whatever happens. Null when it cannot be spawned (the effect is simply missing then, nothing else changes).
+    /// </summary>
+    private CParticleSystem? SpawnParticle(string effectName, Vector at, System.Drawing.Color color, float seconds)
+    {
+        try
+        {
+            var particle = Utilities.CreateEntityByName<CParticleSystem>("info_particle_system");
+            if (particle == null || !particle.IsValid) return null;
+            particle.EffectName = effectName;
+            particle.StartActive = true;
+            particle.DataCP = ParticleColourPoint;
+            particle.DataCPValue.X = color.R;
+            particle.DataCPValue.Y = color.G;
+            particle.DataCPValue.Z = color.B;
+            particle.Teleport(at, new QAngle(0, 0, 0), new Vector(0, 0, 0));
+            particle.DispatchSpawn();
+            AddTimer(seconds, () => { if (particle.IsValid) particle.Remove(); });
+            return particle;
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"[{ModuleName}] Grenade effect {effectName} failed: {exception.Message}");
+            return null;
         }
     }
 
