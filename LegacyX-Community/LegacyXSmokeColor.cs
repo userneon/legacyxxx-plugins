@@ -40,7 +40,12 @@ public sealed partial class LegacyXCommunity
                 if (thrower == null || !thrower.IsValid) return;
                 var controller = new CCSPlayerPawn(thrower.Handle).Controller.Value;
                 if (controller == null || !controller.IsValid) return;
-                if (!smokeColors.TryGetValue(controller.SteamID, out var color)) return;
+                if (!smokeColors.TryGetValue(controller.SteamID, out var color))
+                {
+                    Console.WriteLine($"[{ModuleName}] Smoke thrown by {controller.SteamID}: no colour worn (or not loaded yet), left as it is.");
+                    return;
+                }
+                Console.WriteLine($"[{ModuleName}] Smoke thrown by {controller.SteamID}: coloured {(int)color.First.R},{(int)color.First.G},{(int)color.First.B}{(color.Second is { } two ? $" to {(int)two.R},{(int)two.G},{(int)two.B}" : "")}.");
                 var first = color.First;
                 smokeShades[projectile.Index] = first;
                 // Set it now and keep setting it while the cloud lives: the game writes its own colour back as the smoke runs out, which
