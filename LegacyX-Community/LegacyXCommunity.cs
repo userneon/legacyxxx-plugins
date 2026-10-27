@@ -175,10 +175,12 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         var steamId = player.SteamID;
         if (string.IsNullOrWhiteSpace(Config.ApiBaseUrl) || string.IsNullOrWhiteSpace(Config.PluginSecret))
         {
+            Console.WriteLine($"[{ModuleName}] The site address or the plugin secret is not set for this plugin: looks and smoke colour cannot be loaded.");
             if (welcome) Server.NextFrame(() => ScheduleWelcome(player, null));
             return;
         }
         var (status, profile) = await FetchProfileAsync(steamId.ToString());
+        Console.WriteLine($"[{ModuleName}] Profile of {steamId}: {(profile is { } got ? $"loaded, smoke colour {StringOrNull(got, "smoke_color") ?? "none"}" : $"not loaded ({status?.ToString() ?? "no answer"})")}.");
         // The worn Smoke colour rides along with the profile; a player the site does not know has none.
         if (profile is { } colored) { var hex = StringOrNull(colored, "smoke_color"); var hex2 = StringOrNull(colored, "smoke_color2"); var trail = StringOrNull(colored, "grenade_trail"); var trailFx = StringOrNull(colored, "grenade_trail_fx"); var glow = StringOrNull(colored, "grenade_light"); var flash = StringOrNull(colored, "flash_effect"); var flashFx = StringOrNull(colored, "flash_effect_fx"); var nadeSlots = ReadGrenadeSlots(colored); Server.NextFrame(() => { StoreSmokeColor(steamId, hex, hex2); StoreGrenadeLooks(steamId, trail, trailFx, glow, nadeSlots); StoreFlashEffect(steamId, flash, flashFx); }); }
         else if (status == System.Net.HttpStatusCode.NotFound) Server.NextFrame(() => { StoreSmokeColor(steamId, null); StoreGrenadeLooks(steamId, null, null, null); StoreFlashEffect(steamId, null, null); });
@@ -461,7 +463,11 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
             request.Headers.Add("x-plugin-secret", Config.PluginSecret);
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             using var response = await Http.SendAsync(request);
-            if (!response.IsSuccessStatusCode) return (response.StatusCode, null);
+            if (!response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"[{ModuleName}] Profile lookup for {steamId} answered {(int)response.StatusCode} {response.StatusCode}: looks and smoke colour were not loaded.");
+                return (response.StatusCode, null);
+            }
             using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
             return (response.StatusCode, document.RootElement.GetProperty("profile").Clone());
         }
