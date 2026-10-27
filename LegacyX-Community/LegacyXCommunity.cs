@@ -38,7 +38,7 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
 
 public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(4) };
+    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(8) };
     public required LegacyXCommunityConfig Config { get; set; }
     // SteamID64 -> LEGACY-X rank (1-18) and ranked matches, from the API; re-applied every round
     // because the game resets the scoreboard fields.
