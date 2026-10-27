@@ -31,15 +31,16 @@ public sealed partial class LegacyXCommunity
         RegisterListener<Listeners.OnEntitySpawned>(entity =>
         {
             if (entity.DesignerName != "smokegrenade_projectile") return;
+            Console.WriteLine($"[{ModuleName}] A smoke grenade appeared.");
             var projectile = new CSmokeGrenadeProjectile(entity.Handle);
             // The thrower is filled in a moment after the grenade exists.
             Server.NextFrame(() =>
             {
-                if (!projectile.IsValid) return;
+                if (!projectile.IsValid) { Console.WriteLine($"[{ModuleName}] Smoke: the grenade was gone before it could be coloured."); return; }
                 var thrower = projectile.Thrower.Value;
-                if (thrower == null || !thrower.IsValid) return;
+                if (thrower == null || !thrower.IsValid) { Console.WriteLine($"[{ModuleName}] Smoke: the thrower could not be read."); return; }
                 var controller = new CCSPlayerPawn(thrower.Handle).Controller.Value;
-                if (controller == null || !controller.IsValid) return;
+                if (controller == null || !controller.IsValid) { Console.WriteLine($"[{ModuleName}] Smoke: the thrower's player could not be read."); return; }
                 if (!smokeColors.TryGetValue(controller.SteamID, out var color))
                 {
                     Console.WriteLine($"[{ModuleName}] Smoke thrown by {controller.SteamID}: no colour worn (or not loaded yet), left as it is.");
