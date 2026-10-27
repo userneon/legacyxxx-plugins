@@ -266,6 +266,8 @@ public partial class MainWindow : Window
             {
                 context.Status = "Looking at Steam accounts…";
                 SteamScanner.Scan(context);
+                context.Status = "Looking for FACEIT and Vanguard…";
+                AntiCheatScanner.Scan(context);
                 context.Status = "Looking at running programs…";
                 ProcessScanner.Scan(context);
                 context.Status = "Looking at what ran recently…";
@@ -298,6 +300,7 @@ public partial class MainWindow : Window
             SteamAccounts = context.SteamAccounts.ToList(),
             Cs2 = context.Cs2,
             Hwid = context.Hwid,
+            AntiCheats = context.AntiCheats.ToList(),
             Facts = context.TopFacts(500),
             FilesScanned = context.FilesScanned,
             DurationSeconds = (int)_clock.Elapsed.TotalSeconds,

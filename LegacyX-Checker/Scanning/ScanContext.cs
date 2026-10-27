@@ -18,6 +18,7 @@ public sealed class ScanContext
     public List<SteamAccount> SteamAccounts { get; } = new();
     public Cs2Info? Cs2 { get; set; }
     public HwidInfo? Hwid { get; set; }
+    public List<AntiCheatInfo> AntiCheats { get; } = new();
     public int FactCount { get { lock (_facts) return _facts.Count; } }
     public long FilesScanned => Interlocked.Read(ref _files);
     public int Detections { get { lock (_lock) return _findings.Count(f => f.Confidence == Finding.Detection); } }

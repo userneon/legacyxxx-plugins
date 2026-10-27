@@ -52,6 +52,15 @@ public sealed class ProgramFact
     [JsonIgnore] public int Weight => Family.Count * 6 + Offsets.Count * 3 + Game.Count * 2 + Apis.Count;
 }
 
+/// <summary>One kernel anti-cheat and whether it is on this PC: installed, how it loads (boot, automatic, manual, disabled) and running now.</summary>
+public sealed class AntiCheatInfo
+{
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("installed")] public bool Installed { get; set; }
+    [JsonPropertyName("load"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Load { get; set; }
+    [JsonPropertyName("running")] public bool Running { get; set; }
+}
+
 public sealed class HwidPart
 {
     [JsonPropertyName("kind")] public string Kind { get; set; } = "";
@@ -72,6 +81,7 @@ public sealed class CheckReport
     [JsonPropertyName("steamAccounts")] public List<SteamAccount> SteamAccounts { get; set; } = new();
     [JsonPropertyName("cs2")] public Cs2Info? Cs2 { get; set; }
     [JsonPropertyName("hwid")] public HwidInfo? Hwid { get; set; }
+    [JsonPropertyName("antiCheats")] public List<AntiCheatInfo> AntiCheats { get; set; } = new();
     [JsonPropertyName("facts")] public List<ProgramFact> Facts { get; set; } = new();
     [JsonPropertyName("filesScanned")] public long FilesScanned { get; set; }
     [JsonPropertyName("durationSeconds")] public int DurationSeconds { get; set; }
