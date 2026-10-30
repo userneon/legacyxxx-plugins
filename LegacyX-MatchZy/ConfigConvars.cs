@@ -30,6 +30,7 @@ namespace MatchZy
 
         public FakeConVar<string> matchStartMessage = new("matchzy_match_start_message", "Message to show when the match starts. Use $$$ to break message into multiple lines. Set to \"\" to disable.", "");
 
+        public FakeConVar<int> legacyXMinPlayersPerTeam = new("legacyx_min_players_per_team", "LEGACY-X ready start: a lobby starts once each team has at least this many players (2 to 5) and everyone seated is ready, so 3v5 or 2v4 can play and count for rank (RANK-SYSTEM.md section 3). Set 5 to require a full 5v5. Default: 2", 2);
         public FakeConVar<bool> legacyXExactFiveVFive = new("legacyx_exact_5v5", "LEGACY-X MatchZy starts only with exactly 5 CT vs 5 T and every active player ready. Default: true", true);
         public FakeConVar<bool> legacyXRandomMapAfterMatch = new("legacyx_random_map_after_match", "LEGACY-X changes to a random different map after a series ends. Default: true", true);
         public FakeConVar<string> legacyXMapPool = new("legacyx_map_pool", "Comma-separated installed maps used for random non-repeat rotation", "de_ancient,de_anubis,de_dust2,de_inferno,de_mirage,de_nuke,de_overpass,de_vertigo");

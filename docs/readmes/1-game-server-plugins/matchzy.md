@@ -88,6 +88,7 @@ Production preset: `cfg/MatchZy/config.cfg`.
 
 ```text
 legacyx_exact_5v5 true
+legacyx_min_players_per_team 2
 legacyx_random_map_after_match true
 legacyx_map_pool "de_ancient,de_anubis,de_dust2,de_inferno,de_mirage,de_nuke,de_overpass,de_vertigo"
 legacyx_map_transition_delay 3.0

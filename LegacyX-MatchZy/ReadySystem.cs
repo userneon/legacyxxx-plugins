@@ -17,15 +17,18 @@ public partial class MatchZy
 
     public bool IsTeamsReady()
     {
-        // LEGACY-X competitive servers must never start 6v5, 5v6, 6v6 or any other imbalance.
-        // MatchZy's upstream "at least N players" behavior is intentionally replaced by exact 5v5.
+        // LEGACY-X competitive servers never start with more than 5 a side. Ranked counts 2 to 5 humans a side (RANK-SYSTEM.md section 3),
+        // so a lobby needs only legacyx_min_players_per_team (default 2) on each side, not a full 5v5.
         if (legacyXExactFiveVFive.Value)
         {
             (int ctPlayers, int ctReady) = GetTeamPlayerCount((int)CsTeam.CounterTerrorist, false);
             (int tPlayers, int tReady) = GetTeamPlayerCount((int)CsTeam.Terrorist, false);
 
-            return ctPlayers == matchConfig.PlayersPerTeam &&
-                   tPlayers == matchConfig.PlayersPerTeam &&
+            // Never more than 5 a side; a smaller lobby (3v5, 2v4 ...) may start when both sides have the minimum and all are ready.
+            var most = matchConfig.PlayersPerTeam;
+            var least = Math.Clamp(legacyXMinPlayersPerTeam.Value, 1, most);
+            return ctPlayers >= least && ctPlayers <= most &&
+                   tPlayers >= least && tPlayers <= most &&
                    ctReady == ctPlayers &&
                    tReady == tPlayers;
         }
