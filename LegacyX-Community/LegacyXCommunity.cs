@@ -100,6 +100,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         RegisterDiscordAd();
         RegisterMoneyLines();
         RegisterRadioLines();
+        RegisterLagMonitor();
         // The game's own "left the game" line is not shown (owner request 2026-10-24); this one wears the LEGACY-X prefix. It must be a
         // Pre hook: DontBroadcast set after the event went out (Post) does nothing, so both lines showed.
         RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
