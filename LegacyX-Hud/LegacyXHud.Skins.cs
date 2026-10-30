@@ -44,6 +44,7 @@ public sealed partial class LegacyXHud
         public Tile? Picked;                               // the tile that was clicked
         public List<SkinType> Types = new();               // knife / glove types
         public string? TypeClass;                          // the picked knife / glove type
+        public string ShownKey = "";                         // what the list shows now: when it changes the list rises in again
         public int LoadId;                                 // which asking of the list is current: an answer of an older one is dropped
         public int Total;
         public bool Loading;                               // the skins of the page were asked for and have not come yet: the count is unknown, not 0
@@ -282,6 +283,7 @@ public sealed partial class LegacyXHud
                 .Where(t => t.WeaponClass.Length > 0).Take(SkinTypeSlots).ToList();
             SkinsStatus(menu!, p, "");
             SkinsRender(menu!, p, current);
+            SkinsPop(menu!, p);
         });
     }
 
@@ -325,9 +327,11 @@ public sealed partial class LegacyXHud
                 var at = page.FindIndex(i => i.Id == worn.ItemId);
                 if (at > 0) { var first = page[at]; page.RemoveAt(at); page.Insert(0, first); }
             }
+            var firstPage = current.Items.Count == 0;
             current.Items.AddRange(page.Take(SkinItemSlots - current.Items.Count));
             SkinsStatus(menu!, p, "");
             SkinsRender(menu!, p, current);
+            if (firstPage && page.Count > 0) SkinsPop(menu!, p);
             // The rest of the list follows without a click, so the player only scrolls.
             if (page.Count > 0 && current.Items.Count < current.Total && current.Items.Count < SkinItemSlots) SkinsLoadItemPage(p, current, tile, weaponClass, load);
         });
@@ -509,8 +513,25 @@ public sealed partial class LegacyXHud
         };
     }
 
+    /// <summary>The list fades and rises in (a transition of the .out class in the menu's stylesheet): the class is set at once and taken off a moment later.</summary>
+    private void SkinsPop(PanelHandle panel, CCSPlayerController player)
+    {
+        Sc(panel, player, "sk_scroll", "out", true);
+        var playerSlot = player.Slot;
+        AddTimer(0.06f, () =>
+        {
+            if (Utilities.GetPlayerFromSlot(playerSlot) is { IsValid: true } p && menu is not null) Sc(menu, p, "sk_scroll", "out", false);
+        });
+    }
+
     private void SkinsRender(PanelHandle panel, CCSPlayerController player, SkinView view)
     {
+        var shownKey = $"{view.Mode}:{view.Cat}:{view.Picked?.Slot}:{PickedClass(view)}:{view.Team}";
+        if (shownKey != view.ShownKey)
+        {
+            view.ShownKey = shownKey;
+            SkinsPop(panel, player);
+        }
         Sc(panel, player, "sk_team_t", "active", view.Team == "t");
         Sc(panel, player, "sk_team_ct", "active", view.Team == "ct");
         for (var i = 0; i < CategoryNames.Length; i++) Sc(panel, player, $"sk_cat{i}", "active", i == view.Cat);
