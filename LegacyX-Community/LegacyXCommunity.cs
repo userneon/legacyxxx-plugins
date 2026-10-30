@@ -34,6 +34,7 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public int DiscordAdMinutes { get; set; } = 10;
     /// <summary>The game's money lines in chat: "prefix" (one short LEGACY-X line), "hide" or "game" (left as they are); LEGACYX_&lt;port&gt;_COMMUNITY_MONEY_LINES per server.</summary>
     public string MoneyLines { get; set; } = "prefix";
+    public string RadioLines { get; set; } = "prefix";
 }
 
 public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyXCommunityConfig>
@@ -81,6 +82,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         config.SmokeGlow = environment.GetModuleBoolean("COMMUNITY", "SMOKEGLOW", true);
         config.DiscordAdMinutes = environment.GetModuleInt("COMMUNITY", "DISCORD_AD_MINUTES", config.DiscordAdMinutes, 0, 120);
         config.MoneyLines = environment.GetModule("COMMUNITY", "MONEY_LINES", config.MoneyLines).Trim().ToLowerInvariant();
+        config.RadioLines = environment.GetModule("COMMUNITY", "RADIO_LINES", config.RadioLines).Trim().ToLowerInvariant();
         scoreboardRankType = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_RANK_TYPE", 12, 0, 12);
         scoreboardIconOffset = environment.GetModuleInt("COMMUNITY", "SCOREBOARD_ICON_OFFSET", 18, 0, 18);
         Config = config;
@@ -97,6 +99,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         RegisterFlashEffects();
         RegisterDiscordAd();
         RegisterMoneyLines();
+        RegisterRadioLines();
         // The game's own "left the game" line is not shown (owner request 2026-10-24); this one wears the LEGACY-X prefix. It must be a
         // Pre hook: DontBroadcast set after the event went out (Post) does nothing, so both lines showed.
         RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>

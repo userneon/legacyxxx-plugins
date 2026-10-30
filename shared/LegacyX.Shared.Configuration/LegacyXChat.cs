@@ -65,6 +65,16 @@ public static class LegacyXChat
     }
 
     /// <summary>
+    /// A radio call in the same look as chat (owner request 2026-10-30): "RADIO | Name: Smoke!", the name in its team's colour. The game's
+    /// own "Name (RADIO): Smoke!" line is replaced by this one.
+    /// </summary>
+    public static string Radio(string name, string text, int teamNum = 0)
+    {
+        static string Clean(string value) => new string((value ?? string.Empty).Where(c => c >= ' ' && c != '\u007F').ToArray()).Trim();
+        return Colorize($"{{grey}}RADIO {{grey}}| {TeamColor(teamNum)}{Clean(name)}{{grey}}: {{white}}{Clean(text)}");
+    }
+
+    /// <summary>
     /// True for a typed plugin command: a "!", "/" or "." and a letter, then a word of letters, digits or "_", then the end or a space
     /// (".r", "!admin", "/rs", ".map de_dust2"). "...gg", "!!!" and "." alone are ordinary chat.
     /// </summary>
