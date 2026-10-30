@@ -619,6 +619,7 @@ public sealed partial class LegacyXHud
             Sv(panel, player, $"sk_item{i}_rar", item.RarityName);
             Ss(panel, player, $"sk_item{i}_ln", "rc", item.Rarity is { } rarity ? "rc-" + rarity : null);
             Ss(panel, player, $"sk_item{i}_glow", "rg", item.Rarity is { } glow ? "rg-" + glow : null);
+            Ss(panel, player, $"sk_item{i}", "rb", item.Rarity is { } edge ? "rb-" + edge : null);
             Ss(panel, player, $"sk_item{i}_pic", "sp", SkinPicture(tile!.Slot, model, item.PaintId, item.Defindex));
             // "Saved": the pick the player already has on this gun / type / agent.
             var saved = eq is not null && (agent ? eq.Defindex is not null && eq.Defindex == item.Defindex
