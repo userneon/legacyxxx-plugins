@@ -300,7 +300,7 @@ namespace MatchZy
             // This is to reload the map once it is over so that all flags are reset accordingly
             Server.ExecuteCommand("mp_match_end_restart true");
 
-            PrintToAllChat($"{ChatColors.Green}Live.{ChatColors.Grey} Match {ChatColors.White}#{LegacyXDisplayMatchNumber()}{ChatColors.Grey}. Good luck.");
+            PrintToAllChat(matchCoreNumber.HasValue ? $"{ChatColors.Green}Live.{ChatColors.Grey} Match {ChatColors.White}#{matchCoreNumber.Value}{ChatColors.Grey}. Good luck." : $"{ChatColors.Green}Live.{ChatColors.Grey} Good luck.");
 
             var goingLiveEvent = new GoingLiveEvent
             {

@@ -41,6 +41,8 @@ public partial class MatchZy
     private readonly Dictionary<string, CoreSnapshot> matchCoreSnapshots = new();
     private readonly Dictionary<string, CounterStrikeSharp.API.Modules.Timers.Timer> matchCoreFillTimers = new();
     private Guid? matchCoreId;
+    // The site's number for this match, once match_created is accepted.
+    private long? matchCoreNumber;
     private int matchCoreRevision;
     private int matchCoreEventSequence;
     private bool matchCoreLiveQueued;
@@ -117,6 +119,7 @@ public partial class MatchZy
         }
 
         matchCoreCreateFailed = false;
+        matchCoreNumber = null;
         matchCoreId = Guid.NewGuid();
         matchCoreRevision = 0;
         matchCoreEventSequence = 0;
@@ -158,6 +161,9 @@ public partial class MatchZy
             map_name = Server.MapName,
             map_number = matchConfig.CurrentMapNumber,
             participants,
+        }, result =>
+        {
+            if (result.TryGetProperty("match_number", out var number) && number.TryGetInt64(out var parsed)) matchCoreNumber = parsed;
         });
     }
 

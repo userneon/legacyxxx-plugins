@@ -10,16 +10,14 @@ public partial class MatchZy
     private CounterStrikeSharp.API.Modules.Timers.Timer? legacyXMatchOverlayStopTimer;
     private bool legacyXPostMatchSummarySent;
 
-    private string LegacyXDisplayMatchNumber()
-    {
-        if (matchCoreId.HasValue) return matchCoreId.Value.ToString("N")[..8].ToUpperInvariant();
-        return liveMatchId > 0 ? liveMatchId.ToString() : "PUG";
-    }
+    /// <summary>" #12": the match's number from the site (1, 2, 3 ... over real matches, the same on every server); empty while it is not known, so a
+    /// match the site did not register shows no number at all instead of a made-up one.</summary>
+    private string LegacyXMatchLabel() => matchCoreNumber.HasValue ? $" #{matchCoreNumber.Value}" : "";
 
     private void ShowLegacyXWelcome(CCSPlayerController player)
     {
         if (!legacyXQuietOverlayEnabled.Value || !IsPlayerValid(player) || player.IsBot || player.IsHLTV) return;
-        player.PrintToCenter($"LEGACY-X\n5v5 · Match #{LegacyXDisplayMatchNumber()}");
+        player.PrintToCenter($"LEGACY-X\n5v5 · Match{LegacyXMatchLabel()}");
     }
 
     private void StartLegacyXMatchOverlay()
@@ -39,7 +37,7 @@ public partial class MatchZy
             KillLegacyXMatchOverlay();
             return;
         }
-        var overlay = $"LEGACY-X · Match #{LegacyXDisplayMatchNumber()} · Live";
+        var overlay = $"LEGACY-X · Match{LegacyXMatchLabel()} · Live";
         foreach (var player in Utilities.GetPlayers().Where(player => IsPlayerValid(player) && !player.IsBot && !player.IsHLTV))
         {
             player.PrintToCenter(overlay);
