@@ -521,6 +521,7 @@ public sealed partial class LegacyXHud
 
     private void RenderLoadout(PanelHandle panel, CCSPlayerController player, SkinView view)
     {
+        Ss(panel, player, "sk_head_pic", "hp", null);
         var first = view.Cat < CategoryAgents ? ColumnStart[view.Cat] : -1;
         var last = view.Cat < CategoryAgents ? first + ColumnSize[view.Cat] : -1;
         Sv(panel, player, "sk_title", CategoryNames[view.Cat]);
@@ -546,6 +547,7 @@ public sealed partial class LegacyXHud
 
     private void RenderTypes(PanelHandle panel, CCSPlayerController player, SkinView view)
     {
+        Ss(panel, player, "sk_head_pic", "hp", null);
         var tile = view.Picked;
         Sv(panel, player, "sk_title", tile?.Slot == "glove" ? "Gloves" : "Knives");
         Sv(panel, player, "sk_sub", tile?.Eq is { } eq ? $"Equipped: {eq.WeaponClass} | {eq.Skin}" : "Pick a type, then a skin.");
@@ -573,6 +575,7 @@ public sealed partial class LegacyXHud
         Sv(panel, player, "sk_sub", view.Loading ? "" : agent ? $"{view.Total} agents" : $"{view.Total} skins");   // no "0 skins" while the page is still on its way
         Sc(panel, player, "sk_remove", "hidden", tile?.Eq is null);
         var model = tile is null ? null : tile.Slot == "weapon" ? tile.Model : SkinModel(view.TypeClass);
+        Ss(panel, player, "sk_head_pic", "hp", HeadPicture(tile, model, view.Team));
         var eq = tile?.Eq;
         for (var i = 0; i < SkinItemSlots; i++)
         {
@@ -647,5 +650,15 @@ public sealed partial class LegacyXHud
     }
 
     /// <summary>The class the current skin list was asked for: the knife / glove type, the gun, or the team of the agents.</summary>
+    /// <summary>The grey picture at the right end of the title banner: the gun, knife, glove or agent of the list.</summary>
+    private static string? HeadPicture(Tile? tile, string? model, string team) => tile?.Slot switch
+    {
+        "weapon" when model is not null => "gn-" + model,
+        "knife" when model is not null => "kn-" + model,
+        "glove" when model is not null => "gl-" + model,
+        "agent" => "agn-" + team,
+        _ => null,
+    };
+
     private static string PickedClass(SkinView view) => view.TypeClass ?? view.Picked?.WeaponClass ?? "";
 }
