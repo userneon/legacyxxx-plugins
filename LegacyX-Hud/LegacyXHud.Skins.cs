@@ -539,8 +539,9 @@ public sealed partial class LegacyXHud
         Sc(panel, player, "sk_view_types", "hidden", view.Mode != "types");
         Sc(panel, player, "sk_view_items", "hidden", view.Mode != "items");
         Sc(panel, player, "sk_actions", "hidden", view.Mode != "items");
-        // Back sits left of the title: in the types list and in a pick's skins (an agent list has nowhere to go back to).
-        Sc(panel, player, "sk_back", "hidden", view.Mode == "loadout" || (view.Mode == "items" && view.Picked?.Slot == "agent"));
+        // Back sits left of the title only inside a pick's skins. The category tab opens the types list (and the agents' skins) directly,
+        // so those have nowhere to go back to.
+        Sc(panel, player, "sk_back", "hidden", view.Mode != "items" || view.Picked?.Slot == "agent");
         if (view.Mode == "loadout") RenderLoadout(panel, player, view);
         else if (view.Mode == "types") RenderTypes(panel, player, view);
         else RenderItems(panel, player, view);
