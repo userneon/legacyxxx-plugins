@@ -49,6 +49,7 @@ public partial class MatchZy
     private HookResult OnKnifeMenuKey(CCSPlayerController? player, bool stay)
     {
         if (!isSideSelectionPhase || knifeMenuTimer == null || player == null || !player.IsValid || player.IsBot || player.TeamNum != knifeWinner) return HookResult.Continue;
+        Log($"[KnifeMenu] {(stay ? "1 (stay)" : "2 (switch)")} was pressed by slot {player.Slot}.");
         if (stay) OnTeamStay(player, null);
         else OnTeamSwitch(player, null);
         return HookResult.Stop;
@@ -59,10 +60,10 @@ public partial class MatchZy
         knifeMenuEndsAt = Server.CurrentTime + KnifeVoteSeconds;
         knifeMenuTimer?.Kill();
         knifeMenuTimer = AddTimer(0.5f, DrawLegacyXKnifeMenu, TimerFlags.REPEAT);
-        if (!knifeHudOn)
-            foreach (var player in Utilities.GetPlayers())
-                if (IsPlayerValid(player) && !player.IsBot && !player.IsHLTV && player.TeamNum == knifeWinner)
-                    SendKnifeMenu(player, open: true);
+        // The menu message is what makes the 1 and 2 keys reach the server (menuselect), so it is sent with the card too; then its text is blank.
+        foreach (var player in Utilities.GetPlayers())
+            if (IsPlayerValid(player) && !player.IsBot && !player.IsHLTV && player.TeamNum == knifeWinner)
+                SendKnifeMenu(player, open: true);
         knifeMenuOnScreen = true;
         Log($"[KnifeMenu] The knife vote starts for team {knifeWinner}: {(knifeHudOn ? "the card of the HUD plugin (lx_knife_hud)" : "the centre text and the left menu")}.");
         DrawLegacyXKnifeMenu();
@@ -78,7 +79,7 @@ public partial class MatchZy
         {
             if (!IsPlayerValid(player) || player.IsBot || player.IsHLTV) continue;
             if (knifeHudOn) Server.ExecuteCommand($"lx_knife_hud {player.Slot} off");
-            else SendKnifeMenu(player, open: false);
+            SendKnifeMenu(player, open: false);
         }
     }
 
@@ -88,7 +89,7 @@ public partial class MatchZy
         if (knifeMenuMessage == "off") return;
         try
         {
-            var text = open ? "You won the knife round\n->1. Stay on your side\n->2. Switch sides\n" : "";
+            var text = !open ? "" : knifeHudOn ? " " : "You won the knife round\n->1. Stay on your side\n->2. Switch sides\n";
             var slots = open ? 0b11 : 0;
             var seconds = open ? (int)KnifeVoteSeconds : 0;
             UserMessage message;
