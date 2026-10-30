@@ -27,6 +27,18 @@ public sealed partial class LegacyXCommunity
         try
         {
             var token = message.ReadString("param", 0);
+            // "<name> attacked a teammate" (the game's warning line, only utility can hurt a teammate now): the same words in the LEGACY-X look.
+            if (!string.IsNullOrEmpty(token) && (token.Contains("teammate_attack", StringComparison.OrdinalIgnoreCase) || token.Contains("attacked_teammate", StringComparison.OrdinalIgnoreCase)))
+            {
+                if (string.Equals(Config.MoneyLines, "game", StringComparison.OrdinalIgnoreCase)) return HookResult.Continue;
+                var who = message.GetRepeatedFieldCount("param") > 1 ? CleanName(message.ReadString("param", 1)) : "";
+                var warning = LegacyXChat.System(who.Length > 0 ? $"{{white}}{who}{{grey}} hurt a teammate." : "A teammate was hurt.");
+                foreach (var player in message.Recipients)
+                {
+                    if (player is CCSPlayerController controller && controller.IsValid && !controller.IsBot) controller.PrintToChat(warning);
+                }
+                return HookResult.Handled;
+            }
             var label = MoneyLabel(token);
             if (label == null)
             {
