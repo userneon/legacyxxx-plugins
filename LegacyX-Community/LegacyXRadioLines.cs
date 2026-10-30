@@ -87,8 +87,7 @@ public sealed partial class LegacyXCommunity
                 return HookResult.Continue;
             }
             if (string.Equals(Config.RadioLines, "hide", StringComparison.OrdinalIgnoreCase)) return HookResult.Handled;
-            var thrower = Utilities.GetPlayerFromIndex(message.ReadInt("client"));
-            var name = parts.Count > 0 && !parts[0].StartsWith('#') ? parts[0] : thrower?.PlayerName ?? "";
+            var (name, thrower) = ReadSlotName(parts.Count > 0 ? parts[0] : "", Utilities.GetPlayerFromIndex(message.ReadInt("client")));
             var line = LegacyXChat.Radio(name, call.Text, thrower?.TeamNum ?? 0);
             foreach (var player in message.Recipients)
             {
@@ -133,8 +132,7 @@ public sealed partial class LegacyXCommunity
                 return HookResult.Continue;
             }
             if (string.Equals(Config.RadioLines, "hide", StringComparison.OrdinalIgnoreCase)) return HookResult.Handled;
-            var thrower = Utilities.GetPlayerFromIndex(message.ReadInt("entityindex"));
-            var who = parts[0].Length > 0 && !parts[0].StartsWith('#') ? parts[0] : thrower?.PlayerName ?? "";
+            var (who, thrower) = ReadSlotName(parts[0], Utilities.GetPlayerFromIndex(message.ReadInt("entityindex")));
             var line = LegacyXChat.Radio(who, call.Text, thrower?.TeamNum ?? 0);
             foreach (var player in message.Recipients)
             {
@@ -147,5 +145,20 @@ public sealed partial class LegacyXCommunity
             if (radioSeen.Add("error " + exception.Message)) Console.WriteLine($"[{ModuleName}] Radio line hook error: {exception.Message}");
             return HookResult.Continue;
         }
+    }
+
+    /// <summary>A name in a game message is often "#SLOTNAME[2]777" (the slot, then the name): the name, and the player of that slot when it is known.</summary>
+    internal static (string Name, CCSPlayerController? Player) ReadSlotName(string? raw, CCSPlayerController? fallback)
+    {
+        raw ??= "";
+        var match = System.Text.RegularExpressions.Regex.Match(raw, @"^#SLOTNAME\[(\d+)\](.*)$");
+        if (match.Success)
+        {
+            var player = int.TryParse(match.Groups[1].Value, out var slot) && Utilities.GetPlayerFromSlot(slot) is { IsValid: true } found ? found : fallback;
+            var name = match.Groups[2].Value;
+            return (name.Length > 0 ? name : player?.PlayerName ?? "", player ?? fallback);
+        }
+        if (raw.Length > 0 && !raw.StartsWith('#')) return (raw, fallback);
+        return (fallback?.PlayerName ?? "", fallback);
     }
 }

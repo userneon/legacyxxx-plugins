@@ -31,7 +31,7 @@ public sealed partial class LegacyXCommunity
             if (!string.IsNullOrEmpty(token) && (token.Contains("teammate_attack", StringComparison.OrdinalIgnoreCase) || token.Contains("attacked_teammate", StringComparison.OrdinalIgnoreCase)))
             {
                 if (string.Equals(Config.MoneyLines, "game", StringComparison.OrdinalIgnoreCase)) return HookResult.Continue;
-                var who = message.GetRepeatedFieldCount("param") > 1 ? CleanName(message.ReadString("param", 1)) : "";
+                var who = message.GetRepeatedFieldCount("param") > 1 ? CleanName(ReadSlotName(message.ReadString("param", 1), null).Name) : "";
                 var warning = LegacyXChat.System(who.Length > 0 ? $"{{white}}{who}{{grey}} hurt a teammate." : "A teammate was hurt.");
                 foreach (var player in message.Recipients)
                 {
