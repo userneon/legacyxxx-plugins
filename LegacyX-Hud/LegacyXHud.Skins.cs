@@ -420,7 +420,11 @@ public sealed partial class LegacyXHud
     {
         if (slot == "agent") return defindex is { } id ? $"ag-{id}" : null;
         if (model is null) return null;
-        if (paintId is { } paint) return $"sp-{model}-{paint}";
+        if (paintId is { } paint)
+        {
+            if (SkinPictureKeys.Contains($"{model}-{paint}")) return $"sp-{model}-{paint}";
+            return slot == "weapon" ? "gn-" + model : null;   // a skin the game has no picture of shows as the plain grey gun, never an empty card
+        }
         return slot == "knife" ? $"sp-{model}-0" : null;   // a knife without a paint is the plain one
     }
 
