@@ -82,8 +82,18 @@ rmSync(packageRoot, { recursive: true, force: true })
 rmSync(stageRoot, { recursive: true, force: true })
 mkdirSync(cssRoot, { recursive: true })
 
+// The skin menu (LegacyX-Hud) targets net10.0, the rest net8.0. A machine with only the .NET 8 SDK cannot build it: the package then goes
+// without the menu (and says so) instead of failing the whole deploy. Install the .NET 10 SDK, or pass a package built elsewhere, to get it.
+const NET10_ONLY = new Set(['LegacyX-Hud'])
+let hasNet10 = false
+try { hasNet10 = /^10\./m.test(execFileSync('dotnet', ['--list-sdks'], { encoding: 'utf8' })) } catch { /* no dotnet: the build below fails by itself */ }
+
 const report = []
 for (const plugin of PLUGINS) {
+  if (NET10_ONLY.has(plugin) && !hasNet10) {
+    console.warn(`!! ${plugin} is skipped: it needs the .NET 10 SDK (this machine has only older ones). The skin menu (!ws) will not be in this package.`)
+    continue
+  }
   const stage = join(stageRoot, plugin)
   execFileSync('dotnet', ['publish', join(root, plugin, `${plugin}.csproj`), '-c', 'Release', '-o', stage, '--nologo', '-v', 'q'], { stdio: 'inherit' })
   const provided = counterStrikeSharpProvided(plugin)
