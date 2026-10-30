@@ -1408,6 +1408,29 @@ LEGACYX_27015_SERVER_NAME=LEGACY-X | MATCH #1     # port бүрд тусдаа �
 LEGACYX_PLUGIN_TOKEN=<token>            # create-game-server.mjs үүсгэнэ
 ```
 
+**Богино нэрүүд (2026-10-30).** `LEGACYX_` гэж бичих хэрэггүй: `LX_` хангалттай, мөн хамгийн их бичдэг долоо нь богино нэртэй.
+Хуучин урт нэрүүд хэвээр ажиллана, хамт хэрэглэж болно.
+
+| Богино | Урт |
+|---|---|
+| `LX_MODE` | `LEGACYX_SERVER_MODE` |
+| `LX_NAME` | `LEGACYX_SERVER_NAME` |
+| `LX_HOST` | `LEGACYX_SERVER_HOST` |
+| `LX_ID` | `LEGACYX_SERVER_ID` |
+| `LX_ADDRESS` | `LEGACYX_SERVER_ADDRESS` |
+| `LX_API` | `LEGACYX_API_BASE_URL` |
+| `LX_TOKEN` | `LEGACYX_PLUGIN_TOKEN` |
+
+```dotenv
+LX_API=https://api.legacyx.cc
+LX_HOST=<public IP эсвэл домэйн>
+LX_MODE=competitive_5v5
+LX_27016_MODE=fun                  # port 27016 дээр л fun
+LX_27015_NAME=LEGACY-X | MATCH #1
+LX_TOKEN=<token>
+LX_COMMUNITY_RADIO_LINES=hide      # бусад тохиргоо LX_ + модулийн нэр + тохиргоо
+```
+
 Port-ийн дугаартай хувьсагч (`LEGACYX_27016_SERVER_MODE=fun`) тэр server дээр нийтийн утгыг давна. Нэр, mode нь вэбийн
 Play хуудас, home дэх тоонд харагдана. Өөрчилсний дараа `sudo systemctl restart cs2@<port>`.
 

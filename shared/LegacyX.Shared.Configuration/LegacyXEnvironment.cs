@@ -33,14 +33,50 @@ public sealed class LegacyXEnvironment
     /// <summary>This server process's game port, when it could be found.</summary>
     public int? InstancePort { get; }
 
+    /// <summary>The most written settings have a short name too (owner request 2026-10-30): <c>LX_27016_MODE=fun</c> means <c>LEGACYX_27016_SERVER_MODE=fun</c>.</summary>
+    private static readonly Dictionary<string, string> ShortNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["SERVER_MODE"] = "MODE", ["SERVER_NAME"] = "NAME", ["SERVER_HOST"] = "HOST", ["SERVER_ID"] = "ID", ["SERVER_ADDRESS"] = "ADDRESS",
+        ["API_BASE_URL"] = "API", ["PLUGIN_TOKEN"] = "TOKEN",
+    };
+
+    /// <summary>
+    /// A setting under every name it may be written with, the full name first: <c>LEGACYX_SERVER_MODE</c>, then <c>LX_SERVER_MODE</c>, then
+    /// the short <c>LX_MODE</c> (and <c>LEGACYX_MODE</c>). Anything already written with the full name keeps working.
+    /// </summary>
+    private static IEnumerable<string> Names(string key)
+    {
+        yield return key;
+        if (!key.StartsWith("LEGACYX_", StringComparison.OrdinalIgnoreCase)) yield break;
+        var rest = key[8..];
+        yield return "LX_" + rest;
+        if (ShortNames.TryGetValue(rest, out var shortName))
+        {
+            yield return "LX_" + shortName;
+            yield return "LEGACYX_" + shortName;
+        }
+    }
+
     public string Get(string key, string fallback = "")
     {
-        var processValue = Environment.GetEnvironmentVariable(key);
-        if (!string.IsNullOrWhiteSpace(processValue)) return processValue.Trim();
-        if (InstancePort is { } port && key.StartsWith("LEGACYX_", StringComparison.OrdinalIgnoreCase)
-            && _values.TryGetValue($"LEGACYX_{port}_{key[8..]}", out var instanceValue) && instanceValue.Length > 0)
-            return instanceValue;
-        if (_values.TryGetValue(key, out var fileValue) && fileValue.Length > 0) return fileValue;
+        foreach (var name in Names(key))
+        {
+            var processValue = Environment.GetEnvironmentVariable(name);
+            if (!string.IsNullOrWhiteSpace(processValue)) return processValue.Trim();
+        }
+        // This server's own line (with its port) beats the shared one, whichever name it is written with.
+        if (InstancePort is { } port && key.StartsWith("LEGACYX_", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var name in Names(key))
+            {
+                var tail = name.StartsWith("LEGACYX_", StringComparison.OrdinalIgnoreCase) ? name[8..] : name.StartsWith("LX_", StringComparison.OrdinalIgnoreCase) ? name[3..] : null;
+                if (tail == null) continue;
+                foreach (var head in new[] { "LEGACYX_", "LX_" })
+                    if (_values.TryGetValue($"{head}{port}_{tail}", out var instanceValue) && instanceValue.Length > 0) return instanceValue;
+            }
+        }
+        foreach (var name in Names(key))
+            if (_values.TryGetValue(name, out var fileValue) && fileValue.Length > 0) return fileValue;
         return PortDefault(key) ?? fallback;
     }
 

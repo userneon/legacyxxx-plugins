@@ -37,6 +37,25 @@ public class EnvironmentTests
     }
 
     [Fact]
+    public void Short_names_work_and_the_full_names_still_do()
+    {
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["LX_MODE"] = "competitive_5v5", ["LX_27016_MODE"] = "fun", ["LX_API"] = "https://api.example", ["LX_TOKEN"] = "short-token",
+            ["LX_COMMUNITY_RADIO_LINES"] = "hide", ["LEGACYX_SERVER_NAME"] = "Old style",
+        };
+        var fun = new LegacyXEnvironment(values, ".env", 27016);
+        var main = new LegacyXEnvironment(values, ".env", 27015);
+
+        Assert.Equal("fun", fun.Get("LEGACYX_SERVER_MODE"));
+        Assert.Equal("competitive_5v5", main.Get("LEGACYX_SERVER_MODE"));
+        Assert.Equal("https://api.example", main.Get("LEGACYX_API_BASE_URL"));
+        Assert.Equal("short-token", main.GetModule("MATCHZY", "PLUGIN_TOKEN"));
+        Assert.Equal("hide", main.GetModule("COMMUNITY", "RADIO_LINES"));
+        Assert.Equal("Old style", main.Get("LEGACYX_SERVER_NAME"));
+    }
+
+    [Fact]
     public void An_explicit_value_still_wins_and_no_port_means_no_guessing()
     {
         var explicitId = new Dictionary<string, string>(SharedEnv, StringComparer.OrdinalIgnoreCase) { ["LEGACYX_SERVER_ID"] = "main" };
