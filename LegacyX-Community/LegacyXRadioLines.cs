@@ -23,6 +23,7 @@ public sealed partial class LegacyXCommunity
         ("Molotov_in_the_hole", "Molotov!"), ("Decoy_in_the_hole", "Decoy!"), ("Incendiary_in_the_hole", "Incendiary!"),
     };
 
+    private const int RadioMessageId = 322; // the radio call of this game version (CS_UM_RadioText as the game numbers it)
     private const int SayText2Id = 118; // UM_SayText2: where CS2 sends the radio call line ("#Game_radio_location": name, place, text).
 
     private void RegisterRadioLines()
@@ -53,29 +54,8 @@ public sealed partial class LegacyXCommunity
             Console.WriteLine($"[{ModuleName}] Radio lines: debug, every kind of message is written to the log once.");
             return;
         }
-        // The game's own grenade call is switched off (sv_ignoregrenaderadio) and the same call is written in the LEGACY-X look when the grenade is thrown,
-        // to the thrower's team: this does not depend on which message the game sends the call in.
-        // Set at every map start, never while the plugin loads: the game is not up yet then.
-        RegisterListener<Listeners.OnMapStart>(_ => SetIgnoreGrenadeRadio());
-        if (!string.Equals(Config.RadioLines, "hide", StringComparison.OrdinalIgnoreCase))
-        {
-            RegisterEventHandler<EventWeaponFire>((@event, _) =>
-            {
-                try
-                {
-                    var call = @event.Weapon switch
-                    {
-                        "weapon_smokegrenade" => "Smoke!", "weapon_flashbang" => "Flashbang!", "weapon_hegrenade" => "Fire in the hole!",
-                        "weapon_molotov" => "Molotov!", "weapon_incgrenade" => "Incendiary!", "weapon_decoy" => "Decoy!", _ => null,
-                    };
-                    if (call is null || @event.Userid is not { IsValid: true } thrower || thrower.IsBot) return HookResult.Continue;
-                    var line = LegacyXChat.Radio(thrower.PlayerName, call, thrower.TeamNum);
-                    foreach (var other in Utilities.GetPlayers().Where(o => o.IsValid && !o.IsBot && !o.IsHLTV && o.TeamNum == thrower.TeamNum)) other.PrintToChat(line);
-                }
-                catch { }
-                return HookResult.Continue;
-            });
-        }
+        // The game sends a radio call as message 322 ("#Game_radio_location": client, msg_name, params) - found from the server log with the debug setting.
+        HookUserMessage(RadioMessageId, OnRadioLine, HookMode.Pre);
         HookUserMessage(SayText2Id, OnRadioSayText, HookMode.Pre);
         Console.WriteLine($"[{ModuleName}] Radio lines are shown as '{Config.RadioLines}' (SayText2 hook).");
         try
@@ -97,7 +77,9 @@ public sealed partial class LegacyXCommunity
             var count = message.GetRepeatedFieldCount("params");
             var parts = new List<string>();
             for (var index = 0; index < count; index++) parts.Add(message.ReadString("params", index) ?? "");
-            var call = RadioCalls.FirstOrDefault(entry => parts.Any(part => part.Contains(entry.Token, StringComparison.OrdinalIgnoreCase)));
+            var flatParts = new string(string.Concat(parts).Where(char.IsLetter).ToArray()).ToLowerInvariant();
+            var word = RadioWords.FirstOrDefault(entry => flatParts.Contains(entry.Key));
+            var call = (Token: word.Key, Text: word.Text);
             if (call.Token == null)
             {
                 var seen = string.Join(" | ", new[] { message.ReadString("msg_name") ?? "" }.Concat(parts));
@@ -164,20 +146,6 @@ public sealed partial class LegacyXCommunity
         {
             if (radioSeen.Add("error " + exception.Message)) Console.WriteLine($"[{ModuleName}] Radio line hook error: {exception.Message}");
             return HookResult.Continue;
-        }
-    }
-
-    private void SetIgnoreGrenadeRadio()
-    {
-        try
-        {
-            var convar = ConVar.Find("sv_ignoregrenaderadio");
-            if (convar == null) { Console.WriteLine($"[{ModuleName}] sv_ignoregrenaderadio does not exist on this game version: the game's own grenade call stays."); return; }
-            convar.SetValue(true);
-        }
-        catch (Exception exception)
-        {
-            Console.WriteLine($"[{ModuleName}] sv_ignoregrenaderadio could not be set: {exception.Message}");
         }
     }
 }
