@@ -1,5 +1,7 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Cvars;
+using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API.Modules.UserMessages;
 using LegacyX.Shared.Configuration;
 
@@ -50,6 +52,29 @@ public sealed partial class LegacyXCommunity
             }
             Console.WriteLine($"[{ModuleName}] Radio lines: debug, every kind of message is written to the log once.");
             return;
+        }
+        // The game's own grenade call is switched off (sv_ignoregrenaderadio) and the same call is written in the LEGACY-X look when the grenade is thrown,
+        // to the thrower's team: this does not depend on which message the game sends the call in.
+        // Set at every map start, never while the plugin loads: the game is not up yet then.
+        RegisterListener<Listeners.OnMapStart>(_ => SetIgnoreGrenadeRadio());
+        if (!string.Equals(Config.RadioLines, "hide", StringComparison.OrdinalIgnoreCase))
+        {
+            RegisterEventHandler<EventWeaponFire>((@event, _) =>
+            {
+                try
+                {
+                    var call = @event.Weapon switch
+                    {
+                        "weapon_smokegrenade" => "Smoke!", "weapon_flashbang" => "Flashbang!", "weapon_hegrenade" => "Fire in the hole!",
+                        "weapon_molotov" => "Molotov!", "weapon_incgrenade" => "Incendiary!", "weapon_decoy" => "Decoy!", _ => null,
+                    };
+                    if (call is null || @event.Userid is not { IsValid: true } thrower || thrower.IsBot) return HookResult.Continue;
+                    var line = LegacyXChat.Radio(thrower.PlayerName, call, thrower.TeamNum);
+                    foreach (var other in Utilities.GetPlayers().Where(o => o.IsValid && !o.IsBot && !o.IsHLTV && o.TeamNum == thrower.TeamNum)) other.PrintToChat(line);
+                }
+                catch { }
+                return HookResult.Continue;
+            });
         }
         HookUserMessage(SayText2Id, OnRadioSayText, HookMode.Pre);
         Console.WriteLine($"[{ModuleName}] Radio lines are shown as '{Config.RadioLines}' (SayText2 hook).");
@@ -139,6 +164,20 @@ public sealed partial class LegacyXCommunity
         {
             if (radioSeen.Add("error " + exception.Message)) Console.WriteLine($"[{ModuleName}] Radio line hook error: {exception.Message}");
             return HookResult.Continue;
+        }
+    }
+
+    private void SetIgnoreGrenadeRadio()
+    {
+        try
+        {
+            var convar = ConVar.Find("sv_ignoregrenaderadio");
+            if (convar == null) { Console.WriteLine($"[{ModuleName}] sv_ignoregrenaderadio does not exist on this game version: the game's own grenade call stays."); return; }
+            convar.SetValue(true);
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"[{ModuleName}] sv_ignoregrenaderadio could not be set: {exception.Message}");
         }
     }
 }
