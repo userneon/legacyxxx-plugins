@@ -1,3 +1,4 @@
+using LegacyX.Shared.Configuration;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
@@ -24,8 +25,12 @@ public partial class MatchZy
     // Whether a CS2 client draws either one cannot be told from the server, so it can be switched live: lx_knife_menu_msg cs|base|off.
     private string knifeMenuMessage = "cs";
 
+    // The knife vote card drawn by the LegacyX-Hud plugin (lx_knife_hud). MATCHZY_KNIFE_HUD=false goes back to the centre text and the left menu.
+    private bool knifeHudOn = true;
+
     private void RegisterLegacyXKnifeMenu()
     {
+        knifeHudOn = LegacyXEnvironmentLoader.Load().GetModuleBoolean("MATCHZY", "KNIFE_HUD", true);
         AddCommandListener("menuselect", (player, info) =>
             info.ArgCount > 1 && int.TryParse(info.ArgByIndex(1), out var choice) && choice is 1 or 2 ? OnKnifeMenuKey(player, stay: choice == 1) : HookResult.Continue);
         AddCommandListener("slot1", (player, info) => OnKnifeMenuKey(player, stay: true));
@@ -54,9 +59,10 @@ public partial class MatchZy
         knifeMenuEndsAt = Server.CurrentTime + KnifeVoteSeconds;
         knifeMenuTimer?.Kill();
         knifeMenuTimer = AddTimer(0.5f, DrawLegacyXKnifeMenu, TimerFlags.REPEAT);
-        foreach (var player in Utilities.GetPlayers())
-            if (IsPlayerValid(player) && !player.IsBot && !player.IsHLTV && player.TeamNum == knifeWinner)
-                SendKnifeMenu(player, open: true);
+        if (!knifeHudOn)
+            foreach (var player in Utilities.GetPlayers())
+                if (IsPlayerValid(player) && !player.IsBot && !player.IsHLTV && player.TeamNum == knifeWinner)
+                    SendKnifeMenu(player, open: true);
         knifeMenuOnScreen = true;
         DrawLegacyXKnifeMenu();
     }
@@ -68,8 +74,11 @@ public partial class MatchZy
         if (!knifeMenuOnScreen) return;
         knifeMenuOnScreen = false;
         foreach (var player in Utilities.GetPlayers())
-            if (IsPlayerValid(player) && !player.IsBot && !player.IsHLTV)
-                SendKnifeMenu(player, open: false);
+        {
+            if (!IsPlayerValid(player) || player.IsBot || player.IsHLTV) continue;
+            if (knifeHudOn) Server.ExecuteCommand($"lx_knife_hud {player.Slot} off");
+            else SendKnifeMenu(player, open: false);
+        }
     }
 
     /// <summary>Opens (or closes, with no slots and no time) the numbered menu on one player's screen.</summary>
@@ -114,6 +123,17 @@ public partial class MatchZy
         }
 
         var left = Math.Max(0, (int)Math.Ceiling(knifeMenuEndsAt - Server.CurrentTime));
+        if (knifeHudOn)
+        {
+            // Only numbers go to the card (a player's name never goes into a console command); the winners see the choice, the rest see who won.
+            foreach (var player in Utilities.GetPlayers())
+            {
+                if (!IsPlayerValid(player) || player.IsBot || player.IsHLTV) continue;
+                var role = player.TeamNum == knifeWinner ? "win" : "wait";
+                Server.ExecuteCommand($"lx_knife_hud {player.Slot} {role} {knifeWinner} {left} {(int)KnifeVoteSeconds}");
+            }
+            return;
+        }
         var winners = $"<font class='fontSize-m' color='#fafafa'>You won the knife round</font><br>"
             + "<font class='fontSize-m' color='#fafafa'>[<font color='#a78bfa'>1</font>] Stay &nbsp;&nbsp; [<font color='#a78bfa'>2</font>] Switch</font><br>"
             + $"<font class='fontSize-s' color='#a3a3a3'>{left}s · no answer means stay</font>";

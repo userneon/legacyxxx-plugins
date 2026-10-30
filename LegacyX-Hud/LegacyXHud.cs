@@ -22,6 +22,8 @@ public sealed partial class LegacyXHud : BasePlugin
     private string menuLayout = LayoutDir + "legacyx_menu.vxml_c";
     private string apiBase = "";
     private PanelHandle? menu;
+    private string knifeLayout = LayoutDir + "legacyx_knife.vxml_c";
+    private PanelHandle? knifeHud;
 
     public override string ModuleAuthor => "LEGACY-X";
     public override string ModuleName => "LEGACY-X Hud";
@@ -37,6 +39,7 @@ public sealed partial class LegacyXHud : BasePlugin
             return;
         }
         menuLayout = env.Get("LEGACYX_HUD_MENU_LAYOUT", menuLayout);
+        knifeLayout = env.Get("LEGACYX_HUD_KNIFE_LAYOUT", knifeLayout);
         apiBase = env.Get("LEGACYX_API_BASE_URL", "").TrimEnd('/');
         // The menu reads and saves the loadout with SkinBridge's own token (skinchanger:read and :write).
         skinPluginId = env.GetModule("SKINBRIDGE", "PLUGIN_ID", skinPluginId);
