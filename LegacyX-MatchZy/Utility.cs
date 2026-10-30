@@ -1240,6 +1240,8 @@ namespace MatchZy
 
         private void ForceUnpauseMatch(CCSPlayerController? player, CommandInfo? command)
         {
+            if (!(matchStarted && isPaused) && IsPlayerAdmin(player, "css_forceunpause", "@css/config"))
+                ReplyToUserCommand(player, "The match is not paused.");
             if (matchStarted && isPaused)
             {
                 if (!IsPlayerAdmin(player, "css_forceunpause", "@css/config"))
@@ -1247,11 +1249,10 @@ namespace MatchZy
                     SendPlayerNotAdminMessage(player);
                     return;
                 }
-                if (!CanLegacyXMatchCoreResume(out var coreReason))
-                {
-                    ReplyToUserCommand(player, coreReason);
-                    return;
-                }
+                // A forced unpause is the admin's way out of a pause that cannot end by itself (a player who never comes back), so the
+                // "everyone must be back" rule of Match Core does not stop it; it only says so.
+                if (!CanLegacyXMatchCoreResume(out var coreReason) && !string.IsNullOrEmpty(coreReason))
+                    ReplyToUserCommand(player, $"Resuming anyway: {coreReason}");
                 PrintToAllChat(Localizer["matchzy.pause.adminunpausedthematch"]);
                 UnpauseMatch();
                 OnLegacyXMatchCoreResumed();
