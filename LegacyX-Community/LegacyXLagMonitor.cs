@@ -17,21 +17,26 @@ public sealed partial class LegacyXCommunity
 {
     private readonly Stopwatch lagClock = Stopwatch.StartNew();
     private double lagLastReal;
-    private float lagLastGame;
+    private float lagLastGame = -1f;   // -1: the game clock was not read yet (it does not exist while the server is still starting)
     private int lagQuietChecks;
 
     private void RegisterLagMonitor()
     {
-        lagLastReal = lagClock.Elapsed.TotalSeconds;
-        lagLastGame = Server.CurrentTime;
-        AddTimer(5f, CheckServerSpeed, TimerFlags.REPEAT);
-        RegisterListener<Listeners.OnMapStart>(_ => { lagLastReal = lagClock.Elapsed.TotalSeconds; lagLastGame = Server.CurrentTime; });
+        // Server.CurrentTime reads the game's globals, which do not exist while the plugin loads at server start: reading it here crashed the
+        // server (segmentation fault right after the plugins loaded). It is first read from a map start.
+        RegisterListener<Listeners.OnMapStart>(_ =>
+        {
+            lagLastReal = lagClock.Elapsed.TotalSeconds;
+            lagLastGame = -1f;
+            AddTimer(5f, CheckServerSpeed, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
+        });
     }
 
     private void CheckServerSpeed()
     {
         var real = lagClock.Elapsed.TotalSeconds;
         var game = Server.CurrentTime;
+        if (lagLastGame < 0) { lagLastReal = real; lagLastGame = game; return; }
         var realStep = real - lagLastReal;
         var gameStep = game - lagLastGame;
         lagLastReal = real; lagLastGame = game;
