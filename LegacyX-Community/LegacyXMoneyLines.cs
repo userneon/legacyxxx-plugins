@@ -13,6 +13,7 @@ namespace LegacyXCommunity;
 /// </summary>
 public sealed partial class LegacyXCommunity
 {
+    private readonly HashSet<string> textSeen = new();
     private const int TextMsgId = 124; // UM_TextMsg: the game's localized chat and centre lines.
 
     private void RegisterMoneyLines()
@@ -27,7 +28,13 @@ public sealed partial class LegacyXCommunity
         {
             var token = message.ReadString("param", 0);
             var label = MoneyLabel(token);
-            if (label == null) return HookResult.Continue;
+            if (label == null)
+            {
+                // A line the game shows on its own (not money): its text token is written to the log once, so every default message can be listed.
+                var other = string.Join(" | ", Enumerable.Range(0, Math.Min(message.GetRepeatedFieldCount("param"), 4)).Select(index => message.ReadString("param", index) ?? ""));
+                if (!string.IsNullOrWhiteSpace(other) && textSeen.Count < 200 && textSeen.Add(other)) Console.WriteLine($"[{ModuleName}] Game message: {other}");
+                return HookResult.Continue;
+            }
             if (string.Equals(Config.MoneyLines, "hide", StringComparison.OrdinalIgnoreCase)) return HookResult.Handled;
             var amount = message.GetRepeatedFieldCount("param") > 1 ? message.ReadString("param", 1) : "";
             var line = LegacyXChat.System(MoneyText(amount, label));
