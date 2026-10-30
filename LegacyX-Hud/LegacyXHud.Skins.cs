@@ -45,6 +45,7 @@ public sealed partial class LegacyXHud
         public string? TypeClass;                          // the picked knife / glove type
         public int Offset;
         public int Total;
+        public bool Loading;                               // the skins of the page were asked for and have not come yet: the count is unknown, not 0
         public List<SkinItem> Items = new();
         public int Selected = -1;
         public bool Busy;
@@ -293,6 +294,7 @@ public sealed partial class LegacyXHud
         view.Selected = -1;
         view.Items = new();
         view.Total = 0;
+        view.Loading = true;
         SkinsStatus(panel, player, "Loading ...");
         SkinsRender(panel, player, view);       // the page switches now; the skins arrive in a moment (at once from the cache)
         var wanted = view.Offset;
@@ -300,9 +302,11 @@ public sealed partial class LegacyXHud
         SkinsFetch(player, path, $"it:{tile.Slot}:{weaponClass}:{wanted}", CatalogTtl, (p, current, status, body) =>
         {
             if (current.Picked != tile || current.Mode != "items" || current.Offset != wanted) return;
+            current.Loading = false;
             if (SkinsFailed(status, body, out var json, out var message))
             {
                 SkinsStatus(menu!, p, message);
+                SkinsRender(menu!, p, current);
                 return;
             }
             current.Total = json.GetProperty("total").GetInt32();
@@ -507,12 +511,12 @@ public sealed partial class LegacyXHud
         var tile = view.Picked;
         var agent = tile?.Slot == "agent";
         Sv(panel, player, "sk_title", PickedName(view));
-        Sv(panel, player, "sk_sub", agent ? $"{view.Total} agents" : $"{view.Total} skins");
+        Sv(panel, player, "sk_sub", view.Loading ? "" : agent ? $"{view.Total} agents" : $"{view.Total} skins");   // no "0 skins" while the page is still on its way
         Sc(panel, player, "sk_back", "hidden", agent);
         var pages = Math.Max(1, (view.Total + SkinItemSlots - 1) / SkinItemSlots);
-        Sv(panel, player, "sk_page", $"{view.Offset / SkinItemSlots + 1} / {pages}");
-        Sc(panel, player, "sk_prev", "disabled", view.Offset <= 0);
-        Sc(panel, player, "sk_next", "disabled", view.Offset + SkinItemSlots >= view.Total);
+        Sv(panel, player, "sk_page", view.Loading ? "" : $"{view.Offset / SkinItemSlots + 1} / {pages}");
+        Sc(panel, player, "sk_prev", "disabled", view.Loading || view.Offset <= 0);
+        Sc(panel, player, "sk_next", "disabled", view.Loading || view.Offset + SkinItemSlots >= view.Total);
         var model = tile is null ? null : tile.Slot == "weapon" ? tile.Model : SkinModel(view.TypeClass);
         var eq = tile?.Eq;
         for (var i = 0; i < SkinItemSlots; i++)
