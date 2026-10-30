@@ -16,7 +16,8 @@ namespace LegacyXHud;
 public sealed partial class LegacyXHud
 {
     private const int SkinTypeSlots = 25;
-    private const int SkinItemSlots = 24;          // one page of skins; the content scrolls (MENU_SKIN_PAGE in the backend)
+    private const int SkinItemSlots = 300;         // every skin of a pick is in one list that scrolls (the most any pick has; the cards are in the menu layout)
+    private const int SkinPage = 100;              // skins asked of the backend at a time (MENU_SKIN_PAGE there); the next page is asked for as soon as one arrives
     private const int TileSlots = 35;            // 4 columns of 8 guns, then Agent, Gloves, Knife
     private static readonly int[] ColumnStart = { 0, 8, 16, 24, 32 };
     private static readonly int[] ColumnSize = { 8, 8, 8, 8, 3 };
@@ -43,7 +44,7 @@ public sealed partial class LegacyXHud
         public Tile? Picked;                               // the tile that was clicked
         public List<SkinType> Types = new();               // knife / glove types
         public string? TypeClass;                          // the picked knife / glove type
-        public int Offset;
+        public int LoadId;                                 // which asking of the list is current: an answer of an older one is dropped
         public int Total;
         public bool Loading;                               // the skins of the page were asked for and have not come yet: the count is unknown, not 0
         public List<SkinItem> Items = new();
@@ -284,24 +285,29 @@ public sealed partial class LegacyXHud
         });
     }
 
-    /// <summary>The skins of a pick (a gun, the agents of a team, a knife or glove type), one page.</summary>
-    private void SkinsLoadItems(PanelHandle panel, CCSPlayerController player, SkinView view, Tile tile, string weaponClass, int offset)
+    /// <summary>The skins of a pick (a gun, the agents of a team, a knife or glove type): one list that scrolls, filled page after page.</summary>
+    private void SkinsLoadItems(PanelHandle panel, CCSPlayerController player, SkinView view, Tile tile, string weaponClass, int offset = 0)
     {
         view.Picked = tile;
         view.Mode = "items";
         view.TypeClass = tile.Slot is "knife" or "glove" ? weaponClass : null;
-        view.Offset = Math.Max(0, offset);
         view.Selected = -1;
         view.Items = new();
         view.Total = 0;
         view.Loading = true;
+        var load = ++view.LoadId;
         SkinsStatus(panel, player, "Loading ...");
-        SkinsRender(panel, player, view);       // the page switches now; the skins arrive in a moment (at once from the cache)
-        var wanted = view.Offset;
+        SkinsRender(panel, player, view);       // the list switches now; the skins arrive in a moment (at once from the cache)
+        SkinsLoadItemPage(player, view, tile, weaponClass, load);
+    }
+
+    private void SkinsLoadItemPage(CCSPlayerController player, SkinView view, Tile tile, string weaponClass, int load)
+    {
+        var wanted = view.Items.Count;
         var path = $"/api/v1/plugin/menu/skins/items?steam_id={player.SteamID}&slot={tile.Slot}&weapon_class={Uri.EscapeDataString(weaponClass)}&offset={wanted}";
         SkinsFetch(player, path, $"it:{tile.Slot}:{weaponClass}:{wanted}", CatalogTtl, (p, current, status, body) =>
         {
-            if (current.Picked != tile || current.Mode != "items" || current.Offset != wanted) return;
+            if (current.Picked != tile || current.Mode != "items" || current.LoadId != load) return;
             current.Loading = false;
             if (SkinsFailed(status, body, out var json, out var message))
             {
@@ -310,11 +316,14 @@ public sealed partial class LegacyXHud
                 return;
             }
             current.Total = json.GetProperty("total").GetInt32();
-            current.Items = json.GetProperty("items").EnumerateArray()
+            var page = json.GetProperty("items").EnumerateArray()
                 .Select(i => new SkinItem(Text(i, "id") ?? "", Text(i, "name") ?? "", Number(i, "paintId"), Number(i, "defindex"), Text(i, "rarity"), Text(i, "rarityName") ?? ""))
-                .Where(i => i.Id.Length > 0).Take(SkinItemSlots).ToList();
+                .Where(i => i.Id.Length > 0).ToList();
+            current.Items.AddRange(page.Take(SkinItemSlots - current.Items.Count));
             SkinsStatus(menu!, p, "");
             SkinsRender(menu!, p, current);
+            // The rest of the list follows without a click, so the player only scrolls.
+            if (page.Count > 0 && current.Items.Count < current.Total && current.Items.Count < SkinItemSlots) SkinsLoadItemPage(p, current, tile, weaponClass, load);
         });
     }
 
@@ -562,10 +571,6 @@ public sealed partial class LegacyXHud
         Sv(panel, player, "sk_sub", view.Loading ? "" : agent ? $"{view.Total} agents" : $"{view.Total} skins");   // no "0 skins" while the page is still on its way
         Sc(panel, player, "sk_back", "hidden", agent);
         Sc(panel, player, "sk_remove", "hidden", tile?.Eq is null);
-        var pages = Math.Max(1, (view.Total + SkinItemSlots - 1) / SkinItemSlots);
-        Sv(panel, player, "sk_page", view.Loading ? "" : $"{view.Offset / SkinItemSlots + 1} / {pages}");
-        Sc(panel, player, "sk_prev", "disabled", view.Loading || view.Offset <= 0);
-        Sc(panel, player, "sk_next", "disabled", view.Loading || view.Offset + SkinItemSlots >= view.Total);
         var model = tile is null ? null : tile.Slot == "weapon" ? tile.Model : SkinModel(view.TypeClass);
         var eq = tile?.Eq;
         for (var i = 0; i < SkinItemSlots; i++)
@@ -606,22 +611,8 @@ public sealed partial class LegacyXHud
                 SkinsStatus(panel, player, "");
                 SkinsRender(panel, player, view);
                 return true;
-            case "sk_cancel":
-                view.Selected = -1;
-                SkinsStatus(panel, player, "");
-                SkinsRender(panel, player, view);
-                return true;
-            case "sk_equip":
-                SkinsEquip(panel, player, view);
-                return true;
             case "sk_remove":
                 SkinsRemove(panel, player, view);
-                return true;
-            case "sk_prev":
-                if (view.Picked is { } back && view.Offset > 0) SkinsLoadItems(panel, player, view, back, PickedClass(view), view.Offset - SkinItemSlots);
-                return true;
-            case "sk_next":
-                if (view.Picked is { } forward && view.Offset + SkinItemSlots < view.Total) SkinsLoadItems(panel, player, view, forward, PickedClass(view), view.Offset + SkinItemSlots);
                 return true;
         }
         if (id.StartsWith("sk_cat", StringComparison.Ordinal) && int.TryParse(id.AsSpan(6), out var cat) && cat >= 0 && cat < CategoryNames.Length)
