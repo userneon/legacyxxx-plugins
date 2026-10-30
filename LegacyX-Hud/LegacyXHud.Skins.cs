@@ -591,10 +591,6 @@ public sealed partial class LegacyXHud
                 : eq.PaintId == item.PaintId && (view.TypeClass is null || eq.WeaponClass == view.TypeClass));
             Sc(panel, player, $"sk_item{i}_saved", "hidden", !saved);
         }
-        var chosen = view.Selected >= 0 && view.Selected < view.Items.Count ? view.Items[view.Selected] : null;
-        Sv(panel, player, "sk_pv_name", chosen is null ? "Pick a skin" : agent ? chosen.Name : $"{(view.TypeClass is { } type ? TypeLabel(tile!, type) : tile?.Label)} | {chosen.Name}");
-        Sv(panel, player, "sk_pv_rar", chosen?.RarityName ?? "");
-        Ss(panel, player, "sk_pv_pic", "sp", chosen is null || tile is null ? null : SkinPicture(tile.Slot, model, chosen.PaintId, chosen.Defindex));
     }
 
     /// <summary>Clicks of the Skins tab. Returns true when the id was one of its buttons.</summary>
