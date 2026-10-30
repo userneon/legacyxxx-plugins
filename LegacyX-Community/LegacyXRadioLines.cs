@@ -77,7 +77,9 @@ public sealed partial class LegacyXCommunity
             var count = message.GetRepeatedFieldCount("params");
             var parts = new List<string>();
             for (var index = 0; index < count; index++) parts.Add(message.ReadString("params", index) ?? "");
-            var flatParts = new string(string.Concat(parts).Where(char.IsLetter).ToArray()).ToLowerInvariant();
+            // The call's own token is the last field (the first two are the name and the place): the words are looked for there only, so a name
+            // or a place that happens to contain "smoke" is never taken for a call.
+            var flatParts = new string((parts.Count > 0 ? parts[^1] : "").Where(char.IsLetter).ToArray()).ToLowerInvariant();
             var word = RadioWords.FirstOrDefault(entry => flatParts.Contains(entry.Key));
             var call = (Token: word.Key, Text: word.Text);
             if (call.Token == null)
@@ -105,6 +107,12 @@ public sealed partial class LegacyXCommunity
     {
         ("smoke", "Smoke!"), ("flashbang", "Flashbang!"), ("fireinthehole", "Fire in the hole!"),
         ("molotov", "Molotov!"), ("decoy", "Decoy!"), ("incendiary", "Incendiary!"),
+        // The other radio calls and the bomb calls, by a word of their token (the log lists the tokens the game sends: "Radio line left as the game shows it").
+        ("affirmative", "Yes"), ("negative", "No"), ("roger", "Roger that"), ("enemyspot", "Enemy spotted"), ("enemydown", "Enemy down"),
+        ("needbackup", "Need backup"), ("needhelp", "Need help"), ("takingfire", "Taking fire"), ("sectorclear", "Sector clear"),
+        ("inposition", "In position"), ("reportingin", "Reporting in"), ("getout", "Get out!"), ("followme", "Follow me"),
+        ("holdposition", "Hold position"), ("regroup", "Regroup"), ("stormthefront", "Storm the front"), ("fallback", "Fall back"),
+        ("coverme", "Cover me"), ("thanks", "Thanks"), ("niceshot", "Nice shot"), ("planting", "Planting!"), ("defusing", "Defusing!"),
     };
 
     /// <summary>CS2 prints a radio call as a SayText2 line whose name contains "radio"; the plain player chat shares the message and is never touched.</summary>
