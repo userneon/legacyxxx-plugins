@@ -15,8 +15,9 @@ namespace AdminPlus;
 /// Cheat toys for Fun servers (owner request 2026-10-27), owner only (@css/root): css_wh (see enemies through walls), css_aimlock (view
 /// snaps to the nearest enemy while the fire button is held), css_silentaim (shots hurt the nearest enemy in front, the view does not move),
 /// css_bhop (jump held = automatic bunny hop) and css_cheats (sv_cheats). Each takes a player or <c>all</c> and 1/0 (no number toggles).
-/// They refuse to run unless this server's LEGACYX_SERVER_MODE starts with "fun", so a ranked or Pro League server can never be given
-/// them, and each use is written to the admin log like the other fun commands. A switch lasts until the map changes or the player leaves.
+/// On a Fun server they work all the time; on every other mode (owner request 2026-10-30, "all modes") they work only while the server is in
+/// warmup, so a round that counts is never played with them: when the warmup ends every switch is cleared and sv_cheats is put back to 0.
+/// Each use is written to the admin log like the other fun commands. A switch lasts until the map changes or the player leaves.
 /// </summary>
 public partial class AdminPlus
 {
@@ -25,8 +26,36 @@ public partial class AdminPlus
     private readonly Dictionary<uint, CDynamicProp> wallhackGlows = new();
     private bool funCheatTimerRunning;
 
-    private static bool IsFunServer() =>
-        LegacyXServerRuntime.Load(LegacyXEnvironmentLoader.Load()).ServerMode.StartsWith("fun", StringComparison.OrdinalIgnoreCase);
+    private static readonly Lazy<bool> funServer = new(() =>
+        LegacyXServerRuntime.Load(LegacyXEnvironmentLoader.Load()).ServerMode.StartsWith("fun", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsFunServer() => funServer.Value;
+
+    private static bool InWarmup()
+    {
+        try { return Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault()?.GameRules?.WarmupPeriod == true; }
+        catch { return false; }
+    }
+
+    /// <summary>Fun servers: always. Any other mode: only while the server is in warmup.</summary>
+    private static bool CheatsAllowed() => IsFunServer() || InWarmup();
+
+    private bool cheatsWereOpen;
+
+    /// <summary>Once a second: when the warmup of a non-Fun server ends, every cheat switch is cleared and sv_cheats goes back to 0.</summary>
+    private void WatchFunCheatWindow()
+    {
+        var open = CheatsAllowed();
+        if (!open && cheatsWereOpen)
+        {
+            var any = wallhackSlots.Count + aimlockSlots.Count + silentAimSlots.Count + bhopSlots.Count > 0;
+            wallhackSlots.Clear(); aimlockSlots.Clear(); silentAimSlots.Clear(); bhopSlots.Clear();
+            ClearWallhackGlows();
+            Server.ExecuteCommand("sv_cheats 0");
+            if (any) Console.WriteLine("[AdminPlus] The warmup ended: the cheat switches are off and sv_cheats is 0.");
+        }
+        cheatsWereOpen = open;
+    }
 
     private void RegisterFunCheatCommands()
     {
@@ -41,6 +70,7 @@ public partial class AdminPlus
         RegisterListener<Listeners.OnMapStart>(_ => { wallhackSlots.Clear(); aimlockSlots.Clear(); silentAimSlots.Clear(); bhopSlots.Clear(); wallhackGlows.Clear(); funCheatTimerRunning = false; });
         RegisterListener<Listeners.OnClientDisconnect>(slot => { wallhackSlots.Remove(slot); aimlockSlots.Remove(slot); silentAimSlots.Remove(slot); bhopSlots.Remove(slot); });
         RegisterEventHandler<EventWeaponFire>(OnFunCheatWeaponFire);
+        AddTimer(1f, WatchFunCheatWindow, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
     }
 
     private static void FunReply(CCSPlayerController? caller, string text)
@@ -51,7 +81,7 @@ public partial class AdminPlus
     private void FunCheatSwitch(CCSPlayerController? caller, CommandInfo info, string name, HashSet<int> slots)
     {
         if (info.ArgCount < 2) { FunReply(caller, $"Usage: css_{(name == "wh" ? "wh" : name)} <player|all> [0|1]"); return; }
-        if (!IsFunServer()) { FunReply(caller, "This is only for Fun servers (LEGACYX_SERVER_MODE=fun)."); return; }
+        if (!CheatsAllowed()) { FunReply(caller, "These work on Fun servers, and on other modes only during warmup."); return; }
         if (!ResolveTargets(caller, info.GetArg(1), false, false, false, out var players, out var admin, out var label, out _, true))
         { SendErrorMessage(caller, "NoMatchingClient", Localizer["NoMatchingClient"]); return; }
         int asked = -1;
@@ -73,7 +103,7 @@ public partial class AdminPlus
 
     private void CmdSvCheats(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!IsFunServer()) { FunReply(caller, "This is only for Fun servers (LEGACYX_SERVER_MODE=fun)."); return; }
+        if (!CheatsAllowed()) { FunReply(caller, "sv_cheats can be turned on at Fun servers, and on other modes only during warmup."); return; }
         if (info.ArgCount < 2 || info.GetArg(1) is not ("0" or "1")) { FunReply(caller, "Usage: css_cheats <0|1>"); return; }
         Server.ExecuteCommand($"sv_cheats {info.GetArg(1)}");
         FunReply(caller, $"sv_cheats {(info.GetArg(1) == "1" ? "on" : "off")}.");
