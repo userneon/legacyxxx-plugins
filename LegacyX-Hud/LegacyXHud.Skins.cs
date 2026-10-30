@@ -537,7 +537,7 @@ public sealed partial class LegacyXHud
             if (eq is not null)
                 pic = SkinPicture(tile.Slot, tile.Slot == "weapon" ? tile.Model : SkinModel(eq.WeaponClass), eq.PaintId, eq.Defindex);
             else
-                pic = tile.Slot == "weapon" && tile.Model is not null ? "gn-" + tile.Model : tile.Slot == "knife" ? "kn-karambit" : null;
+                pic = tile.Slot == "weapon" && tile.Model is not null ? "gn-" + tile.Model : tile.Slot == "knife" ? "kn-karambit" : tile.Slot == "agent" ? "agn-" + view.Team : null;
             Ss(panel, player, $"sk_w{i}_pic", "sp", pic);
         }
     }
