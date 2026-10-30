@@ -77,9 +77,9 @@ public sealed partial class LegacyXCommunity
             var count = message.GetRepeatedFieldCount("params");
             var parts = new List<string>();
             for (var index = 0; index < count; index++) parts.Add(message.ReadString("params", index) ?? "");
-            // The call's own token is the last field (the first two are the name and the place): the words are looked for there only, so a name
+            // The call's own token is whatever follows the first two fields (the name and the place): the words are looked for there only, so a name
             // or a place that happens to contain "smoke" is never taken for a call.
-            var flatParts = new string((parts.Count > 0 ? parts[^1] : "").Where(char.IsLetter).ToArray()).ToLowerInvariant();
+            var flatParts = new string(string.Concat(parts.Skip(Math.Min(2, Math.Max(0, parts.Count - 1)))).Where(char.IsLetter).ToArray()).ToLowerInvariant();
             var word = RadioWords.FirstOrDefault(entry => flatParts.Contains(entry.Key));
             var call = (Token: word.Key, Text: word.Text);
             if (call.Token == null)
