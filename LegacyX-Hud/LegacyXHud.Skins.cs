@@ -410,6 +410,53 @@ public sealed partial class LegacyXHud
         });
     }
 
+    /// <summary>Takes the equipped skin of the picked gun, knife, glove type or agent off (it falls back to the game's own).</summary>
+    private void SkinsRemove(PanelHandle panel, CCSPlayerController player, SkinView view)
+    {
+        if (view.Picked is not { Eq: { } eq } tile || view.Busy) return;
+        view.Busy = true;
+        var team = view.Team;
+        var steamId = player.SteamID;
+        var playerSlot = player.Slot;
+        SkinsStatus(panel, player, "Removing ...");
+        _ = Task.Run(async () =>
+        {
+            var removed = false;
+            string message;
+            try
+            {
+                var json = JsonSerializer.Serialize(new { steam_id = steamId.ToString(), catalog_item_id = eq.ItemId, team });
+                var (status, body) = await SkinsApiAsync(HttpMethod.Post, "/api/v1/plugin/menu/skins/unequip", json);
+                removed = status == 200;
+                message = removed ? "Skin removed." : status == 404 ? "Nothing to remove." : $"Could not remove (error {status}). Tell staff.";
+                if (!removed) Console.WriteLine($"[{ModuleName}] Skin remove refused: HTTP {status} {body}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[{ModuleName}] Skin remove failed: {ex.Message}");
+                message = "Could not remove. Try again.";
+            }
+            Server.NextFrame(() =>
+            {
+                if (skinViews.TryGetValue(playerSlot, out var current)) current.Busy = false;
+                var p = Utilities.GetPlayerFromSlot(playerSlot);
+                if (p is not { IsValid: true } || menu is null || current is null) return;
+                if (removed)
+                {
+                    ForgetLoadouts(steamId);
+                    var bare = tile with { Eq = null };
+                    for (var i = 0; i < current.Slots.Length; i++)
+                        if (current.Slots[i] == tile) current.Slots[i] = bare;
+                    if (current.Picked == tile) current.Picked = bare;
+                    p.ExecuteClientCommandFromServer("css_lxapply");
+                    MenuSound(p, soundPick, LevelPick);
+                }
+                SkinsRender(menu, p, current);
+                SkinsStatus(menu, p, message);
+            });
+        });
+    }
+
     // ---- drawing ----------------------------------------------------------------------------------------
 
     private static string? SkinModel(string? weaponClass)
@@ -427,7 +474,8 @@ public sealed partial class LegacyXHud
         if (paintId is { } paint)
         {
             if (SkinPictureKeys.Contains($"{model}-{paint}")) return $"sp-{model}-{paint}";
-            return slot == "weapon" ? "gn-" + model : null;   // a skin the game has no picture of shows as the plain grey gun, never an empty card
+            // A skin the game has no picture of shows as the plain gun, knife or glove, never an empty card.
+            return slot switch { "weapon" => "gn-" + model, "knife" => "kn-" + model, "glove" => "gl-" + model, _ => null };
         }
         return slot == "knife" ? $"sp-{model}-0" : null;   // a knife without a paint is the plain one
     }
@@ -513,6 +561,7 @@ public sealed partial class LegacyXHud
         Sv(panel, player, "sk_title", PickedName(view));
         Sv(panel, player, "sk_sub", view.Loading ? "" : agent ? $"{view.Total} agents" : $"{view.Total} skins");   // no "0 skins" while the page is still on its way
         Sc(panel, player, "sk_back", "hidden", agent);
+        Sc(panel, player, "sk_remove", "hidden", tile?.Eq is null);
         var pages = Math.Max(1, (view.Total + SkinItemSlots - 1) / SkinItemSlots);
         Sv(panel, player, "sk_page", view.Loading ? "" : $"{view.Offset / SkinItemSlots + 1} / {pages}");
         Sc(panel, player, "sk_prev", "disabled", view.Loading || view.Offset <= 0);
@@ -564,6 +613,9 @@ public sealed partial class LegacyXHud
                 return true;
             case "sk_equip":
                 SkinsEquip(panel, player, view);
+                return true;
+            case "sk_remove":
+                SkinsRemove(panel, player, view);
                 return true;
             case "sk_prev":
                 if (view.Picked is { } back && view.Offset > 0) SkinsLoadItems(panel, player, view, back, PickedClass(view), view.Offset - SkinItemSlots);
