@@ -45,6 +45,8 @@ public partial class MatchZy
     private int matchCoreEventSequence;
     private bool matchCoreLiveQueued;
     private bool matchCoreRemoteSlotsReady;
+    // Set when the site did not take match_created: nothing later is sent for that match (it would only answer "unknown match_id"), and the players are told.
+    private volatile bool matchCoreCreateFailed;
 
     private bool IsMatchCoreEnabled => legacyXMatchCoreEnabled.Value && !string.IsNullOrWhiteSpace(legacyXMatchCoreApiUrl.Value) && !string.IsNullOrWhiteSpace(legacyXMatchCorePluginSecret.Value);
 
@@ -88,7 +90,13 @@ public partial class MatchZy
 
     private void BeginLegacyXMatchCore()
     {
-        if (!IsMatchCoreEnabled) return;
+        if (!IsMatchCoreEnabled)
+        {
+            // Said out loud: a server that is not connected plays whole matches with no EXP, rank or recent match, and nothing showed why.
+            Log($"[LegacyXMatchCore] Match Core is OFF for this match: enabled={legacyXMatchCoreEnabled.Value}, api url set={!string.IsNullOrWhiteSpace(legacyXMatchCoreApiUrl.Value)}, plugin token set={!string.IsNullOrWhiteSpace(legacyXMatchCorePluginSecret.Value)}. Set LEGACYX_API_BASE_URL and LEGACYX_PLUGIN_TOKEN (or LEGACYX_MATCHZY_MATCH_CORE_*) for this server.");
+            PrintToAllChat("This match is {white}not ranked{grey}: this server is not connected to LEGACY-X. No EXP or rank will change.");
+            return;
+        }
 
         var roster = playerData.Values
             .Where(player => IsPlayerValid(player) && !player.IsBot && !player.IsHLTV)
@@ -108,6 +116,7 @@ public partial class MatchZy
             return;
         }
 
+        matchCoreCreateFailed = false;
         matchCoreId = Guid.NewGuid();
         matchCoreRevision = 0;
         matchCoreEventSequence = 0;
@@ -457,6 +466,7 @@ public partial class MatchZy
         {
             matchCoreQueue = matchCoreQueue.ContinueWith(async _ =>
             {
+                if (matchCoreCreateFailed && eventName != "match_created") return;
                 var payload = payloadFactory(matchCoreRevision);
                 await PostMatchCoreEventAsync(eventName, payload, onSuccess);
             }, TaskScheduler.Default).Unwrap();
@@ -476,6 +486,7 @@ public partial class MatchZy
             if (!response.IsSuccessStatusCode)
             {
                 Log($"[LegacyXMatchCore] {eventName} rejected ({(int)response.StatusCode}): {responseBody[..Math.Min(240, responseBody.Length)]}");
+                if (eventName == "match_created") FailLegacyXMatchCoreCreate();
                 return;
             }
             using var document = JsonDocument.Parse(responseBody);
@@ -488,6 +499,14 @@ public partial class MatchZy
         catch (Exception exception)
         {
             Log($"[LegacyXMatchCore] {eventName} transport error: {exception.Message}");
+            if (eventName == "match_created") FailLegacyXMatchCoreCreate();
         }
+    }
+
+    /// <summary>The site did not take match_created: this match is not ranked, and the players are told once instead of finding out at the end.</summary>
+    private void FailLegacyXMatchCoreCreate()
+    {
+        matchCoreCreateFailed = true;
+        Server.NextFrame(() => PrintToAllChat("This match is {white}not ranked{grey}: LEGACY-X could not register it. No EXP or rank will change."));
     }
 }
