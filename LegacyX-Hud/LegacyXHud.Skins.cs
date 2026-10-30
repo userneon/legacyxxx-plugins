@@ -566,8 +566,12 @@ public sealed partial class LegacyXHud
             Sv(panel, player, $"sk_type{i}_name", TypeLabel(tile!, type.WeaponClass));
             Sv(panel, player, $"sk_type{i}_n", $"{type.Skins} skins");
             // A knife type has its grey icon; a glove type shows one skin of that type (glove_<type>.png), like the website.
+            // The type the player has a skin on shows that skin; the others their grey shape.
+            var worn = tile!.Eq is { } wornSkin && wornSkin.WeaponClass == type.WeaponClass ? wornSkin : null;
+            var wornModel = SkinModel(type.WeaponClass);
             Ss(panel, player, $"sk_type{i}_ic", "kn",
-                tile!.Slot == "knife" && KnifeIcons.TryGetValue(type.WeaponClass, out var knife) ? "kn-" + knife
+                worn is not null && wornModel is not null ? SkinPicture(tile.Slot, wornModel, worn.PaintId, worn.Defindex)
+                : tile.Slot == "knife" && KnifeIcons.TryGetValue(type.WeaponClass, out var knife) ? "kn-" + knife
                 : tile.Slot == "glove" && GloveModels.TryGetValue(type.WeaponClass, out var glove) ? "gl-" + glove
                 : null);
         }
@@ -581,7 +585,7 @@ public sealed partial class LegacyXHud
         Sv(panel, player, "sk_sub", view.Loading ? "" : agent ? $"{view.Total} agents" : $"{view.Total} skins");   // no "0 skins" while the page is still on its way
         Sc(panel, player, "sk_remove", "hidden", tile?.Eq is null);
         var model = tile is null ? null : tile.Slot == "weapon" ? tile.Model : SkinModel(view.TypeClass);
-        Ss(panel, player, "sk_head_pic", "hp", HeadPicture(tile, model, view.Team));
+        Ss(panel, player, "sk_head_pic", "hp", HeadPicture(tile, model, view.Team, PickedClass(view)));
         var eq = tile?.Eq;
         for (var i = 0; i < SkinItemSlots; i++)
         {
@@ -657,7 +661,18 @@ public sealed partial class LegacyXHud
 
     /// <summary>The class the current skin list was asked for: the knife / glove type, the gun, or the team of the agents.</summary>
     /// <summary>The grey picture at the right end of the title banner: the gun, knife, glove or agent of the list.</summary>
-    private static string? HeadPicture(Tile? tile, string? model, string team) => tile?.Slot switch
+    private static string? HeadPicture(Tile? tile, string? model, string team, string pickedClass)
+    {
+        // With a skin on, the banner shows that skin, not the plain grey gun.
+        if (tile?.Eq is { } worn && model is not null && tile.Slot != "agent" && (worn.WeaponClass == pickedClass || tile.Slot == "weapon"))
+        {
+            var picture = SkinPicture(tile.Slot, model, worn.PaintId, worn.Defindex);
+            if (picture is not null) return picture;
+        }
+        return PlainHeadPicture(tile, model, team);
+    }
+
+    private static string? PlainHeadPicture(Tile? tile, string? model, string team) => tile?.Slot switch
     {
         "weapon" when model is not null => "gn-" + model,
         "knife" when model is not null => "kn-" + model,
