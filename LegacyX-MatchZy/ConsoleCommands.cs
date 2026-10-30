@@ -265,6 +265,14 @@ namespace MatchZy
                 {
                     return;
                 }
+                // The other team's confirmation cannot come when nobody of that team is on the server (everyone left, or they are waiting to
+                // reconnect): one team asking is then enough, otherwise the pause could never end.
+                var otherTeamNum = player.TeamNum == 2 ? 3 : 2;
+                if (!Utilities.GetPlayers().Any(other => other.IsValid && !other.IsBot && !other.IsHLTV && other.TeamNum == otherTeamNum))
+                {
+                    unpauseData["t"] = true;
+                    unpauseData["ct"] = true;
+                }
                 if ((bool)unpauseData["t"] && (bool)unpauseData["ct"])
                 {
                     if (!CanLegacyXMatchCoreResume(out var coreReason))
