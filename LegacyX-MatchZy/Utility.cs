@@ -1041,6 +1041,7 @@ namespace MatchZy
                     int ctTeamNum = reverseTeamSides["CT"] == matchzyTeam1 ? 1 : 2;
                     int tTeamNum = reverseTeamSides["TERRORIST"] == matchzyTeam1 ? 1 : 2;
                     Winner winner = new(@event.Winner.ToString(), t1score > t2score ? "team1" : "team2");
+                    PostLegacyXRound(@event.Winner, @event.Reason, t1score, t2score, t1score + t2score, currentMapNumber);
 
                     var roundEndEvent = new MatchZyRoundEndedEvent
                     {
