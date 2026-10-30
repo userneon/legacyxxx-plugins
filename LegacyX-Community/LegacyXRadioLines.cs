@@ -113,6 +113,8 @@ public sealed partial class LegacyXCommunity
         ("inposition", "In position"), ("reportingin", "Reporting in"), ("getout", "Get out!"), ("followme", "Follow me"),
         ("holdposition", "Hold position"), ("regroup", "Regroup"), ("stormthefront", "Storm the front"), ("fallback", "Fall back"),
         ("coverme", "Cover me"), ("thanks", "Thanks"), ("niceshot", "Nice shot"), ("planting", "Planting!"), ("defusing", "Defusing!"),
+        ("cheer", "Cheer!"), ("compliment", "Nice!"), ("sticktogether", "Stick together"), ("gogogo", "Go go go!"), ("stormfront", "Storm the front"),
+        ("holdthisposition", "Hold this position"), ("followme", "Follow me"), ("reportin", "Report in"),
     };
 
     /// <summary>CS2 prints a radio call as a SayText2 line whose name contains "radio"; the plain player chat shares the message and is never touched.</summary>
