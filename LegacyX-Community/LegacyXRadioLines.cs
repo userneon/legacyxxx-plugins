@@ -26,6 +26,31 @@ public sealed partial class LegacyXCommunity
     private void RegisterRadioLines()
     {
         if (string.Equals(Config.RadioLines, "game", StringComparison.OrdinalIgnoreCase)) return;
+        if (string.Equals(Config.RadioLines, "debug", StringComparison.OrdinalIgnoreCase))
+        {
+            // For finding a message by hand: every kind of message the game sends is written to the log once, with its number and its fields.
+            for (var id = 100; id < 420; id++)
+            {
+                var number = id;
+                try
+                {
+                    HookUserMessage(number, message =>
+                    {
+                        if (radioSeen.Count < 400 && radioSeen.Add("um:" + number))
+                        {
+                            string text;
+                            try { text = string.Join(" | ", new[] { "messagename", "msg_name", "param1", "param2", "param3", "params" }.Select(f => { try { return f + "=" + message.ReadString(f); } catch { return ""; } }).Where(x => x.Length > 0)); }
+                            catch { text = ""; }
+                            Console.WriteLine($"[{ModuleName}] UserMessage {number}: {text}");
+                        }
+                        return HookResult.Continue;
+                    }, HookMode.Pre);
+                }
+                catch { }
+            }
+            Console.WriteLine($"[{ModuleName}] Radio lines: debug, every kind of message is written to the log once.");
+            return;
+        }
         HookUserMessage(SayText2Id, OnRadioSayText, HookMode.Pre);
         Console.WriteLine($"[{ModuleName}] Radio lines are shown as '{Config.RadioLines}' (SayText2 hook).");
         try
