@@ -319,6 +319,12 @@ public sealed partial class LegacyXHud
             var page = json.GetProperty("items").EnumerateArray()
                 .Select(i => new SkinItem(Text(i, "id") ?? "", Text(i, "name") ?? "", Number(i, "paintId"), Number(i, "defindex"), Text(i, "rarity"), Text(i, "rarityName") ?? ""))
                 .Where(i => i.Id.Length > 0).ToList();
+            // The skin the player has on this gun, knife, glove or agent comes first in the list, with its EQUIPPED badge, so it is the one seen at once.
+            if (current.Items.Count == 0 && tile.Eq is { } worn)
+            {
+                var at = page.FindIndex(i => i.Id == worn.ItemId);
+                if (at > 0) { var first = page[at]; page.RemoveAt(at); page.Insert(0, first); }
+            }
             current.Items.AddRange(page.Take(SkinItemSlots - current.Items.Count));
             SkinsStatus(menu!, p, "");
             SkinsRender(menu!, p, current);
