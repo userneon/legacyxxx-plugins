@@ -118,6 +118,7 @@ public partial class MatchZy
             return;
         }
 
+        halftimeExpShown = false;
         matchCoreCreateFailed = false;
         matchCoreNumber = null;
         matchCoreId = Guid.NewGuid();

@@ -354,6 +354,7 @@ namespace MatchZy
             RegisterListener<Listeners.OnTick>(OnLegacyXReadyKeyTick);
             RegisterLegacyXTeamGate();
             RegisterLegacyXKnifeMenu();
+            RegisterLegacyXHalftimeExp();
             RegisterLegacyXEmptyReset();
             RegisterListener<Listeners.OnMapStart>(mapName => { 
                 AddTimer(1.0f, () => {
