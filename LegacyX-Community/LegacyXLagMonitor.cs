@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Timers;
 
 namespace LegacyXCommunity;
@@ -37,16 +38,18 @@ public sealed partial class LegacyXCommunity
         // A map change, a pause or a restart moves the game clock on its own: only a normal step is judged.
         if (realStep < 3 || gameStep < 0 || gameStep > realStep * 1.5) return;
         var ratio = gameStep / realStep;
+        string Setting(string name) { try { var convar = ConVar.Find(name); return convar == null ? "?" : convar.StringValue; } catch { return "?"; } }
+        var settings = $"host_timescale {Setting("host_timescale")}, sv_cheats {Setting("sv_cheats")}";
         var humans = Utilities.GetPlayers().Count(player => player.IsValid && !player.IsBot && !player.IsHLTV);
         if (ratio < 0.92)
         {
             lagQuietChecks = 0;
-            Console.WriteLine($"[{ModuleName}] SERVER SLOW: game time ran at {ratio:0.00}x of real time over {realStep:0.0} s ({humans} players). Check CPU steal (top: st), disk and demo writes.");
+            Console.WriteLine($"[{ModuleName}] SERVER SLOW: game time ran at {ratio:0.00}x of real time over {realStep:0.0} s ({humans} players; {settings}). Check CPU steal (top: st), disk and demo writes.");
         }
         else if (++lagQuietChecks >= 120)
         {
             lagQuietChecks = 0;
-            Console.WriteLine($"[{ModuleName}] Server speed is normal ({ratio:0.00}x, {humans} players).");
+            Console.WriteLine($"[{ModuleName}] Server speed is normal ({ratio:0.00}x, {humans} players; {settings}).");
         }
     }
 }
