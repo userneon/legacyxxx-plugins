@@ -12,6 +12,8 @@ namespace LegacyXHud;
 //   lx_knife_hud <slot> off                                                               take it away
 public sealed partial class LegacyXHud
 {
+    private readonly HashSet<int> knifeHudLogged = new();
+
     [ConsoleCommand("lx_knife_hud", "The knife vote card: lx_knife_hud <slot> win|wait <team> <left> <total> | <slot> off")]
     public void OnKnifeHudCommand(CCSPlayerController? caller, CommandInfo command)
     {
@@ -19,10 +21,12 @@ public sealed partial class LegacyXHud
         if (!int.TryParse(command.ArgByIndex(1), out var slot)) return;
         if (Utilities.GetPlayerFromSlot(slot) is not { IsValid: true, IsBot: false } target) return;
         var mode = command.ArgByIndex(2).ToLowerInvariant();
+        if (mode != "off" && knifeHudLogged.Add(slot)) Console.WriteLine($"[{ModuleName}] Knife vote card for slot {slot}: {mode}.");
         var panel = Ensure(ref knifeHud, knifeLayout, "lx_knife");
         if (panel is null) return;
         if (mode == "off")
         {
+            knifeHudLogged.Remove(slot);
             Sc(panel, target, "kv", "shown", false);
             return;
         }

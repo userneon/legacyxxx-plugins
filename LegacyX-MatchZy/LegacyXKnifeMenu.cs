@@ -64,6 +64,7 @@ public partial class MatchZy
                 if (IsPlayerValid(player) && !player.IsBot && !player.IsHLTV && player.TeamNum == knifeWinner)
                     SendKnifeMenu(player, open: true);
         knifeMenuOnScreen = true;
+        Log($"[KnifeMenu] The knife vote starts for team {knifeWinner}: {(knifeHudOn ? "the card of the HUD plugin (lx_knife_hud)" : "the centre text and the left menu")}.");
         DrawLegacyXKnifeMenu();
     }
 
