@@ -151,6 +151,10 @@ public partial class MatchZy
         }
 
         var coreId = matchCoreId.Value;
+        // The game's own values (map name, map number) are read here, on the game thread: the payload is built later on a worker thread,
+        // where reading them fails, and the match was then never created (no log line, no match, no EXP).
+        var createdMapName = Server.MapName;
+        var createdMapNumber = matchConfig.CurrentMapNumber;
         QueueMatchCoreEvent("match_created", _ => new
         {
             event_id = NextMatchCoreEventId("match_created"),
@@ -158,8 +162,8 @@ public partial class MatchZy
             match_id = coreId.ToString(),
             server_id = legacyXMatchCoreServerId.Value,
             matchzy_local_id = liveMatchId.ToString(),
-            map_name = Server.MapName,
-            map_number = matchConfig.CurrentMapNumber,
+            map_name = createdMapName,
+            map_number = createdMapNumber,
             participants,
         }, result =>
         {
@@ -301,6 +305,8 @@ public partial class MatchZy
     private void OnLegacyXMatchCoreFinal(string winnerTeam, int team1Score, int team2Score, int mapTeam1Rounds, int mapTeam2Rounds)
     {
         if (!IsMatchCoreEnabled || !matchCoreId.HasValue) return;
+        var finalMapName = Server.MapName;   // read on the game thread, the payload is built on a worker thread
+        var finalMapNumber = matchConfig.CurrentMapNumber;
         // Match Core keys teams by starting side, MatchZy by config order; the result uses Match Core keys.
         var coreWinner = CoreTeamFromMatchzy(winnerTeam);
         var coreTeam1Series = rankCoreTeam1IsMatchzyTeam1 ? team1Score : team2Score;
@@ -319,8 +325,8 @@ public partial class MatchZy
                 winner_team = coreWinner,
                 team1_series_score = coreTeam1Series,
                 team2_series_score = coreTeam2Series,
-                map_name = Server.MapName,
-                map_number = matchConfig.CurrentMapNumber,
+                map_name = finalMapName,
+                map_number = finalMapNumber,
                 reward_eligible = rewardEligible,
                 competitive_result = competitiveResult,
             },
@@ -473,7 +479,14 @@ public partial class MatchZy
             matchCoreQueue = matchCoreQueue.ContinueWith(async _ =>
             {
                 if (matchCoreCreateFailed && eventName != "match_created") return;
-                var payload = payloadFactory(matchCoreRevision);
+                object payload;
+                try { payload = payloadFactory(matchCoreRevision); }
+                catch (Exception exception)
+                {
+                    Log($"[LegacyXMatchCore] {eventName} could not be built: {exception.Message}");
+                    if (eventName == "match_created") FailLegacyXMatchCoreCreate();
+                    return;
+                }
                 await PostMatchCoreEventAsync(eventName, payload, onSuccess);
             }, TaskScheduler.Default).Unwrap();
         }
