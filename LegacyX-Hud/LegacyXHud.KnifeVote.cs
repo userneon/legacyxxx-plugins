@@ -35,6 +35,7 @@ public sealed partial class LegacyXHud
         Sc(panel, target, "kv_wait", "hidden", mode != "wait");
         Ss(panel, target, "kv_stay_ic", "side", winningSide);
         Ss(panel, target, "kv_switch_ic", "side", winner == 2 ? "side-ct" : "side-t");
+        Ss(panel, target, "kv_wait_ic", "side", winningSide);
         Sv(panel, target, "kv_wait_title", winner == 2 ? "Terrorists won the knife round" : "Counter-Terrorists won the knife round");
         Sv(panel, target, "kv_time", mode == "win" ? $"{left} s · no answer means stay" : $"{left} s");
         Ss(panel, target, "kv_fill", "p", "p" + percent);
