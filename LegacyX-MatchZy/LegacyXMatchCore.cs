@@ -171,9 +171,45 @@ public partial class MatchZy
         });
     }
 
+    /// <summary>
+    /// Players who joined after the match was registered (during the knife round, or the side pick) were not in it: it said 2v2 while the
+    /// server played 3v3, and the ones who joined later had no EXP or rank. When the match goes live with a different set of humans on valid
+    /// teams (2 to 5 a side), the first registration is cancelled and the match is registered again with everyone who is there.
+    /// </summary>
+    private void ResyncLegacyXMatchCoreRoster()
+    {
+        if (!matchCoreId.HasValue || matchCoreCreateFailed) return;
+        var current = playerData.Values
+            .Where(player => IsPlayerValid(player) && !player.IsBot && !player.IsHLTV)
+            .Select(player => (Id: CoreSteamId(player), Team: CoreTeamKey(player)))
+            .Where(entry => entry.Team is not null)
+            .ToList();
+        var team1 = current.Count(entry => entry.Team == "team1");
+        var team2 = current.Count(entry => entry.Team == "team2");
+        if (team1 is < 2 or > 5 || team2 is < 2 or > 5) return;
+        var registered = matchCoreSlotsByOriginal.Values.Select(slot => (Id: slot.OriginalSteamId, Team: slot.TeamKey)).ToHashSet();
+        if (registered.SetEquals(current.Select(entry => (entry.Id, Team: entry.Team!)))) return;
+
+        // The cancel is built now (its numbers are those of the old match), the new registration starts from a clean state.
+        var oldId = matchCoreId.Value;
+        var oldRevision = matchCoreRevision;
+        var cancelEventId = NextMatchCoreEventId("cancel_resync");
+        QueueMatchCoreEvent("match_cancelled", _ => new
+        {
+            event_id = cancelEventId,
+            event_type = "match_cancelled",
+            match_id = oldId.ToString(),
+            expected_revision = oldRevision,
+        });
+        Log($"[LegacyXMatchCore] The teams changed since the match was registered ({registered.Count} then, {current.Count} now): registering it again with everyone.");
+        BeginLegacyXMatchCore();
+    }
+
     private void OnLegacyXMatchCoreLive()
     {
         if (!IsMatchCoreEnabled || !matchCoreId.HasValue || matchCoreLiveQueued) return;
+        ResyncLegacyXMatchCoreRoster();
+        if (!matchCoreId.HasValue) return;
         matchCoreLiveQueued = true;
         QueueMatchCoreEvent("state_transition_live", expectedRevision => new
         {
