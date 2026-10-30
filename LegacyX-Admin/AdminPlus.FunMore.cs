@@ -23,6 +23,7 @@ public partial class AdminPlus
         AddPermCmd("@css/slay", "css_launch", "<#userid|name|all @ commands> [power]", CmdLaunch);
         AddPermCmd("@css/slay", "css_size", "<#userid|name|all @ commands> <0.3-3>", CmdSize);
         AddPermCmd("@css/slay", "css_unsize", "<#userid|name|all @ commands>", CmdUnSize);
+        RegisterFunCheatCommands();
     }
 
     private void CmdLaunch(CCSPlayerController? caller, CommandInfo info)
