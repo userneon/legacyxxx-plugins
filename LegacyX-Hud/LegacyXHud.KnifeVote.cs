@@ -27,11 +27,23 @@ public sealed partial class LegacyXHud
         if (mode == "off")
         {
             knifeHudLogged.Remove(slot);
-            Sc(panel, target, "kv", "shown", false);
+            if (panel.IsOpenFor(target))
+            {
+                Sc(panel, target, "kv", "shown", false);
+                panel.Close(target);
+            }
+            ForgetKnifeCardState(slot);
             return;
         }
         if (mode is not ("win" or "wait") || command.ArgCount < 6) return;
         if (!int.TryParse(command.ArgByIndex(3), out var winner) || !int.TryParse(command.ArgByIndex(4), out var left) || !int.TryParse(command.ArgByIndex(5), out var total)) return;
+        // SetVariableFor / SetClassFor do nothing for a player without a session: the card is opened for them first, and what the client
+        // is known to have is forgotten then (a fresh session has nothing).
+        if (!panel.IsOpenFor(target))
+        {
+            ForgetKnifeCardState(slot);
+            if (!OpenFor(panel, target)) return;
+        }
         left = Math.Max(0, left);
         var percent = total > 0 ? Math.Clamp((int)Math.Round(left * 20.0 / total) * 5, 0, 100) : 0;   // the bar has a class for every 5 %
         var winningSide = winner == 2 ? "side-t" : "side-ct";
@@ -45,5 +57,12 @@ public sealed partial class LegacyXHud
         Sv(panel, target, "kv_time", mode == "win" ? $"{left} s · no answer means stay" : $"{left} s");
         Ss(panel, target, "kv_fill", "p", "p" + percent);
         Sc(panel, target, "kv", "shown", true);
+    }
+
+    private void ForgetKnifeCardState(int slot)
+    {
+        if (!menuSent.TryGetValue(slot, out var known)) return;
+        foreach (var key in known.Keys.Where(key => key.Contains(":kv", StringComparison.Ordinal)).ToList()) known.Remove(key);
+        foreach (var key in applied.Keys.Where(key => key.Slot == slot && key.PanelId.StartsWith("kv", StringComparison.Ordinal)).ToList()) applied.Remove(key);
     }
 }
