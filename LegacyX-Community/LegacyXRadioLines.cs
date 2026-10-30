@@ -82,7 +82,14 @@ public sealed partial class LegacyXCommunity
         try
         {
             var name = message.ReadString("messagename") ?? "";
-            if (name.IndexOf("radio", StringComparison.OrdinalIgnoreCase) < 0) return HookResult.Continue;
+            if (name.IndexOf("radio", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                // Plain player chat is "Cstrike_Chat_*"; any other kind of line is written to the log once, so the radio call can be named from it.
+                if (!name.StartsWith("Cstrike_Chat", StringComparison.OrdinalIgnoreCase) && !name.StartsWith("#Cstrike_Chat", StringComparison.OrdinalIgnoreCase)
+                    && radioSeen.Count < 100 && radioSeen.Add("say:" + name))
+                    Console.WriteLine($"[{ModuleName}] Chat line kind: {name} | {message.ReadString("param1")} | {message.ReadString("param2")} | {message.ReadString("param3")} | {message.ReadString("param4")}");
+                return HookResult.Continue;
+            }
             var parts = new List<string>();
             for (var index = 1; index <= 4; index++) parts.Add(message.ReadString("param" + index) ?? "");
             var flat = new string(string.Concat(parts).Where(char.IsLetter).ToArray()).ToLowerInvariant();
