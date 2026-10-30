@@ -512,6 +512,8 @@ public sealed partial class LegacyXHud
         Sc(panel, player, "sk_view_types", "hidden", view.Mode != "types");
         Sc(panel, player, "sk_view_items", "hidden", view.Mode != "items");
         Sc(panel, player, "sk_actions", "hidden", view.Mode != "items");
+        // Back sits left of the title: in the types list and in a pick's skins (an agent list has nowhere to go back to).
+        Sc(panel, player, "sk_back", "hidden", view.Mode == "loadout" || (view.Mode == "items" && view.Picked?.Slot == "agent"));
         if (view.Mode == "loadout") RenderLoadout(panel, player, view);
         else if (view.Mode == "types") RenderTypes(panel, player, view);
         else RenderItems(panel, player, view);
@@ -569,7 +571,6 @@ public sealed partial class LegacyXHud
         var agent = tile?.Slot == "agent";
         Sv(panel, player, "sk_title", PickedName(view));
         Sv(panel, player, "sk_sub", view.Loading ? "" : agent ? $"{view.Total} agents" : $"{view.Total} skins");   // no "0 skins" while the page is still on its way
-        Sc(panel, player, "sk_back", "hidden", agent);
         Sc(panel, player, "sk_remove", "hidden", tile?.Eq is null);
         var model = tile is null ? null : tile.Slot == "weapon" ? tile.Model : SkinModel(view.TypeClass);
         var eq = tile?.Eq;
