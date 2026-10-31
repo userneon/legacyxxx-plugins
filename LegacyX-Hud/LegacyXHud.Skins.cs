@@ -564,6 +564,9 @@ public sealed partial class LegacyXHud
             var eq = tile.Eq;
             Sc(panel, player, $"sk_w{i}_ck", "hidden", eq is null);
             Ss(panel, player, $"sk_w{i}_dot", "rc", eq?.Rarity is { } rarity ? "rc-" + rarity : null);
+            // A gun that wears a skin carries its rarity as a soft light fading down from the top of its card (and a lit edge on hover).
+            Ss(panel, player, $"sk_w{i}_glow", "rg", eq?.Rarity is { } glow ? "rg-" + glow : null);
+            Ss(panel, player, $"sk_w{i}", "rb", eq?.Rarity is { } edge ? "rb-" + edge : null);
             string? pic;
             if (eq is not null)
                 pic = SkinPicture(tile.Slot, tile.Slot == "weapon" ? tile.Model : SkinModel(eq.WeaponClass), eq.PaintId, eq.Defindex);
