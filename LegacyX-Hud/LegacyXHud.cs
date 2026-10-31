@@ -24,6 +24,10 @@ public sealed partial class LegacyXHud : BasePlugin
     private PanelHandle? menu;
     private string knifeLayout = LayoutDir + "legacyx_knife.vxml_c";
     private PanelHandle? knifeHud;
+    // After a map change a client that got the Workshop addon at connect has lost it (the new level's addon list is empty) and its HUD is dead until it
+    // connects again. A short reconnect brings the addon back, exactly like leaving and joining by hand (LEGACYX_HUD_RECONNECT_ON_MAP, default on).
+    private bool reconnectOnMap = true;
+    private bool firstMapSeen;
 
     public override string ModuleAuthor => "LEGACY-X";
     public override string ModuleName => "LEGACY-X Hud";
@@ -47,6 +51,7 @@ public sealed partial class LegacyXHud : BasePlugin
         skinSecret = env.GetModule("SKINBRIDGE", "PLUGIN_TOKEN", "");
 
         menuKeys = env.GetModuleBoolean("HUD", "MENU_KEYS", true);
+        reconnectOnMap = env.GetModuleBoolean("HUD", "RECONNECT_ON_MAP", true);
         menuSounds = env.GetModuleBoolean("HUD", "MENU_SOUNDS", true);
         if (float.TryParse(env.GetModule("HUD", "MENU_SOUND_VOLUME", "1"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var volume))
             soundVolume = Math.Clamp(volume, 0f, 1f);
@@ -91,8 +96,27 @@ public sealed partial class LegacyXHud : BasePlugin
         Console.WriteLine($"[{ModuleName}] Map {mapName}: the menu is drawn again from scratch");
         foreach (var slot in Enumerable.Range(0, 64)) ForgetMenuState(slot, everything: true);
         rulesProxy = null;
+        if (reconnectOnMap && firstMapSeen) AddTimer(5f, ReconnectPlayersForAddon);
+        firstMapSeen = true;
         AddTimer(2f, ReleaseMenuInputForAll);
         AddTimer(8f, ReleaseMenuInputForAll);
+    }
+
+    /// <summary>Players who were already on the server when the map changed connect again, so the client gets the Workshop addon (and the HUD) back.</summary>
+    private void ReconnectPlayersForAddon()
+    {
+        foreach (var player in Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }))
+        {
+            try
+            {
+                Console.WriteLine($"[{ModuleName}] Slot {player.Slot} connects again so the addon is back after the map change.");
+                player.ExecuteClientCommandFromServer("reconnect");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[{ModuleName}] Could not send the reconnect to slot {player.Slot}: {ex.Message}");
+            }
+        }
     }
 
     private void ReleaseMenuInputForAll()
