@@ -538,6 +538,8 @@ public sealed partial class LegacyXHud
         Sc(panel, player, "sk_view_loadout", "hidden", view.Mode != "loadout");
         Sc(panel, player, "sk_view_types", "hidden", view.Mode != "types");
         Sc(panel, player, "sk_view_items", "hidden", view.Mode != "items");
+        // "Choosing a skin for" stands before the gun's name while its skins are listed (not for the agents' list, which has no gun).
+        Sc(panel, player, "sk_pre", "hidden", !(view.Mode == "items" && view.Picked?.Slot != "agent"));
         Sc(panel, player, "sk_actions", "hidden", view.Mode != "items");
         // Back sits left of the title only inside a pick's skins. The category tab opens the types list (and the agents' skins) directly,
         // so those have nowhere to go back to.
