@@ -598,6 +598,9 @@ public sealed partial class LegacyXHud
             // The type the player has a skin on shows that skin; the others their grey shape.
             var worn = tile!.Eq is { } wornSkin && wornSkin.WeaponClass == type.WeaponClass ? wornSkin : null;
             var wornModel = SkinModel(type.WeaponClass);
+            // The type that wears a skin carries the skin's rarity as a soft light and a lit edge, like a gun card.
+            Ss(panel, player, $"sk_type{i}_glow", "rg", worn?.Rarity is { } glow ? "rg-" + glow : null);
+            Ss(panel, player, $"sk_type{i}", "rb", worn?.Rarity is { } edge ? "rb-" + edge : null);
             Ss(panel, player, $"sk_type{i}_ic", "kn",
                 worn is not null && wornModel is not null ? SkinPicture(tile.Slot, wornModel, worn.PaintId, worn.Defindex)
                 : tile.Slot == "knife" && KnifeIcons.TryGetValue(type.WeaponClass, out var knife) ? "kn-" + knife
