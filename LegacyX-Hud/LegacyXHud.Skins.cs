@@ -575,6 +575,8 @@ public sealed partial class LegacyXHud
             else
                 pic = tile.Slot == "weapon" && tile.Model is not null ? "gn-" + tile.Model : tile.Slot == "knife" ? "kn-karambit" : tile.Slot == "agent" ? "agn-" + view.Team : null;
             Ss(panel, player, $"sk_w{i}_pic", "sp", pic);
+            // A gun with no skin shows its plain grey picture, faded, so a skinned gun stands out and nothing looks white.
+            Sc(panel, player, $"sk_w{i}_pic", "dim", eq is null);
         }
     }
 
