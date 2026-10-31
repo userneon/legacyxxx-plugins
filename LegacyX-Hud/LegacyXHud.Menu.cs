@@ -68,6 +68,7 @@ public sealed partial class LegacyXHud
         if (!everything) return;
         holds.Remove(slot);
         hintOn.Remove(slot);
+        hintLogged.Remove(slot);
         menuOpen.Remove(slot);
         skinViews.Remove(slot);
     }

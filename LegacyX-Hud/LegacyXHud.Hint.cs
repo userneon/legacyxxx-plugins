@@ -1,6 +1,7 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
+using CounterStrikeSharp.API.Modules.Timers;
 using PanoramaManager;
 
 namespace LegacyXHud;
@@ -37,7 +38,21 @@ public sealed partial class LegacyXHud
         if (hintOn.Add(player.Slot))
         {
             if (!OpenFor(panel, player)) { hintOn.Remove(player.Slot); return; }
-            if (hintLogged.Add(player.Slot)) Console.WriteLine($"[{ModuleName}] The HOLD E card is shown to slot {player.Slot}.");
+            if (hintLogged.Add(player.Slot))
+            {
+                Console.WriteLine($"[{ModuleName}] The HOLD E card is shown to slot {player.Slot}.");
+                // A player who has just joined may not have the Workshop addon mounted yet, so the first card can fail to load on their side
+                // (they see it only after reconnecting). Draw it once more a few seconds later.
+                var slot = player.Slot;
+                var steamId = player.SteamID;
+                AddTimer(8f, () =>
+                {
+                    var again = Utilities.GetPlayerFromSlot(slot);
+                    if (again is not { IsValid: true } || again.SteamID != steamId || hintHud is null || !hintHud.IsOpenFor(again)) return;
+                    hintHud.Close(again);
+                    hintOn.Remove(slot);
+                }, TimerFlags.STOP_ON_MAPCHANGE);
+            }
             panel.SetClassFor(player, "hint", "shown", true);
             hold.OpenStep = -1;
         }
