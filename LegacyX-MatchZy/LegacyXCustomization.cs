@@ -41,6 +41,7 @@ public partial class MatchZy
         float delay = Math.Max(0.5f, legacyXMapTransitionDelay.Value);
 
         PrintToAllChat($"Match saved. Next map: {{white}}{nextMap}{{grey}}.");
+        if (legacyXRestartAfterMatch.Value) PrintToAllChat("The server restarts for the next map: reconnect in about a minute.");
         Log($"[LEGACY-X] Post-match soft transition scheduled: {Server.MapName} -> {nextMap} in {delay:0.0}s");
 
         AddTimer(Math.Max(0, restartDelay), () =>
@@ -56,7 +57,10 @@ public partial class MatchZy
                     // A whole restart, not a map change: the HUD layout and the plugins are loaded again. The service starts the server again
                     // (Restart=always) and OpenLegacyXNextMap changes to the saved map once it is up.
                     Log($"[LEGACY-X] Restarting the server for the next map {nextMap}.");
-                    Server.ExecuteCommand("quit");
+                    // Everyone is sent out with a clear reason first, so the players read "restarting" and not a lost connection.
+                    foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV && p.UserId.HasValue))
+                        Server.ExecuteCommand($"kickid {(ushort)player.UserId!.Value} \"Match finished. The server restarts, reconnect in a minute.\"");
+                    AddTimer(1.5f, () => Server.ExecuteCommand("quit"));
                     return;
                 }
                 ChangeMap(nextMap, 0.0f);
