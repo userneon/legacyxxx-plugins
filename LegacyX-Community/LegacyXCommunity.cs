@@ -159,8 +159,8 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
             foreach (var online in Utilities.GetPlayers()) ApplyScoreboardRank(online);
         }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
         // The rank column only draws after a reveal arrives while Tab is open, and CS2 may never send the
-        // server the Tab button: with an icon mode on, reveal to everyone every second instead.
-        AddTimer(1.0f, () =>
+        // server the Tab button: with an icon mode on, reveal to everyone every 4 seconds instead (every second made the badge blink).
+        AddTimer(4.0f, () =>
         {
             if (scoreboardRankType != 0 && scoreboardRanks.Count > 0) RevealScoreboardRanks();
         }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
@@ -291,20 +291,20 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
             if (RankHidden())
             {
                 // A ranked match is on: no rank in Tab, as on FACEIT. The new rank is on the website after the match.
-                player.CompetitiveRankType = 0;
-                player.CompetitiveRanking = 0;
-                Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRankType");
-                Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRanking");
+                // Written to the network only when the value really changes: a resend every 2 s made the badge blink in Tab.
+                if (player.CompetitiveRankType != 0) { player.CompetitiveRankType = 0; Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRankType"); }
+                if (player.CompetitiveRanking != 0) { player.CompetitiveRanking = 0; Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRanking"); }
                 return;
             }
             if (scoreboardRankType == 0) return;
-            player.CompetitiveRankType = (sbyte)scoreboardRankType;
-            player.CompetitiveRanking = scoreboardRankType == 11 ? rank.Exp : rank.RankId + scoreboardIconOffset;
             // The client hides a skill group below 10 wins; the rank itself is already earned on the site.
-            player.CompetitiveWins = Math.Max(10, rank.Matches);
-            Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRankType");
-            Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRanking");
-            Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveWins");
+            // Each field is written and sent to the clients only when it differs: sending all three again every 2 s made the badge blink in Tab.
+            var wantedType = (sbyte)scoreboardRankType;
+            var wantedRanking = scoreboardRankType == 11 ? rank.Exp : rank.RankId + scoreboardIconOffset;
+            var wantedWins = Math.Max(10, rank.Matches);
+            if (player.CompetitiveRankType != wantedType) { player.CompetitiveRankType = wantedType; Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRankType"); }
+            if (player.CompetitiveRanking != wantedRanking) { player.CompetitiveRanking = wantedRanking; Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveRanking"); }
+            if (player.CompetitiveWins != wantedWins) { player.CompetitiveWins = wantedWins; Utilities.SetStateChanged(player, "CCSPlayerController", "m_iCompetitiveWins"); }
             if (scoreboardLogged.Add(player.SteamID))
                 Console.WriteLine($"[{ModuleName}] Tab rank for {player.SteamID}: type {scoreboardRankType}, value {player.CompetitiveRanking}.");
         }
