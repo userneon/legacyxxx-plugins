@@ -34,6 +34,7 @@ namespace MatchZy
         public FakeConVar<bool> legacyXExactFiveVFive = new("legacyx_exact_5v5", "LEGACY-X MatchZy starts only with exactly 5 CT vs 5 T and every active player ready. Default: true", true);
         public FakeConVar<bool> legacyXRandomMapAfterMatch = new("legacyx_random_map_after_match", "LEGACY-X changes to a random different map after a series ends. Default: true", true);
         public FakeConVar<string> legacyXMapPool = new("legacyx_map_pool", "Comma-separated installed maps used for random non-repeat rotation", "de_ancient,de_anubis,de_dust2,de_inferno,de_mirage,de_nuke,de_overpass,de_vertigo");
+        public FakeConVar<bool> legacyXRestartAfterMatch = new("legacyx_restart_after_match", "The game server restarts itself after a match and then opens the next map, so the HUD and every plugin start fresh (needs the cs2@ service to restart on exit). Default: true", true);
         public FakeConVar<float> legacyXMapTransitionDelay = new("legacyx_map_transition_delay", "Seconds to show PLEASE WAIT before the soft map change", 3.0f);
         public FakeConVar<string> legacyXRankSeason = new("legacyx_rank_season", "LEGACY-X rank season slug sent with final MatchZy map results", "season-1");
         public FakeConVar<bool> legacyXMatchLiveFlag = new("legacyx_match_live", "Read-only: 1 while a match is live. LegacyX-Community hides Tab ranks during it.", false);

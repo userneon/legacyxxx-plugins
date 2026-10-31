@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Modules.Timers;
 
@@ -50,8 +51,46 @@ public partial class MatchZy
 
             AddTimer(delay, () =>
             {
+                if (legacyXRestartAfterMatch.Value && TryWriteLegacyXNextMap(nextMap))
+                {
+                    // A whole restart, not a map change: the HUD layout and the plugins are loaded again. The service starts the server again
+                    // (Restart=always) and OpenLegacyXNextMap changes to the saved map once it is up.
+                    Log($"[LEGACY-X] Restarting the server for the next map {nextMap}.");
+                    Server.ExecuteCommand("quit");
+                    return;
+                }
                 ChangeMap(nextMap, 0.0f);
             }, TimerFlags.STOP_ON_MAPCHANGE);
         }, TimerFlags.STOP_ON_MAPCHANGE);
+    }
+
+    private static string LegacyXNextMapFile => Path.Combine(Server.GameDirectory, "csgo", "legacyx_next_map.txt");
+
+    private bool TryWriteLegacyXNextMap(string map)
+    {
+        try { File.WriteAllText(LegacyXNextMapFile, map); return true; }
+        catch (Exception ex) { Log($"[LEGACY-X] Could not save the next map, changing the map without a restart: {ex.Message}"); return false; }
+    }
+
+    /// <summary>After a restart for the next map: change to the map saved before the restart (once; the file is removed first, so a failure cannot loop).</summary>
+    private void RegisterLegacyXNextMap()
+    {
+        RegisterListener<Listeners.OnMapStart>(_ =>
+        {
+            try
+            {
+                var file = LegacyXNextMapFile;
+                if (!File.Exists(file)) return;
+                var map = File.ReadAllText(file).Trim();
+                File.Delete(file);
+                if (map.Length == 0 || string.Equals(map, Server.MapName, StringComparison.OrdinalIgnoreCase)) return;
+                AddTimer(5f, () =>
+                {
+                    if (Server.IsMapValid(map)) ChangeMap(map, 0.0f);
+                    else Log($"[LEGACY-X] The saved next map {map} is not valid here; staying on {Server.MapName}.");
+                });
+            }
+            catch (Exception ex) { Log($"[LEGACY-X] Could not open the saved next map: {ex.Message}"); }
+        });
     }
 }

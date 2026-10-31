@@ -299,7 +299,7 @@ User=$CS2_USER
 WorkingDirectory=$CS2_DIR
 EnvironmentFile=$CONF_DIR/%i.conf
 ExecStart=/bin/bash -c 'exec $CS2_DIR/game/cs2.sh -dedicated -port %i -maxplayers \${MAXPLAYERS} +map \${MAP} \${GAME_ARGS} +sv_setsteamaccount \${GSLT} +hostname "\$\${GAME_NAME:-LEGACY-X}"'
-Restart=on-failure
+Restart=always
 RestartSec=10
 LimitNOFILE=100000
  
@@ -490,6 +490,7 @@ cmd_update() {
   install_metamod
   install_counterstrikesharp
   install_multiaddonmanager
+  write_unit   # a server may restart itself after a match (Restart=always), so the unit is kept current
   if [[ -n "$package" ]] || command -v dotnet >/dev/null; then
     install_legacyx "$package" ""
   else

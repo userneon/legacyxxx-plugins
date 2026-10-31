@@ -356,6 +356,7 @@ namespace MatchZy
             RegisterLegacyXKnifeMenu();
             RegisterLegacyXHalftimeExp();
             RegisterLegacyXEmptyReset();
+            RegisterLegacyXNextMap();
             RegisterListener<Listeners.OnMapStart>(mapName => { 
                 AddTimer(1.0f, () => {
                     // A map change that MatchZy did not start itself (an admin's !map, a vote) while a match was running: the old match
