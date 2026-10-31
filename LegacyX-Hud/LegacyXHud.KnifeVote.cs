@@ -91,6 +91,13 @@ public sealed partial class LegacyXHud
         Sc(panel, target, "kv_wait", "hidden", mode != "wait");
         Ss(panel, target, "kv_stay_ic", "side", winningSide);
         Ss(panel, target, "kv_switch_ic", "side", winner == 2 ? "side-ct" : "side-t");
+        // The buttons and their keys take the colour of the side they lead to: Stay is the side the winners are on, Switch the other.
+        var stayTone = winner == 2 ? "t" : "ct";
+        var switchTone = winner == 2 ? "ct" : "t";
+        Ss(panel, target, "kv_key_stay", "key", "key-" + stayTone);
+        Ss(panel, target, "kv_key_switch", "key", "key-" + switchTone);
+        Ss(panel, target, "kv_btn_stay", "opt", "opt-" + stayTone);
+        Ss(panel, target, "kv_btn_switch", "opt", "opt-" + switchTone);
         Ss(panel, target, "kv_wait_ic", "side", winningSide);
         Sv(panel, target, "kv_wait_title", "Enemy team is choosing, please wait!");
         Sv(panel, target, "kv_wait_sub", winner == 2 ? "Terrorists won the knife round: stay or switch" : "Counter-Terrorists won the knife round: stay or switch");
