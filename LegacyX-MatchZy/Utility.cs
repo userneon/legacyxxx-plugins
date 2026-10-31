@@ -244,7 +244,7 @@ namespace MatchZy
         {
             if (!sideVoteAwaitingRound || !isSideSelectionPhase) return;
             sideVoteAwaitingRound = false;
-            PrintToAllChat($"{ChatColors.White}{knifeWinnerName}{ChatColors.Grey}: press {ChatColors.White}R{ChatColors.Grey} to stay or {ChatColors.White}F{ChatColors.Grey} to switch (or type {ChatColors.White}.stay{ChatColors.Grey} / {ChatColors.White}.switch{ChatColors.Grey}) within {KnifeVoteSeconds:0} seconds. No answer means stay.");
+            PrintToAllChat($"{ChatColors.White}{knifeWinnerName}{ChatColors.Grey}: click {ChatColors.White}Stay{ChatColors.Grey} or {ChatColors.White}Switch{ChatColors.Grey} (or type {ChatColors.White}.stay{ChatColors.Grey} / {ChatColors.White}.switch{ChatColors.Grey}) within {KnifeVoteSeconds:0} seconds. No answer means stay.");
             knifeVoteTimer?.Kill();
             knifeVoteTimer = AddTimer(KnifeVoteSeconds, KnifeVoteTimeout);
             StartLegacyXKnifeMenu();

@@ -7,7 +7,7 @@ using PanoramaManager;
 namespace LegacyXHud;
 
 // The knife round side vote card (legacyx_knife): MatchZy (the knife round) tells this plugin who sees what through a server command, and this
-// plugin draws it per player. There is no mouse: the winners press R (stay) or F (switch), which MatchZy answers.
+// plugin draws it per player. The winners click Stay or Switch (a click is the same as typing .stay or .switch, which MatchZy answers).
 //   lx_knife_hud <slot> win|wait <winning team 2|3> <seconds left> <seconds in all>      show / refresh the card for one player
 //   lx_knife_hud <slot> off                                                               take it away
 public sealed partial class LegacyXHud
@@ -91,11 +91,9 @@ public sealed partial class LegacyXHud
         Sc(panel, target, "kv_wait", "hidden", mode != "wait");
         Ss(panel, target, "kv_stay_ic", "side", winningSide);
         Ss(panel, target, "kv_switch_ic", "side", winner == 2 ? "side-ct" : "side-t");
-        // The buttons and their keys take the colour of the side they lead to: Stay is the side the winners are on, Switch the other.
+        // The buttons take the colour of the side they lead to: Stay is the side the winners are on, Switch the other.
         var stayTone = winner == 2 ? "t" : "ct";
         var switchTone = winner == 2 ? "ct" : "t";
-        Ss(panel, target, "kv_key_stay", "key", "key-" + stayTone);
-        Ss(panel, target, "kv_key_switch", "key", "key-" + switchTone);
         Ss(panel, target, "kv_btn_stay", "opt", "opt-" + stayTone);
         Ss(panel, target, "kv_btn_switch", "opt", "opt-" + switchTone);
         Ss(panel, target, "kv_wait_ic", "side", winningSide);
