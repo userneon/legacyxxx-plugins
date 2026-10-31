@@ -35,6 +35,30 @@ public partial class MatchZy
             info.ArgCount > 1 && int.TryParse(info.ArgByIndex(1), out var choice) && choice is 1 or 2 ? OnKnifeMenuKey(player, stay: choice == 1) : HookResult.Continue);
         AddCommandListener("slot1", (player, info) => OnKnifeMenuKey(player, stay: true));
         AddCommandListener("slot2", (player, info) => OnKnifeMenuKey(player, stay: false));
+        // The keys that are sure to reach the server (owner request 2026-10-31, the number keys did not): R stays, F (inspect) switches.
+        RegisterListener<Listeners.OnTick>(OnKnifeVoteKeysTick);
+    }
+
+    private readonly Dictionary<int, (bool R, bool F)> knifeVoteKeys = new();
+
+    private void OnKnifeVoteKeysTick()
+    {
+        if (!isSideSelectionPhase || knifeMenuTimer == null)
+        {
+            if (knifeVoteKeys.Count > 0) knifeVoteKeys.Clear();
+            return;
+        }
+        foreach (var player in Utilities.GetPlayers())
+        {
+            if (player == null || !player.IsValid || player.IsBot || player.IsHLTV || player.TeamNum != knifeWinner) continue;
+            var r = (player.Buttons & PlayerButtons.Reload) != 0;
+            var f = (player.Buttons & PlayerButtons.Inspect) != 0;
+            knifeVoteKeys.TryGetValue(player.Slot, out var was);
+            knifeVoteKeys[player.Slot] = (r, f);
+            // Pressed down just now (not held): answer once.
+            if (r && !was.R) { OnKnifeMenuKey(player, stay: true); return; }
+            if (f && !was.F) { OnKnifeMenuKey(player, stay: false); return; }
+        }
     }
 
     [ConsoleCommand("lx_knife_menu_msg", "Knife vote menu on the left of the screen: lx_knife_menu_msg cs|base|off")]

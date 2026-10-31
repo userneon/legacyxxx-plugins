@@ -7,7 +7,7 @@ using PanoramaManager;
 namespace LegacyXHud;
 
 // The knife round side vote card (legacyx_knife): MatchZy (the knife round) tells this plugin who sees what through a server command, and this
-// plugin draws it per player. There is no mouse: the winners press 1 or 2, which MatchZy already answers.
+// plugin draws it per player. There is no mouse: the winners press R (stay) or F (switch), which MatchZy answers.
 //   lx_knife_hud <slot> win|wait <winning team 2|3> <seconds left> <seconds in all>      show / refresh the card for one player
 //   lx_knife_hud <slot> off                                                               take it away
 public sealed partial class LegacyXHud
