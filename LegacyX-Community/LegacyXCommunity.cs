@@ -158,12 +158,8 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         {
             foreach (var online in Utilities.GetPlayers()) ApplyScoreboardRank(online);
         }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
-        // The rank column only draws after a reveal arrives while Tab is open, and CS2 may never send the
-        // server the Tab button: with an icon mode on, reveal to everyone every 4 seconds instead (every second made the badge blink).
-        AddTimer(4.0f, () =>
-        {
-            if (scoreboardRankType != 0 && scoreboardRanks.Count > 0) RevealScoreboardRanks();
-        }, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
+        // The reveal message plays the badge's grow-and-shrink animation on every client, so it is sent only when something changed: when a player's
+        // Tab opens (OnTick below, to that player only), at the round start and when ranks load. A reveal every few seconds made every badge pulse.
         RegisterListener<Listeners.OnTick>(() =>
         {
             foreach (var player in Utilities.GetPlayers())
