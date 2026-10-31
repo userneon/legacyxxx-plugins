@@ -31,6 +31,7 @@ public sealed partial class LegacyXHud
     private void OnKnifeCardEvent(PanelEvent e)
     {
         if (e.Player is not { IsValid: true, IsBot: false } player) return;
+        Console.WriteLine($"[{ModuleName}] Knife card event from slot {player.Slot}: {e.Action} {e.ElementId}");
         if (e.Action == PanelAction.Restored)
         {
             ForgetKnifeCardState(player.Slot);

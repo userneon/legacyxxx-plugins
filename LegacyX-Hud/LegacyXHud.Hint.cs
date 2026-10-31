@@ -15,6 +15,7 @@ public sealed partial class LegacyXHud
     private PanelHandle? hintHud;
     private readonly HashSet<int> hintOn = new();
     private bool hintListening;
+    private readonly HashSet<int> hintLogged = new();
 
     private void HintTick(CCSPlayerController player, Hold hold, bool allowed, bool use)
     {
@@ -36,6 +37,7 @@ public sealed partial class LegacyXHud
         if (hintOn.Add(player.Slot))
         {
             if (!OpenFor(panel, player)) { hintOn.Remove(player.Slot); return; }
+            if (hintLogged.Add(player.Slot)) Console.WriteLine($"[{ModuleName}] The HOLD E card is shown to slot {player.Slot}.");
             panel.SetClassFor(player, "hint", "shown", true);
             hold.OpenStep = -1;
         }
@@ -47,6 +49,7 @@ public sealed partial class LegacyXHud
                 hold.Open = 0;
                 hold.NeedRelease = true;
                 HintHide(player);
+                Console.WriteLine($"[{ModuleName}] E was held by slot {player.Slot}: opening the skin menu.");
                 OpenSkinMenu(player);
                 return;
             }
