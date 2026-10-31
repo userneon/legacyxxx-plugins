@@ -123,6 +123,7 @@ public sealed partial class LegacyXHud
         menuOpen.Add(player.Slot);
         MenuSound(player, soundOpen, LevelOpen);
         Ss(panel, player, "menu_hold_fill", "p", "p0");
+        Sv(panel, player, "sk_version", $"LEGACY-X v{ModuleVersion}");
 
         Sc(panel, player, "menu_dim", "shown", true);
         Sc(panel, player, "menu", "shown", true);
