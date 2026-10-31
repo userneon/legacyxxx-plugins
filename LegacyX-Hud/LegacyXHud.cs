@@ -40,6 +40,7 @@ public sealed partial class LegacyXHud : BasePlugin
         }
         menuLayout = env.Get("LEGACYX_HUD_MENU_LAYOUT", menuLayout);
         knifeLayout = env.Get("LEGACYX_HUD_KNIFE_LAYOUT", knifeLayout);
+        hintLayout = env.Get("LEGACYX_HUD_HINT_LAYOUT", hintLayout);
         apiBase = env.Get("LEGACYX_API_BASE_URL", "").TrimEnd('/');
         // The menu reads and saves the loadout with SkinBridge's own token (skinchanger:read and :write).
         skinPluginId = env.GetModule("SKINBRIDGE", "PLUGIN_ID", skinPluginId);
@@ -71,6 +72,8 @@ public sealed partial class LegacyXHud : BasePlugin
     {
         menu?.Dispose();
         menu = null;
+        hintHud?.Dispose();
+        hintHud = null;
         if (enabled) Panorama.Shutdown();
     }
 

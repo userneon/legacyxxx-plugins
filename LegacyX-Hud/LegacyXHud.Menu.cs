@@ -67,6 +67,7 @@ public sealed partial class LegacyXHud
             applied.Remove(key);
         if (!everything) return;
         holds.Remove(slot);
+        hintOn.Remove(slot);
         menuOpen.Remove(slot);
         skinViews.Remove(slot);
     }
@@ -89,11 +90,16 @@ public sealed partial class LegacyXHud
     public void OnSkinMenuCommand(CCSPlayerController? player, CommandInfo command)
     {
         if (!enabled || player is not { IsValid: true, IsBot: false }) return;
+        OpenSkinMenu(player);
+    }
+
+    /// <summary>Opens the skin menu on the side the player is on now (T or CT); a spectator or an unassigned player keeps the side they had last.</summary>
+    private void OpenSkinMenu(CCSPlayerController player)
+    {
         OpenMenu(player);
         if (!menuOpen.Contains(player.Slot)) return;
         var panel = EnsureMenu();
         if (panel is null) return;
-        // It opens on the side the player is on now (T or CT); a spectator or an unassigned player keeps the side they had last.
         var side = player.TeamNum == 2 ? "t" : player.TeamNum == 3 ? "ct" : null;
         SkinsOpen(panel, player, side);
     }

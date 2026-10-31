@@ -19,6 +19,8 @@ public sealed partial class LegacyXHud
         public float Close;         // seconds R has been held while the menu is open
         public bool NeedRelease;    // a hold fired: wait for the key to go up
         public int ShownStep = -1;  // last progress step drawn (0..20)
+        public float Open;          // seconds E has been held to open the menu (the hint on the right)
+        public int OpenStep = -1;   // last step of that bar drawn
     }
 
     private readonly Dictionary<int, Hold> holds = new();
@@ -73,8 +75,9 @@ public sealed partial class LegacyXHud
                 continue;
             }
 
-            // The menu opens only with !ws; the keys only close it.
-            if (!isOpen) continue;
+            // !ws opens the menu; holding E (the hint on the right) does too; holding R closes it.
+            if (!isOpen) { HintTick(player, hold, allowed, use); continue; }
+            HintHide(player);
 
             if (!reload)
             {
