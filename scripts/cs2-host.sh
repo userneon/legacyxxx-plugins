@@ -29,7 +29,7 @@
 #       while the installed CounterStrikeSharp release is the one it was built for; the next release replaces it.
 #   sudo ./scripts/cs2-host.sh client-addons [id,id,...]
 #       Workshop addon IDs every player downloads on connect (MultiAddonManager mm_client_extra_addons): LEGACY-X's particle
-#       effects are 3810642940. No IDs prints the current value; "none" clears it. Restart the servers after.
+#       effects are 3830785234. No IDs prints the current value; "none" clears it. Restart the servers after.
 #   sudo ./scripts/cs2-host.sh remove <port>        stops and deletes that server's service and config
 #   sudo ./scripts/cs2-host.sh name <port> "<website name>" ["<in-game name>"]
 #       two separate names for one server: the website's (e.g. "Match 1") and the one players see in the server
