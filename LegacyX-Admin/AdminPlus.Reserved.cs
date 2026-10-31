@@ -110,7 +110,8 @@ public partial class AdminPlus
     {
         try
         {
-            int currentPlayers = GetCurrentPlayerCount();
+            // The player who is joining is already on the server here: counting them made a server with a free slot look full and removed them (or someone else).
+            int currentPlayers = GetCurrentPlayerCount(player);
             int maxPlayers = Server.MaxPlayers;
             
             if (player.IsBot) return HookResult.Continue;
@@ -322,7 +323,7 @@ public partial class AdminPlus
         }
     }
     
-    private int GetCurrentPlayerCount()
+    private int GetCurrentPlayerCount(CCSPlayerController? except = null)
     {
         try
         {
@@ -332,7 +333,7 @@ public partial class AdminPlus
             int count = 0;
             foreach (var player in allPlayers)
             {
-                if (IsPlayerValid(player))
+                if (player != except && IsPlayerValid(player))
                 {
                     count++;
                 }
