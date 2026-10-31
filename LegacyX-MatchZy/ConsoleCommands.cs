@@ -525,7 +525,8 @@ namespace MatchZy
             }
         }
 
-        [ConsoleCommand("css_map", "Changes the map using changelevel")]
+        // css_map belongs to LegacyX-Admin (4 s delay, permissions, log). With MatchZy answering it too, !map changed the map twice, 4-5 s apart, and the second change cut off
+        // the players who were connecting after the first ("Unable to establish a connection with the gameserver"). The chat command .map (MatchZy.cs) is unchanged.
         public void OnChangeMapCommand(CCSPlayerController? player, CommandInfo command)
         {
             var mapName = command.ArgByIndex(1);
