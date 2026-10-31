@@ -228,14 +228,15 @@ install_multiaddonmanager() {
   say "MultiAddonManager ${tag:-installed} (in the console: meta list)"
 }
  
-# Without this a player who already has the Workshop addon is sent it again on every map change: the client drops out and comes
-# back ("loop shutdown"), and the HUD and the microphone are dead until the addon is back. With it, MultiAddonManager remembers
-# which SteamIDs already have the addons, so a map change keeps them in place. Written to MultiAddonManager's own cfg on every run.
+# MultiAddonManager's client cache (mm_cache_clients_with_addons) stops it from sending the Workshop addon again at a map change, but the client
+# unmounts it when the new level loads (the level's own addon list is empty), so the HUD is dead after every map change (seen 2026-10-31).
+# So the cache is OFF: at a map change each client briefly reconnects and gets the addon back. mm_block_disconnect_messages hides the
+# "loop shutdown" lines. Written to MultiAddonManager's own cfg on every run.
 ensure_mam_client_cache() {
   local cfg="$CSGO_DIR/cfg/multiaddonmanager/multiaddonmanager.cfg" name value
   mkdir -p "$(dirname "$cfg")"
   touch "$cfg"
-  for pair in "mm_cache_clients_with_addons 1" "mm_cache_clients_duration 0" "mm_block_disconnect_messages 1"; do
+  for pair in "mm_cache_clients_with_addons 0" "mm_cache_clients_duration 0" "mm_block_disconnect_messages 1"; do
     name="${pair%% *}"; value="${pair##* }"
     sed -i "/^[[:space:]]*${name}[[:space:]]/d" "$cfg"
     printf '%s "%s"\n' "$name" "$value" >> "$cfg"

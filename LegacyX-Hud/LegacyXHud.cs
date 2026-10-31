@@ -26,8 +26,8 @@ public sealed partial class LegacyXHud : BasePlugin
     private string knifeLayout = LayoutDir + "legacyx_knife.vxml_c";
     private PanelHandle? knifeHud;
     // After a map change a client that got the Workshop addon at connect has lost it (the new level's addon list is empty) and its HUD is dead until it
-    // connects again. A short reconnect brings the addon back, exactly like leaving and joining by hand (LEGACYX_HUD_RECONNECT_ON_MAP, default on).
-    private bool reconnectOnMap = true;
+    // connects again. A short reconnect brings the addon back, exactly like leaving and joining by hand (LEGACYX_HUD_RECONNECT_ON_MAP, default off: MultiAddonManager does it itself when its client cache is off).
+    private bool reconnectOnMap;
     private bool firstMapSeen;
 
     public override string ModuleAuthor => "LEGACY-X";
@@ -52,7 +52,7 @@ public sealed partial class LegacyXHud : BasePlugin
         skinSecret = env.GetModule("SKINBRIDGE", "PLUGIN_TOKEN", "");
 
         menuKeys = env.GetModuleBoolean("HUD", "MENU_KEYS", true);
-        reconnectOnMap = env.GetModuleBoolean("HUD", "RECONNECT_ON_MAP", true);
+        reconnectOnMap = env.GetModuleBoolean("HUD", "RECONNECT_ON_MAP", false);
         menuSounds = env.GetModuleBoolean("HUD", "MENU_SOUNDS", true);
         if (float.TryParse(env.GetModule("HUD", "MENU_SOUND_VOLUME", "1"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var volume))
             soundVolume = Math.Clamp(volume, 0f, 1f);
