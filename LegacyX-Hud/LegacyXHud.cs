@@ -1,5 +1,6 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using LegacyX.Shared.Configuration;
 using PanoramaManager;
@@ -96,7 +97,8 @@ public sealed partial class LegacyXHud : BasePlugin
         Console.WriteLine($"[{ModuleName}] Map {mapName}: the menu is drawn again from scratch");
         foreach (var slot in Enumerable.Range(0, 64)) ForgetMenuState(slot, everything: true);
         rulesProxy = null;
-        if (reconnectOnMap && firstMapSeen) AddTimer(5f, ReconnectPlayersForAddon);
+        // Only for a map that really loaded and is still the one running 5 s later: another map change in between (or one that failed) cancels it.
+        if (reconnectOnMap && firstMapSeen) AddTimer(5f, () => { if (string.Equals(Server.MapName, mapName, StringComparison.OrdinalIgnoreCase)) ReconnectPlayersForAddon(); }, TimerFlags.STOP_ON_MAPCHANGE);
         firstMapSeen = true;
         AddTimer(2f, ReleaseMenuInputForAll);
         AddTimer(8f, ReleaseMenuInputForAll);
