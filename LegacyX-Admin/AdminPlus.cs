@@ -135,7 +135,7 @@ public partial class AdminPlus : BasePlugin
         
         RegisterReportCommands();
         RegisterStaminaCommandGuards();
-        RegisterEventHandler<EventRoundEnd>(OnAdminRoundEnd);
+        RegisterEventHandler<EventRoundStart>(OnAdminRoundStart);
         RegisterListener<Listeners.OnTick>(OnInternalMenuTick);
         AddCommandListener("say", OnInternalMenuSay, HookMode.Pre);
         AddCommandListener("say_team", OnInternalMenuSay, HookMode.Pre);
@@ -729,9 +729,15 @@ public partial class AdminPlus : BasePlugin
         caller.PrintToCenter($"{roleName[..1]}{roleName[1..].ToLowerInvariant()} called");
     }
 
-    private HookResult OnAdminRoundEnd(EventRoundEnd @event, GameEventInfo info)
+    // The help line used to come at the round end, between the game's own money and win lines, and read as part of them. It is now said near the end
+    // of the freeze time of the next round, when the chat is quiet.
+    private HookResult OnAdminRoundStart(EventRoundStart @event, GameEventInfo info)
     {
-        PlayerExtensions.PrintToAll("Need help? Type {white}!calladmin{grey} or {white}!callmanager{grey}.");
+        float freeze;
+        try { freeze = ConVar.Find("mp_freezetime")?.GetPrimitiveValue<int>() ?? 15; }
+        catch { freeze = 15; }
+        var wait = Math.Max(1f, freeze - 4f);
+        AddTimer(wait, () => PlayerExtensions.PrintToAll("Need help? Type {white}!calladmin{grey} or {white}!callmanager{grey}."), CounterStrikeSharp.API.Modules.Timers.TimerFlags.STOP_ON_MAPCHANGE);
         return HookResult.Continue;
     }
 
