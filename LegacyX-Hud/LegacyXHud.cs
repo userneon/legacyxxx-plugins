@@ -74,6 +74,10 @@ public sealed partial class LegacyXHud : BasePlugin
         menu = null;
         hintHud?.Dispose();
         hintHud = null;
+        knifeHudWin?.Dispose();
+        knifeHudWin = null;
+        knifeHud?.Dispose();
+        knifeHud = null;
         if (enabled) Panorama.Shutdown();
     }
 
@@ -102,6 +106,8 @@ public sealed partial class LegacyXHud : BasePlugin
         try
         {
             if (menu is { } m && !menuOpen.Contains(player.Slot) && m.IsOpenFor(player)) m.Close(player);
+            // The vote card that holds the mouse never outlives the vote.
+            if (knifeHudWin is { } k && !knifeHudLogged.Contains(player.Slot) && k.IsOpenFor(player)) k.Close(player);
         }
         catch (Exception ex)
         {
