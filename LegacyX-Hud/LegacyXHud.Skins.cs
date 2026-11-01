@@ -39,7 +39,8 @@ public sealed partial class LegacyXHud
     {
         public string Team = "t";
         public int Cat;                                    // the category picked on the left
-        public string Mode = "loadout";                    // loadout | types | items
+        public string Mode = "loadout";                    // loadout | types | items | custom
+        public string BackMode = "loadout";                // where Back goes from the Customize page
         public Tile?[] Slots = new Tile?[TileSlots];       // the overview, by pool position
         public Tile? Picked;                               // the tile that was clicked
         public List<SkinType> Types = new();               // knife / glove types
@@ -541,6 +542,7 @@ public sealed partial class LegacyXHud
         Sc(panel, player, "sk_view_loadout", "hidden", view.Mode != "loadout");
         Sc(panel, player, "sk_view_types", "hidden", view.Mode != "types");
         Sc(panel, player, "sk_view_items", "hidden", view.Mode != "items");
+        Sc(panel, player, "sk_view_custom", "hidden", view.Mode != "custom");
         // "Choosing a skin for" stands before the gun's name while its skins are listed (not for the agents' list, which has no gun).
         Sc(panel, player, "sk_pre", "hidden", !(view.Mode == "items" && view.Picked?.Slot != "agent"));
         // The guns' own list has no heading ("Pistols  Equipped 6"): the category tab already says where the player is.
@@ -548,9 +550,10 @@ public sealed partial class LegacyXHud
         Sc(panel, player, "sk_actions", "hidden", view.Mode != "items");
         // Back sits left of the title only inside a pick's skins. The category tab opens the types list (and the agents' skins) directly,
         // so those have nowhere to go back to.
-        Sc(panel, player, "sk_back", "hidden", view.Mode != "items" || view.Picked?.Slot == "agent");
+        Sc(panel, player, "sk_back", "hidden", view.Mode == "custom" ? false : view.Mode != "items" || view.Picked?.Slot == "agent");
         if (view.Mode == "loadout") RenderLoadout(panel, player, view);
         else if (view.Mode == "types") RenderTypes(panel, player, view);
+        else if (view.Mode == "custom") RenderCustom(panel, player, view);
         else RenderItems(panel, player, view);
     }
 
@@ -570,6 +573,7 @@ public sealed partial class LegacyXHud
             Sv(panel, player, $"sk_w{i}_name", tile.Label);
             var eq = tile.Eq;
             Sc(panel, player, $"sk_w{i}_ck", "hidden", eq is null);
+            Sc(panel, player, $"sk_w{i}_acts", "hidden", eq is null);
             Ss(panel, player, $"sk_w{i}_dot", "rc", eq?.Rarity is { } rarity ? "rc-" + rarity : null);
             // A gun that wears a skin carries its rarity as a soft light fading down from the top of its card (and a lit edge on hover).
             Ss(panel, player, $"sk_w{i}_glow", "rg", eq?.Rarity is { } glow ? "rg-" + glow : null);
@@ -604,6 +608,7 @@ public sealed partial class LegacyXHud
             var worn = tile!.Eq is { } wornSkin && wornSkin.WeaponClass == type.WeaponClass ? wornSkin : null;
             var wornModel = SkinModel(type.WeaponClass);
             // The type that wears a skin carries the skin's rarity as a soft light and a lit edge, like a gun card.
+            Sc(panel, player, $"sk_type{i}_acts", "hidden", worn is null);
             Ss(panel, player, $"sk_type{i}_glow", "rg", worn?.Rarity is { } glow ? "rg-" + glow : null);
             Ss(panel, player, $"sk_type{i}", "rb", worn?.Rarity is { } edge ? "rb-" + edge : null);
             Ss(panel, player, $"sk_type{i}_ic", "kn",
@@ -621,7 +626,6 @@ public sealed partial class LegacyXHud
         Sv(panel, player, "sk_title", PickedName(view));
         Sv(panel, player, "sk_sub", view.Loading ? "" : agent ? $"{view.Total} agents" : $"{view.Total} skins");   // no "0 skins" while the page is still on its way
         Sc(panel, player, "sk_remove", "hidden", tile?.Eq is null);
-        RenderCustomise(panel, player, tile);
         var model = tile is null ? null : tile.Slot == "weapon" ? tile.Model : SkinModel(view.TypeClass);
         Ss(panel, player, "sk_head_pic", "hp", HeadPicture(tile, model, view.Team, PickedClass(view)));
         var eq = tile?.Eq;
@@ -651,10 +655,14 @@ public sealed partial class LegacyXHud
 
     private static int WearBand(double wear) { for (var i = 0; i < WearBands.Length; i++) if (wear < WearBands[i]) return i; return WearBands.Length - 1; }
 
-    /// <summary>Wear and StatTrak of the skin the player wears on the picked gun, knife type or glove type (the buttons in the bottom bar).</summary>
-    private void RenderCustomise(PanelHandle panel, CCSPlayerController player, Tile? tile)
+    /// <summary>The Customize page: the wear and StatTrak of the skin the player wears on the picked gun, knife type or glove type.</summary>
+    private void RenderCustom(PanelHandle panel, CCSPlayerController player, SkinView view)
     {
+        var tile = view.Picked;
         var eq = tile?.Eq;
+        Ss(panel, player, "sk_head_pic", "hp", null);
+        Sv(panel, player, "sk_title", "Customize");
+        Sv(panel, player, "sk_sub", eq is null ? "" : tile!.Slot == "agent" ? eq.Skin : $"{eq.WeaponClass} | {eq.Skin}");
         var canWear = eq is not null && tile!.Slot is "weapon" or "knife" or "glove";
         var canStatTrak = eq is not null && tile!.Slot is "weapon" or "knife";
         var band = eq?.Wear is { } w ? WearBand(w) : -1;
@@ -663,10 +671,13 @@ public sealed partial class LegacyXHud
             Sc(panel, player, $"sk_wear{i}", "hidden", !canWear);
             Sc(panel, player, $"sk_wear{i}", "active", canWear && i == band);
         }
+        Sv(panel, player, "sk_cu_wear", eq?.Wear is { } value ? $"{WearNames[band]} · {value:0.000}" : canWear ? "The skin's own wear. Pick one to change it." : "");
         Sc(panel, player, "sk_st", "hidden", !canStatTrak);
         Sc(panel, player, "sk_st", "active", canStatTrak && eq!.StatTrak);
         Sv(panel, player, "sk_st_label", eq is { StatTrak: true } ? "StatTrak ON" : "StatTrak OFF");
     }
+
+    private static readonly string[] WearNames = { "Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred" };
 
     /// <summary>Saves a new wear and/or StatTrak for the skin the player wears here (POST /plugin/menu/skins/options), then applies it to their guns.</summary>
     private void SkinsOptions(PanelHandle panel, CCSPlayerController player, SkinView view, double? wear, bool? statTrak)
@@ -733,6 +744,13 @@ public sealed partial class LegacyXHud
             case "sk_team_t": SkinsOpen(panel, player, "t"); return true;
             case "sk_team_ct": SkinsOpen(panel, player, "ct"); return true;
             case "sk_back":
+                if (view.Mode == "custom")
+                {
+                    view.Mode = view.BackMode;
+                    SkinsStatus(panel, player, "");
+                    SkinsRender(panel, player, view);
+                    return true;
+                }
                 view.Selected = -1;
                 view.Mode = view.TypeClass is not null ? "types" : "loadout";
                 if (view.Mode == "loadout") view.Picked = null;
@@ -746,6 +764,20 @@ public sealed partial class LegacyXHud
             case "sk_st":
                 if (view.Picked is { Eq: { } stEq }) SkinsOptions(panel, player, view, null, !stEq.StatTrak);
                 return true;
+        }
+        // Customize and Remove on a card that wears a skin: sk_w<N>_cu / _rm (a gun) and sk_type<N>_cu / _rm (a knife or glove type).
+        if ((id.EndsWith("_cu", StringComparison.Ordinal) || id.EndsWith("_rm", StringComparison.Ordinal)) && CardOf(view, id) is { } cardTile)
+        {
+            view.Picked = cardTile;
+            if (id.EndsWith("_cu", StringComparison.Ordinal))
+            {
+                view.BackMode = view.Mode;
+                view.Mode = "custom";
+                SkinsStatus(panel, player, "");
+                SkinsRender(panel, player, view);
+            }
+            else SkinsRemove(panel, player, view);
+            return true;
         }
         if (id.StartsWith("sk_wear", StringComparison.Ordinal) && int.TryParse(id.AsSpan(7), out var preset) && preset >= 0 && preset < WearPresets.Length)
         {
@@ -783,6 +815,18 @@ public sealed partial class LegacyXHud
             return true;
         }
         return false;
+    }
+
+    /// <summary>The tile a card's Customize or Remove button belongs to (null when the id is not one of them or the card shows no worn skin).</summary>
+    private static Tile? CardOf(SkinView view, string id)
+    {
+        var body = id[..^3];
+        if (body.StartsWith("sk_w", StringComparison.Ordinal) && int.TryParse(body.AsSpan(4), out var slot) && slot >= 0 && slot < TileSlots)
+            return view.Slots[slot] is { Eq: not null } gun ? gun : null;
+        if (body.StartsWith("sk_type", StringComparison.Ordinal) && int.TryParse(body.AsSpan(7), out var type) && type >= 0 && type < view.Types.Count
+            && view.Picked is { Eq: { } worn } picked && worn.WeaponClass == view.Types[type].WeaponClass)
+            return picked;
+        return null;
     }
 
     /// <summary>The class the current skin list was asked for: the knife / glove type, the gun, or the team of the agents.</summary>
