@@ -403,6 +403,36 @@ public sealed partial class LegacyXCommunity
         player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System(on ? "Tube trail is on for your grenades. Type !tubetest again to switch it off." : "Tube trail is off."));
     }
 
+    /// <summary>
+    /// EXPERIMENT (owner request 2026-11-01, "completely different weapon models"): a root player holding a gun types !modeltest weapons/models/deagle/weapon_pist_deagle.vmdl
+    /// and the gun in their hand (its world model: what others see and what lies on the floor) turns into that model. The model in the player's own hands (the viewmodel) is not touched yet. Only to learn whether the game accepts a swap at all,
+    /// with models the game already has; a custom model from the Workshop addon goes the same way. Weapons only, and only under weapons/models/.
+    /// </summary>
+    [ConsoleCommand("css_modeltest", "Try a weapon model swap on the gun in your hand (root only)")]
+    public void OnModelTest(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !player.IsValid || !AdminManager.PlayerHasPermissions(new SteamID(player.SteamID), "@css/root")) return;
+        var path = command.ArgCount > 1 ? command.ArgByIndex(1) : "";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(path, @"^weapons/models/[a-z0-9_/]+\.vmdl$"))
+        {
+            player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System("Usage: !modeltest weapons/models/deagle/weapon_pist_deagle.vmdl"));
+            return;
+        }
+        try
+        {
+            var pawn = player.PlayerPawn.Value;
+            var weapon = pawn?.WeaponServices?.ActiveWeapon.Value;
+            if (pawn == null || weapon == null || !weapon.IsValid) { player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System("Hold a gun first.")); return; }
+            weapon.SetModel(path);
+            Console.WriteLine($"[{ModuleName}] Model test: {player.PlayerName} -> {path}.");
+            player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System($"Model set to {{white}}{path}{{grey}}. Drop the gun (G) or ask a friend to look at it; your own hands may still show the old one."));
+        }
+        catch (Exception exception)
+        {
+            player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System("The model swap failed: " + exception.Message));
+        }
+    }
+
     private CBarnLight? SpawnGrenadeLight(Vector at, System.Drawing.Color color)
     {
         try
