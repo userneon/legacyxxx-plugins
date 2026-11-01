@@ -18,13 +18,41 @@ public sealed partial class LegacyXHud
 
     private void RegisterBomb()
     {
-        RegisterEventHandler<EventBombPlanted>((_, _) => { ShowBomb("planted", "BOMB PLANTED", ""); return HookResult.Continue; });
-        RegisterEventHandler<EventBombDefused>((e, _) =>
+        RegisterEventHandler<EventBombPlanted>((_, _) => { ShowBomb("planted", "BOMB PLANTED", "", null); return HookResult.Continue; });
+        RegisterEventHandler<EventBombDefused>((e, info) =>
         {
             var name = e.Userid is { IsValid: true } defuser ? CleanBombName(defuser.PlayerName) : "";
-            ShowBomb("defused", "BOMB DEFUSED", name.Length > 0 ? name : "");
+            var steamId = e.Userid is { IsValid: true } who ? who.SteamID : 0UL;
+            // The defuser's agent (the one they wear from the skin menu, else the plain Counter-Terrorist picture) rides with the banner; it is asked for first.
+            _ = Task.Run(async () =>
+            {
+                var picture = await DefuserAgentPictureAsync(steamId);
+                Server.NextFrame(() => ShowBomb("defused", "BOMB DEFUSED", name, picture));
+            });
             return HookResult.Continue;
         });
+    }
+
+    /// <summary>The picture class of the agent a player wears as a Counter-Terrorist (ag-&lt;defindex&gt;), or the plain team picture when they wear none or it could not be read.</summary>
+    private async Task<string> DefuserAgentPictureAsync(ulong steamId)
+    {
+        const string plain = "agn-ct";
+        if (steamId == 0 || !SkinsReady) return plain;
+        try
+        {
+            var (status, body) = await SkinsApiAsync(HttpMethod.Get, $"/api/v1/plugin/menu/skins/loadout?steam_id={steamId}&team=ct");
+            if (status != 200 || body is not { } root || !root.TryGetProperty("tiles", out var tiles) || tiles.ValueKind != System.Text.Json.JsonValueKind.Array) return plain;
+            foreach (var tile in tiles.EnumerateArray())
+            {
+                if (Text(tile, "slot") != "agent") continue;
+                if (tile.TryGetProperty("equipped", out var worn) && worn.ValueKind == System.Text.Json.JsonValueKind.Object && Number(worn, "defindex") is { } defindex) return SkinPicture("agent", null, null, defindex) ?? plain;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[{ModuleName}] The defuser's agent could not be read: {ex.Message}");
+        }
+        return plain;
     }
 
     /// <summary>A name for a label: no control characters, at most 24 characters.</summary>
@@ -34,7 +62,7 @@ public sealed partial class LegacyXHud
         return name.Length > 24 ? name[..24] : name;
     }
 
-    private void ShowBomb(string kind, string title, string sub)
+    private void ShowBomb(string kind, string title, string sub, string? agentPicture)
     {
         var panel = Ensure(ref bombHud, bombLayout, "lx_bomb");
         if (panel is null) return;
@@ -46,6 +74,8 @@ public sealed partial class LegacyXHud
             Sv(panel, player, "bomb_title", title);
             Sv(panel, player, "bomb_sub", sub);
             SetState(panel, player, "bomb_bar", "kind", kind);
+            Sc(panel, player, "bomb_agent", "hidden", agentPicture is null);
+            Ss(panel, player, "bomb_agent", "ag", agentPicture);
             panel.SetClassFor(player, "bomb", "shown", true);
             shown.Add((player.Slot, player.SteamID));
         }
