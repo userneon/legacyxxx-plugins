@@ -64,6 +64,7 @@ public sealed partial class LegacyXHud : BasePlugin
         Panorama.Init(this);
         RegisterListener<Listeners.OnMapStart>(OnMapChanged);
         RegisterIntro();
+        RegisterBomb();
         if (menuKeys)
         {
             RegisterListener<Listeners.OnTick>(OnMenuKeysTick);
@@ -83,6 +84,8 @@ public sealed partial class LegacyXHud : BasePlugin
         hintHud = null;
         introHud?.Dispose();
         introHud = null;
+        bombHud?.Dispose();
+        bombHud = null;
         knifeHudWin?.Dispose();
         knifeHudWin = null;
         knifeHud?.Dispose();
