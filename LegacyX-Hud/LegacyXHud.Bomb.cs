@@ -5,7 +5,7 @@ using PanoramaManager;
 
 namespace LegacyXHud;
 
-// The bomb banner (owner request 2026-11-01): "BOMB PLANTED" and "BOMB DEFUSED" slide in from the right edge for every player. Nothing says where the bomb
+// The bomb banner (owner request 2026-11-01): "BOMB PLANTED" and "BOMB DEFUSED" rise and fade in in the middle of the screen for every player. Nothing says where the bomb
 // was planted or who planted it; a defused bomb shows who defused it. Layout legacyx_bomb.xml, the slide is a CSS transition started by a class.
 public sealed partial class LegacyXHud
 {
