@@ -30,7 +30,7 @@ public sealed partial class LegacyXHud
     private string skinSecret = "";
     private bool SkinsReady => apiBase.Length > 0 && skinSecret.Length > 0;
 
-    private sealed record Equipped(string ItemId, string WeaponClass, string Skin, int? PaintId, int? Defindex, string? Rarity, double? Wear = null, double MinWear = 0, double MaxWear = 1, bool StatTrak = false, string? NameTag = null);
+    private sealed record Equipped(string ItemId, string WeaponClass, string Skin, int? PaintId, int? Defindex, string? Rarity);
     private sealed record Tile(int Column, string Slot, string WeaponClass, string Label, string? Model, Equipped? Eq);
     private sealed record SkinType(string WeaponClass, int Skins);
     private sealed record SkinItem(string Id, string Name, int? PaintId, int? Defindex, string? Rarity, string RarityName);
@@ -39,8 +39,7 @@ public sealed partial class LegacyXHud
     {
         public string Team = "t";
         public int Cat;                                    // the category picked on the left
-        public string Mode = "loadout";                    // loadout | types | items | custom
-        public string BackMode = "loadout";                // where Back goes from the Customize page
+        public string Mode = "loadout";                    // loadout | types | items
         public Tile?[] Slots = new Tile?[TileSlots];       // the overview, by pool position
         public Tile? Picked;                               // the tile that was clicked
         public List<SkinType> Types = new();               // knife / glove types
@@ -101,9 +100,6 @@ public sealed partial class LegacyXHud
 
     private static string? Text(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
-
-    private static double? Real(JsonElement e, string name) =>
-        e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetDouble(out var d) ? d : null;
 
     private static int? Number(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i) ? i : null;
@@ -231,7 +227,7 @@ public sealed partial class LegacyXHud
                 if (rows[column] >= ColumnSize[column]) continue;
                 Equipped? eq = null;
                 if (t.TryGetProperty("equipped", out var e) && e.ValueKind == JsonValueKind.Object)
-                    eq = new Equipped(Text(e, "itemId") ?? "", Text(e, "weaponClass") ?? "", Text(e, "skin") ?? "", Number(e, "paintId"), Number(e, "defindex"), Text(e, "rarity"), Real(e, "wear"), Real(e, "minWear") ?? 0, Real(e, "maxWear") ?? 1, e.TryGetProperty("statTrak", out var st) && st.ValueKind == JsonValueKind.True, Text(e, "nameTag"));
+                    eq = new Equipped(Text(e, "itemId") ?? "", Text(e, "weaponClass") ?? "", Text(e, "skin") ?? "", Number(e, "paintId"), Number(e, "defindex"), Text(e, "rarity"));
                 current.Slots[ColumnStart[column] + rows[column]++] = new Tile(column, Text(t, "slot") ?? "", Text(t, "weaponClass") ?? "", Text(t, "label") ?? "", Text(t, "model"), eq);
             }
             SkinsStatus(menu!, p, "");
@@ -542,7 +538,6 @@ public sealed partial class LegacyXHud
         Sc(panel, player, "sk_view_loadout", "hidden", view.Mode != "loadout");
         Sc(panel, player, "sk_view_types", "hidden", view.Mode != "types");
         Sc(panel, player, "sk_view_items", "hidden", view.Mode != "items");
-        Sc(panel, player, "sk_view_custom", "hidden", view.Mode != "custom");
         // "Choosing a skin for" stands before the gun's name while its skins are listed (not for the agents' list, which has no gun).
         Sc(panel, player, "sk_pre", "hidden", !(view.Mode == "items" && view.Picked?.Slot != "agent"));
         // The guns' own list has no heading ("Pistols  Equipped 6"): the category tab already says where the player is.
@@ -550,10 +545,9 @@ public sealed partial class LegacyXHud
         Sc(panel, player, "sk_actions", "hidden", view.Mode != "items");
         // Back sits left of the title only inside a pick's skins. The category tab opens the types list (and the agents' skins) directly,
         // so those have nowhere to go back to.
-        Sc(panel, player, "sk_back", "hidden", view.Mode == "custom" ? false : view.Mode != "items" || view.Picked?.Slot == "agent");
+        Sc(panel, player, "sk_back", "hidden", view.Mode != "items" || view.Picked?.Slot == "agent");
         if (view.Mode == "loadout") RenderLoadout(panel, player, view);
         else if (view.Mode == "types") RenderTypes(panel, player, view);
-        else if (view.Mode == "custom") RenderCustom(panel, player, view);
         else RenderItems(panel, player, view);
     }
 
@@ -649,92 +643,6 @@ public sealed partial class LegacyXHud
         }
     }
 
-    // The wear presets the Customise part offers: the middle of each CS2 wear band (the API keeps the value inside the skin's own range).
-    private static readonly double[] WearPresets = { 0.03, 0.10, 0.25, 0.41, 0.60 };
-    private static readonly double[] WearBands = { 0.07, 0.15, 0.38, 0.45, 1.01 };
-
-    private static int WearBand(double wear) { for (var i = 0; i < WearBands.Length; i++) if (wear < WearBands[i]) return i; return WearBands.Length - 1; }
-
-    /// <summary>The Customize page: the wear and StatTrak of the skin the player wears on the picked gun, knife type or glove type.</summary>
-    private void RenderCustom(PanelHandle panel, CCSPlayerController player, SkinView view)
-    {
-        var tile = view.Picked;
-        var eq = tile?.Eq;
-        Ss(panel, player, "sk_head_pic", "hp", null);
-        Sv(panel, player, "sk_title", "Customize");
-        Sv(panel, player, "sk_sub", eq is null ? "" : tile!.Slot == "agent" ? eq.Skin : $"{eq.WeaponClass} | {eq.Skin}");
-        var canWear = eq is not null && tile!.Slot is "weapon" or "knife" or "glove";
-        var canStatTrak = eq is not null && tile!.Slot is "weapon" or "knife";
-        var band = eq?.Wear is { } w ? WearBand(w) : -1;
-        for (var i = 0; i < WearPresets.Length; i++)
-        {
-            Sc(panel, player, $"sk_wear{i}", "hidden", !canWear);
-            Sc(panel, player, $"sk_wear{i}", "active", canWear && i == band);
-        }
-        Sv(panel, player, "sk_cu_wear", eq?.Wear is { } value ? $"{WearNames[band]} · {value:0.000}" : canWear ? "The skin's own wear. Pick one to change it." : "");
-        Sc(panel, player, "sk_st", "hidden", !canStatTrak);
-        Sc(panel, player, "sk_st", "active", canStatTrak && eq!.StatTrak);
-        Sv(panel, player, "sk_st_label", eq is { StatTrak: true } ? "StatTrak ON" : "StatTrak OFF");
-    }
-
-    private static readonly string[] WearNames = { "Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred" };
-
-    /// <summary>Saves a new wear and/or StatTrak for the skin the player wears here (POST /plugin/menu/skins/options), then applies it to their guns.</summary>
-    private void SkinsOptions(PanelHandle panel, CCSPlayerController player, SkinView view, double? wear, bool? statTrak)
-    {
-        if (view.Picked is not { Eq: { } eq } tile || view.Busy) return;
-        view.Busy = true;
-        var team = view.Team;
-        var steamId = player.SteamID;
-        var playerSlot = player.Slot;
-        SkinsStatus(panel, player, "Saving ...");
-        _ = Task.Run(async () =>
-        {
-            Equipped? updated = null;
-            string message;
-            try
-            {
-                var payload = new Dictionary<string, object?> { ["steam_id"] = steamId.ToString(), ["catalog_item_id"] = eq.ItemId, ["team"] = team };
-                if (wear is { } w) payload["wear"] = w;
-                if (statTrak is { } st) payload["stat_trak"] = st;
-                var (status, body) = await SkinsApiAsync(HttpMethod.Post, "/api/v1/plugin/menu/skins/options", JsonSerializer.Serialize(payload));
-                if (status == 200 && body is { } root)
-                {
-                    updated = eq with { Wear = Real(root, "wear"), StatTrak = root.TryGetProperty("statTrak", out var s2) && s2.ValueKind == JsonValueKind.True, NameTag = Text(root, "nameTag") };
-                    message = "Saved.";
-                }
-                else
-                {
-                    message = status == 404 ? "Pick a skin first." : $"Could not save (error {status}). Tell staff.";
-                    Console.WriteLine($"[{ModuleName}] Skin options refused: HTTP {status} {body}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[{ModuleName}] Skin options failed: {ex.Message}");
-                message = "Could not save. Try again.";
-            }
-            Server.NextFrame(() =>
-            {
-                if (skinViews.TryGetValue(playerSlot, out var current)) current.Busy = false;
-                var p = Utilities.GetPlayerFromSlot(playerSlot);
-                if (p is not { IsValid: true } || menu is null || current is null) return;
-                if (updated is not null)
-                {
-                    ForgetLoadouts(steamId);
-                    var fresh = tile with { Eq = updated };
-                    for (var i = 0; i < current.Slots.Length; i++)
-                        if (current.Slots[i] == tile) current.Slots[i] = fresh;
-                    if (current.Picked == tile) current.Picked = fresh;
-                    p.ExecuteClientCommandFromServer("css_lxapply");
-                    MenuSound(p, soundPick, LevelPick);
-                }
-                SkinsRender(menu, p, current);
-                SkinsStatus(menu, p, message);
-            });
-        });
-    }
-
     /// <summary>Clicks of the Skins tab. Returns true when the id was one of its buttons.</summary>
     private bool SkinsClick(PanelHandle panel, CCSPlayerController player, string id)
     {
@@ -744,13 +652,6 @@ public sealed partial class LegacyXHud
             case "sk_team_t": SkinsOpen(panel, player, "t"); return true;
             case "sk_team_ct": SkinsOpen(panel, player, "ct"); return true;
             case "sk_back":
-                if (view.Mode == "custom")
-                {
-                    view.Mode = view.BackMode;
-                    SkinsStatus(panel, player, "");
-                    SkinsRender(panel, player, view);
-                    return true;
-                }
                 view.Selected = -1;
                 view.Mode = view.TypeClass is not null ? "types" : "loadout";
                 if (view.Mode == "loadout") view.Picked = null;
@@ -761,27 +662,12 @@ public sealed partial class LegacyXHud
             case "sk_remove":
                 SkinsRemove(panel, player, view);
                 return true;
-            case "sk_st":
-                if (view.Picked is { Eq: { } stEq }) SkinsOptions(panel, player, view, null, !stEq.StatTrak);
-                return true;
         }
-        // Customize and Remove on a card that wears a skin: sk_w<N>_cu / _rm (a gun) and sk_type<N>_cu / _rm (a knife or glove type).
-        if ((id.EndsWith("_cu", StringComparison.Ordinal) || id.EndsWith("_rm", StringComparison.Ordinal)) && CardOf(view, id) is { } cardTile)
+        // Remove on a card that wears a skin (shown while the pointer is on it): sk_w<N>_rm (a gun) and sk_type<N>_rm (a knife or glove type).
+        if (id.EndsWith("_rm", StringComparison.Ordinal) && CardOf(view, id) is { } cardTile)
         {
             view.Picked = cardTile;
-            if (id.EndsWith("_cu", StringComparison.Ordinal))
-            {
-                view.BackMode = view.Mode;
-                view.Mode = "custom";
-                SkinsStatus(panel, player, "");
-                SkinsRender(panel, player, view);
-            }
-            else SkinsRemove(panel, player, view);
-            return true;
-        }
-        if (id.StartsWith("sk_wear", StringComparison.Ordinal) && int.TryParse(id.AsSpan(7), out var preset) && preset >= 0 && preset < WearPresets.Length)
-        {
-            SkinsOptions(panel, player, view, WearPresets[preset], null);
+            SkinsRemove(panel, player, view);
             return true;
         }
         if (id.StartsWith("sk_cat", StringComparison.Ordinal) && int.TryParse(id.AsSpan(6), out var cat) && cat >= 0 && cat < CategoryNames.Length)
