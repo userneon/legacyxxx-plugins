@@ -63,6 +63,7 @@ public sealed partial class LegacyXHud : BasePlugin
 
         Panorama.Init(this);
         RegisterListener<Listeners.OnMapStart>(OnMapChanged);
+        RegisterIntro();
         if (menuKeys)
         {
             RegisterListener<Listeners.OnTick>(OnMenuKeysTick);
@@ -80,6 +81,8 @@ public sealed partial class LegacyXHud : BasePlugin
         menu = null;
         hintHud?.Dispose();
         hintHud = null;
+        introHud?.Dispose();
+        introHud = null;
         knifeHudWin?.Dispose();
         knifeHudWin = null;
         knifeHud?.Dispose();
@@ -97,6 +100,7 @@ public sealed partial class LegacyXHud : BasePlugin
         Console.WriteLine($"[{ModuleName}] Map {mapName}: the menu is drawn again from scratch");
         foreach (var slot in Enumerable.Range(0, 64)) ForgetMenuState(slot, everything: true);
         rulesProxy = null;
+        matchWasLive = false;
         // Only for a map that really loaded and is still the one running 5 s later: another map change in between (or one that failed) cancels it.
         if (reconnectOnMap && firstMapSeen) AddTimer(5f, () => { if (string.Equals(Server.MapName, mapName, StringComparison.OrdinalIgnoreCase)) ReconnectPlayersForAddon(); }, TimerFlags.STOP_ON_MAPCHANGE);
         firstMapSeen = true;
