@@ -17,8 +17,9 @@ public sealed partial class LegacyXCommunity
         if (Config.DiscordAdMinutes <= 0 || string.IsNullOrWhiteSpace(Config.DiscordUrl)) return;
         AddTimer(Config.DiscordAdMinutes * 60f, () =>
         {
-            // Discord's own blue (chat has no exact #5865F2; \x0B, blue, was picked) on the invite line; the invite itself stays white.
-            var line = LegacyXChat.Colorize(LegacyXChat.Prefix) + $"\x0BJoin our Discord: \x01{Config.DiscordUrl.Replace("https://", "")}";
+            // "Join our discord | discord.gg/legacyx", with no LEGACY-X prefix (owner request 2026-11-01). Discord's own blue (chat has no exact #5865F2;
+            // \x0B, blue, was picked) on the words, grey on the bar, the invite itself white.
+            var line = $" \x0BJoin our discord \x08| \x01{Config.DiscordUrl.Replace("https://", "")}";
             foreach (var player in Utilities.GetPlayers().Where(player => player.IsValid && !player.IsBot && !player.IsHLTV)) player.PrintToChat(line);
         }, TimerFlags.REPEAT);
     }
