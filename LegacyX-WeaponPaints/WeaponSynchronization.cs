@@ -20,9 +20,9 @@ internal sealed class WeaponSynchronization
     /// Reads the player's saved loadout and applies it on the next game frame. A player without a
     /// LEGACY-X account gets an empty loadout (default items).
     /// </summary>
-    internal async Task GetPlayerData(PlayerInfo? player)
+    internal async Task<bool> GetPlayerData(PlayerInfo? player)
     {
-        if (player?.SteamId is not { Length: > 0 } steamId) return;
+        if (player?.SteamId is not { Length: > 0 } steamId) return true;
         try
         {
             var payload = await _api.GetLoadoutAsync(steamId) ?? new SkinchangerPayload();
@@ -44,10 +44,13 @@ internal sealed class WeaponSynchronization
                 }
             });
             await applied.Task;
+            return true;
         }
         catch (Exception exception)
         {
+            // The API answers one loadout read per second for a player (429 above that): the caller tries once more a moment later.
             Utility.Log($"LEGACY-X SkinBridge loadout read failed: {exception.Message}");
+            return false;
         }
     }
 

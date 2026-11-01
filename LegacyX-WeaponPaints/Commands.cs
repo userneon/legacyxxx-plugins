@@ -20,7 +20,13 @@ public partial class WeaponPaints
 		if (WeaponSync == null) return;
 		_ = Task.Run(async () =>
 		{
-			await WeaponSync.GetPlayerData(playerInfo);
+			var read = await WeaponSync.GetPlayerData(playerInfo);
+			// The read failed (the API allows one per second for a player, or it was busy): once more after a short wait, so the pick is not lost.
+			if (!read)
+			{
+				await Task.Delay(1300);
+				await WeaponSync.GetPlayerData(playerInfo);
+			}
 			Server.NextFrame(() =>
 			{
 				if (!player.IsValid) return;
@@ -142,17 +148,38 @@ public partial class WeaponPaints
 		{
 			if (!Utility.IsPlayerValid(player) || player == null || player.UserId == null || player.IsBot) return;
 			if (!Config.Additional.SkinEnabled || !_gBCommandsAllowed) return;
-			if (_menuApplyAt.TryGetValue(player.Slot, out var next) && DateTime.UtcNow < next) return;
-			_menuApplyAt[player.Slot] = DateTime.UtcNow.AddMilliseconds(400);
-			RefreshFromWebsite(player, new PlayerInfo
+			// The API answers one loadout read per second for a player. A pick that comes sooner than that is not dropped: one apply is queued for the moment
+			// the wait is over, and it reads the loadout then, so it carries the latest pick (dropping it left the gun as it was until the player typed !rs).
+			var slot = player.Slot;
+			if (_menuApplyAt.TryGetValue(slot, out var next) && DateTime.UtcNow < next)
 			{
-				UserId = player.UserId,
-				Slot = player.Slot,
-				Index = (int)player.Index,
-				SteamId = player.SteamID.ToString(),
-				Name = player.PlayerName,
-				IpAddress = player.IpAddress?.Split(":")[0]
-			});
+				if (_menuApplyQueued.Add(slot))
+					AddTimer((float)(next - DateTime.UtcNow).TotalSeconds + 0.05f, () =>
+					{
+						_menuApplyQueued.Remove(slot);
+						var again = Utilities.GetPlayerFromSlot(slot);
+						if (again is { IsValid: true, IsBot: false }) ApplyMenuPick(again);
+					});
+				return;
+			}
+			ApplyMenuPick(player);
+		});
+	}
+
+	private readonly HashSet<int> _menuApplyQueued = new();
+
+	private void ApplyMenuPick(CCSPlayerController player)
+	{
+		if (player.UserId == null) return;
+		_menuApplyAt[player.Slot] = DateTime.UtcNow.AddMilliseconds(1100);
+		RefreshFromWebsite(player, new PlayerInfo
+		{
+			UserId = player.UserId,
+			Slot = player.Slot,
+			Index = (int)player.Index,
+			SteamId = player.SteamID.ToString(),
+			Name = player.PlayerName,
+			IpAddress = player.IpAddress?.Split(":")[0]
 		});
 	}
 
