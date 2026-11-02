@@ -76,7 +76,11 @@ public partial class AdminPlus
         AddTimer(2.0f, ApplyStaffTags, TimerFlags.REPEAT);
     }
 
-    private static readonly HashSet<string> StaffTagNames = new(StringComparer.Ordinal) { "OWNER", "MANAGER", "ADMIN", "STAFF" };
+    private static readonly HashSet<string> StaffTagNames = new(StringComparer.Ordinal) { "OWNER", "MANAGER", "ADMIN", "STAFF", "CREATOR", "MAIN CREATOR" };
+
+    /// <summary>The player is a website content creator on this server (fun commands only).</summary>
+    private bool IsCreatorRole(ulong steamId) =>
+        adminStaffRoles.TryGetValue(steamId, out var roleName) && (roleName == "CREATOR" || roleName == "MAIN CREATOR");
 
     /// <summary>A role tag set by this plugin: "OWNER", or with a clan "WOLF | OWNER".</summary>
     private static bool IsStaffTag(string tag) =>

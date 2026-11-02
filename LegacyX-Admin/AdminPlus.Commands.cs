@@ -403,6 +403,9 @@ public partial class AdminPlus
     {
         if (caller != null && (!caller.IsValid || !AdminManager.PlayerHasPermissions(caller, "@css/slay")))
         { if (caller.IsValid) caller.Print(Localizer["NoPermission"]); return; }
+        // A creator may not rename anyone: a changed name could pass for a staff member's.
+        if (caller != null && IsCreatorRole(caller.SteamID))
+        { caller.Print(Localizer["NoPermission"]); return; }
 
         if (info.ArgCount < 3)
         { SendUsageMessage(caller, "Rename.Usage", "Usage: css_rename <target> <new_name>"); return; }

@@ -11,6 +11,8 @@ public class StaffPermissionsTests
     [InlineData("manager", StaffRole.Manager)]
     [InlineData("admin", StaffRole.Admin)]
     [InlineData("staff", StaffRole.Staff)]
+    [InlineData("creator", StaffRole.Creator)]
+    [InlineData("main_creator", StaffRole.MainCreator)]
     [InlineData("player", StaffRole.Player)]
     public void Parses_the_api_role_names(string value, StaffRole expected)
     {
@@ -77,5 +79,29 @@ public class StaffPermissionsTests
     public void Maps_role_to_flags(StaffRole role, string flag, bool expected)
     {
         Assert.Equal(expected, StaffPermissions.For(role).Flags.Contains(flag));
+    }
+
+    [Fact]
+    public void Creators_get_the_fun_commands_and_nothing_that_punishes_or_runs_the_server()
+    {
+        foreach (var role in new[] { StaffRole.Creator, StaffRole.MainCreator })
+        {
+            var flags = StaffPermissions.For(role).Flags;
+            Assert.Contains("@css/slay", flags);
+            Assert.Contains("@css/cheats", flags);
+            foreach (var flag in new[] { "@css/generic", "@css/kick", "@css/ban", "@css/unban", "@css/chat", "@css/vote", "@css/changemap", "@css/config", "@css/cvar", "@css/rcon", "@css/root", "@legacyx/match" })
+                Assert.DoesNotContain(flag, flags);
+        }
+    }
+
+    [Fact]
+    public void A_main_creator_outranks_a_creator_and_staff_outrank_both()
+    {
+        var creator = StaffPermissions.For(StaffRole.Creator);
+        var main = StaffPermissions.For(StaffRole.MainCreator);
+        var staff = StaffPermissions.For(StaffRole.Staff);
+        Assert.True(main.Immunity > creator.Immunity);
+        Assert.True(staff.Immunity > main.Immunity);
+        Assert.True(StaffRole.Staff > StaffRole.MainCreator && StaffRole.MainCreator > StaffRole.Creator);
     }
 }
