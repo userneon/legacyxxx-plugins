@@ -78,10 +78,6 @@ public partial class AdminPlus
 
     private static readonly HashSet<string> StaffTagNames = new(StringComparer.Ordinal) { "OWNER", "MANAGER", "ADMIN", "STAFF", "CREATOR", "MAIN CREATOR" };
 
-    /// <summary>The player is a website content creator on this server (fun commands only).</summary>
-    private bool IsCreatorRole(ulong steamId) =>
-        adminStaffRoles.TryGetValue(steamId, out var roleName) && (roleName == "CREATOR" || roleName == "MAIN CREATOR");
-
     /// <summary>A role tag set by this plugin: "OWNER", or with a clan "WOLF | OWNER".</summary>
     private static bool IsStaffTag(string tag) =>
         StaffTagNames.Contains(tag) || StaffTagNames.Any(name => tag.EndsWith(" | " + name, StringComparison.Ordinal));
@@ -229,9 +225,14 @@ public partial class AdminPlus
         // Keyed by SteamID, not the controller: right after a connect or map change the controller's
         // AuthorizedSteamID can still be empty, and the controller-based calls then silently do nothing.
         var steamId = new SteamID(player.SteamID);
-        AdminManager.AddPlayerPermissions(steamId, role.Flags.ToArray());
-        AdminManager.SetPlayerImmunity(steamId, role.Immunity);
-        adminImmunity[player.SteamID] = (int)role.Immunity;
+        // The role as edited on the staff site (Staff → Roles) replaces the built-in one; without it the built-in role applies.
+        var custom = grant.Grant;
+        var flags = custom != null ? custom.Flags.ToArray() : role.Flags.ToArray();
+        var immunity = custom != null ? custom.Immunity : role.Immunity;
+        AdminManager.AddPlayerPermissions(steamId, flags);
+        AdminManager.SetPlayerImmunity(steamId, immunity);
+        adminImmunity[player.SteamID] = (int)immunity;
+        if (custom != null) adminCommandAllow[player.SteamID] = new HashSet<string>(custom.Commands, StringComparer.OrdinalIgnoreCase);
         adminStamina[player.SteamID] = role.Stamina;
         adminStaffRoles[player.SteamID] = role.Name;
         adminStaffClans[player.SteamID] = grant.ClanTag;
@@ -244,6 +245,7 @@ public partial class AdminPlus
         adminImmunity.Remove(steamId);
         adminStamina.Remove(steamId);
         adminStaffRoles.Remove(steamId);
+        adminCommandAllow.Remove(steamId);
         adminStaffClans.Remove(steamId);
     }
 

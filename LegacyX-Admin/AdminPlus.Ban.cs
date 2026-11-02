@@ -21,6 +21,8 @@ public partial class AdminPlus
     private Dictionary<ulong, int> adminImmunity = new();
     private Dictionary<ulong, int> adminStamina = new();
     private Dictionary<ulong, string> adminStaffRoles = new();
+    /// <summary>The commands (without "css_") a player may run when their role was edited on the staff site; absent = the built-in role.</summary>
+    private Dictionary<ulong, HashSet<string>> adminCommandAllow = new();
     private Dictionary<ulong, string> adminStaffClans = new();
     private Dictionary<ulong, (DateTime seenAt, string ip)> recentSeen = new();
 
@@ -36,6 +38,7 @@ public partial class AdminPlus
             adminImmunity.Clear();
             adminStamina.Clear();
             adminStaffRoles.Clear();
+            adminCommandAllow.Clear();
             adminStaffClans.Clear();
             recentSeen.Clear();
         }

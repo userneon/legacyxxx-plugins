@@ -5,6 +5,7 @@ using CounterStrikeSharp.API.Modules.Utils;
 using LegacyX.Shared.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AdminPlus;
 
@@ -37,9 +38,8 @@ public partial class AdminPlus
 
     private void RegisterStaminaCommandGuards()
     {
-        foreach (var requirement in CommandStaminaRequirements)
+        foreach (var command in CommandStaminaRequirements.Keys.Concat(CommandPermissionRequirements.Keys).Concat(ExtraGuardedCommands).Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            var command = requirement.Key;
             AddCommandListener($"css_{command}", (caller, _info) => RequireCommandStamina(caller, command) ? HookResult.Continue : HookResult.Handled, HookMode.Pre);
         }
     }
@@ -49,6 +49,13 @@ public partial class AdminPlus
         if (caller == null || !caller.IsValid || caller.IsBot) return true;
         var normalized = (command ?? string.Empty).Trim().ToLowerInvariant();
         if (normalized.StartsWith("css_", StringComparison.Ordinal)) normalized = normalized[4..];
+        // A role edited on the staff site is exactly its list of commands: one not on it is refused, one on it is allowed (stamina does not apply).
+        if (adminCommandAllow.TryGetValue(caller.SteamID, out var allowed) && IsAdminCommand(normalized))
+        {
+            if (allowed.Contains(normalized)) return true;
+            caller.PrintToChat(LegacyXChat.System("Your role can't use this."));
+            return false;
+        }
         if (!CommandStaminaRequirements.TryGetValue(normalized, out var required)) return true;
         adminStamina.TryGetValue(caller.SteamID, out var available);
         if (available >= required) return true;
@@ -56,12 +63,19 @@ public partial class AdminPlus
         return false;
     }
 
+    /// <summary>Commands the Roles list can grant: the ones with a permission, plus a few fun ones the stamina table never listed.</summary>
+    private static readonly HashSet<string> ExtraGuardedCommands = new(StringComparer.OrdinalIgnoreCase) { "size", "unsize", "launch", "aimlock", "bhop", "cheats", "silentaim", "wh" };
+
+    private static bool IsAdminCommand(string normalized) => CommandPermissionRequirements.ContainsKey(normalized) || ExtraGuardedCommands.Contains(normalized);
+
     private bool HasCommandAccess(CCSPlayerController? caller, string command)
     {
         if (caller == null || !caller.IsValid || caller.IsBot) return false;
         var normalized = (command ?? string.Empty).Trim().ToLowerInvariant();
         if (normalized.StartsWith("css_", StringComparison.Ordinal)) normalized = normalized[4..];
-        if (!CommandStaminaRequirements.TryGetValue(normalized, out var required) || !CommandPermissionRequirements.TryGetValue(normalized, out var permission)) return false;
+        if (!CommandPermissionRequirements.TryGetValue(normalized, out var permission)) return false;
+        if (adminCommandAllow.TryGetValue(caller.SteamID, out var allowed)) return allowed.Contains(normalized) && HasEffectivePermission(caller, permission);
+        if (!CommandStaminaRequirements.TryGetValue(normalized, out var required)) return false;
         adminStamina.TryGetValue(caller.SteamID, out var available);
         return available >= required && HasEffectivePermission(caller, permission);
     }

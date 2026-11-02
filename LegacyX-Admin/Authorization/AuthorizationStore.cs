@@ -64,9 +64,11 @@ public sealed class AuthorizationStore
 
             _grants[steamId] = answer;
             if (!hadGrant) return AuthorizationChange.Granted;
-            return previous!.Role != answer.Role || previous.ExpiresAt != answer.ExpiresAt ? AuthorizationChange.Updated : AuthorizationChange.Unchanged;
+            return previous!.Role != answer.Role || previous.ExpiresAt != answer.ExpiresAt || !SameGrant(previous.Grant, answer.Grant) ? AuthorizationChange.Updated : AuthorizationChange.Unchanged;
         }
     }
+
+    private static bool SameGrant(CustomGrant? a, CustomGrant? b) => a == null ? b == null : a.SameAs(b);
 
     /// <summary>
     /// Applies a failed lookup. A new player gets nothing; an existing grant is kept only while it is

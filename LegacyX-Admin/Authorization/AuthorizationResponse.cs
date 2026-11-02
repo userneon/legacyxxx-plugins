@@ -7,7 +7,17 @@ using System.Text.Json;
 namespace LegacyX.Admin.Authorization;
 
 /// <summary>A player's confirmed in-game role on this server, as of <see cref="CheckedAt"/>.</summary>
-public sealed record PlayerAuthorization(ulong SteamId, StaffRole Role, DateTimeOffset? ExpiresAt, DateTimeOffset CheckedAt, string ClanTag = "")
+/// <summary>
+/// What the API says a role may do, as the Owner set it on the staff site (Staff → Roles): the CounterStrikeSharp flags, the commands (without
+/// "css_") and the immunity. When it is present it replaces the built-in grant of the role; the Owner role never carries one.
+/// </summary>
+public sealed record CustomGrant(IReadOnlyList<string> Flags, IReadOnlyList<string> Commands, uint Immunity)
+{
+    public bool SameAs(CustomGrant? other) =>
+        other != null && Immunity == other.Immunity && Flags.OrderBy(f => f).SequenceEqual(other.Flags.OrderBy(f => f)) && Commands.OrderBy(c => c).SequenceEqual(other.Commands.OrderBy(c => c));
+}
+
+public sealed record PlayerAuthorization(ulong SteamId, StaffRole Role, DateTimeOffset? ExpiresAt, DateTimeOffset CheckedAt, string ClanTag = "", CustomGrant? Grant = null)
 {
     public bool IsStaff => Role != StaffRole.Player;
 
@@ -95,7 +105,32 @@ public static class AuthorizationResponseParser
             if (parsed <= now) return player;
             expiresAt = parsed;
         }
-        return new PlayerAuthorization(steamId, role, expiresAt, now, ParseClanTag(entry));
+        return new PlayerAuthorization(steamId, role, expiresAt, now, ParseClanTag(entry), role == StaffRole.Owner ? null : ParseGrant(entry));
+    }
+
+    /// <summary>The edited role, if the API sent a well-formed one: flags like "@css/slay", command names, immunity 0 to 900. Anything else means no custom grant (the built-in role applies).</summary>
+    private static CustomGrant? ParseGrant(JsonElement entry)
+    {
+        if (!entry.TryGetProperty("grant", out var grant) || grant.ValueKind != JsonValueKind.Object) return null;
+        if (!grant.TryGetProperty("flags", out var flagsValue) || flagsValue.ValueKind != JsonValueKind.Array) return null;
+        if (!grant.TryGetProperty("commands", out var commandsValue) || commandsValue.ValueKind != JsonValueKind.Array) return null;
+        if (!grant.TryGetProperty("immunity", out var immunityValue) || immunityValue.ValueKind != JsonValueKind.Number || !immunityValue.TryGetInt32(out var immunity) || immunity < 0 || immunity > 900) return null;
+        var flags = new List<string>();
+        foreach (var flag in flagsValue.EnumerateArray())
+        {
+            var text = flag.ValueKind == JsonValueKind.String ? flag.GetString() : null;
+            if (text == null || text.Length > 40 || !System.Text.RegularExpressions.Regex.IsMatch(text, "^@[a-z0-9_]+/[a-z0-9_]+$")) return null;
+            flags.Add(text);
+        }
+        var commands = new List<string>();
+        foreach (var command in commandsValue.EnumerateArray())
+        {
+            var text = command.ValueKind == JsonValueKind.String ? command.GetString() : null;
+            if (text == null || text.Length > 40 || !System.Text.RegularExpressions.Regex.IsMatch(text, "^[a-z0-9_]+$")) return null;
+            commands.Add(text);
+        }
+        if (flags.Count > 40 || commands.Count > 200) return null;
+        return new CustomGrant(flags, commands, (uint)immunity);
     }
 
     /// <summary>The website clan tag, if the API sent one: upper-case letters, digits and - _ . only, at most 8 (it is shown in the Tab tag).</summary>

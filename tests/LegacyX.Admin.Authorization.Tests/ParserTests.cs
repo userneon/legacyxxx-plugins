@@ -27,6 +27,8 @@ public class ParserTests
     [InlineData("manager", StaffRole.Manager)]
     [InlineData("admin", StaffRole.Admin)]
     [InlineData("staff", StaffRole.Staff)]
+    [InlineData("creator", StaffRole.Creator)]
+    [InlineData("main_creator", StaffRole.MainCreator)]
     public void Authorizes_active_roles(string role, StaffRole expected)
     {
         Assert.Equal(expected, RoleOf(Body("srv-1", Entry(A, true, role)), A));
@@ -129,5 +131,42 @@ public class ParserTests
     public void Accepts_only_steamid64(string value, bool expected)
     {
         Assert.Equal(expected, AuthorizationResponseParser.TryParseSteamId64(value, out _));
+    }
+
+    private static string WithGrant(string entry, string grant) => entry[..^1] + ",\"grant\":" + grant + "}";
+
+    [Fact]
+    public void Reads_the_edited_role_the_api_sends()
+    {
+        var entry = WithGrant(Entry(A, true, "creator"), "{\"flags\":[\"@css/slay\"],\"commands\":[\"noclip\",\"slap\"],\"immunity\":120}");
+        var player = AuthorizationResponseParser.Parse(Body("srv-1", entry), "srv-1", new[] { A }, Now, out _)![A];
+        Assert.NotNull(player.Grant);
+        Assert.Equal(new[] { "@css/slay" }, player.Grant!.Flags);
+        Assert.Equal(new[] { "noclip", "slap" }, player.Grant.Commands);
+        Assert.Equal(120u, player.Grant.Immunity);
+    }
+
+    [Theory]
+    [InlineData("{\"flags\":[\"css/slay\"],\"commands\":[],\"immunity\":1}")]       // not a flag
+    [InlineData("{\"flags\":[],\"commands\":[\"No Clip\"],\"immunity\":1}")]         // not a command name
+    [InlineData("{\"flags\":[],\"commands\":[],\"immunity\":901}")]                 // immunity too high
+    [InlineData("{\"flags\":[],\"commands\":[],\"immunity\":-1}")]
+    [InlineData("{\"flags\":[],\"commands\":\"noclip\",\"immunity\":1}")]            // not a list
+    [InlineData("[]")]
+    public void Ignores_a_malformed_grant_and_keeps_the_role(string grant)
+    {
+        var entry = WithGrant(Entry(A, true, "admin"), grant);
+        var player = AuthorizationResponseParser.Parse(Body("srv-1", entry), "srv-1", new[] { A }, Now, out _)![A];
+        Assert.Equal(StaffRole.Admin, player.Role);
+        Assert.Null(player.Grant);
+    }
+
+    [Fact]
+    public void The_owner_never_takes_an_edited_role()
+    {
+        var entry = WithGrant(Entry(A, true, "owner"), "{\"flags\":[],\"commands\":[],\"immunity\":1}");
+        var player = AuthorizationResponseParser.Parse(Body("srv-1", entry), "srv-1", new[] { A }, Now, out _)![A];
+        Assert.Equal(StaffRole.Owner, player.Role);
+        Assert.Null(player.Grant);
     }
 }
