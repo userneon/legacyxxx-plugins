@@ -132,6 +132,7 @@ internal sealed class WeaponSynchronization
         Seed = entry.Options.Seed ?? 0,
         Wear = entry.Options.Wear ?? 0.0001f,
         StatTrak = entry.Options.StatTrak ?? false,
+        StatTrakCount = System.Math.Clamp(entry.Options.StatTrakCount ?? 0, 0, 999_999),
         Nametag = entry.Options.NameTag ?? string.Empty,
         Stickers = entry.Options.Stickers
             .Where(sticker => sticker.Id is > 0 && sticker.Slot is >= 0 and <= 4)

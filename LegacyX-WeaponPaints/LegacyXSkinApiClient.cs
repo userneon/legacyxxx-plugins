@@ -63,6 +63,8 @@ internal sealed class SkinchangerOptions
     [JsonPropertyName("wear")] public float? Wear { get; set; }
     [JsonPropertyName("seed")] public int? Seed { get; set; }
     [JsonPropertyName("statTrak")] public bool? StatTrak { get; set; }
+    // The kill count a StatTrak weapon starts with (Advanced studio on the site); it counts up from there.
+    [JsonPropertyName("statTrakCount")] public int? StatTrakCount { get; set; }
     [JsonPropertyName("nameTag")] public string? NameTag { get; set; }
     [JsonPropertyName("stickers")] public List<SkinchangerStickerOption> Stickers { get; set; } = [];
     [JsonPropertyName("charm")] public SkinchangerCharmOption? Charm { get; set; }
