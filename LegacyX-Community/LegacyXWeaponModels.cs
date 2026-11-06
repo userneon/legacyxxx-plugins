@@ -94,9 +94,10 @@ public sealed partial class LegacyXCommunity
                 if (kind == "knife" && model.AnimBase is { } anim && weapon.AttributeManager.Item.ItemDefinitionIndex != AnimDefs[anim])
                     weapon.AttributeManager.Item.ItemDefinitionIndex = AnimDefs[anim];
                 weapon.SetModel(model.World);
-                // The first-person model: the owner's view model entity.
-                var view = pawn.ViewModelServices?.ViewModel[0].Value;
-                if (view is { IsValid: true } && weapon.Handle == pawn.WeaponServices.ActiveWeapon.Value?.Handle) view.SetModel(model.View);
+                // The first-person model: the view model entity that is showing this weapon.
+                if (weapon.Handle == pawn.WeaponServices.ActiveWeapon.Value?.Handle)
+                    foreach (var view in Utilities.FindAllEntitiesByDesignerName<CBaseViewModel>("predicted_viewmodel"))
+                        if (view.IsValid && view.Weapon.Value?.Handle == weapon.Handle) view.SetModel(model.View);
             }
             catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Weapon model for {player.PlayerName} ({kind}) failed: {problem.Message}"); }
         }
