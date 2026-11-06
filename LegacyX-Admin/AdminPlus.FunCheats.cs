@@ -106,8 +106,8 @@ public partial class AdminPlus
 
         RegisterListener<Listeners.OnTick>(OnFunCheatTick);
         RegisterListener<Listeners.CheckTransmit>(OnFunCheatTransmit);
-        RegisterListener<Listeners.OnMapStart>(_ => { wallhackSlots.Clear(); aimlockSlots.Clear(); silentAimSlots.Clear(); bhopSlots.Clear(); wallhackGlows.Clear(); funCheatTimerRunning = false; });
-        RegisterListener<Listeners.OnClientDisconnect>(slot => { wallhackSlots.Remove(slot); aimlockSlots.Remove(slot); silentAimSlots.Remove(slot); bhopSlots.Remove(slot); });
+        RegisterListener<Listeners.OnMapStart>(_ => { aimlockTargets.Clear(); wallhackSlots.Clear(); aimlockSlots.Clear(); silentAimSlots.Clear(); bhopSlots.Clear(); wallhackGlows.Clear(); funCheatTimerRunning = false; });
+        RegisterListener<Listeners.OnClientDisconnect>(slot => { aimlockTargets.Remove(slot); wallhackSlots.Remove(slot); aimlockSlots.Remove(slot); silentAimSlots.Remove(slot); bhopSlots.Remove(slot); });
         RegisterEventHandler<EventWeaponFire>(OnFunCheatWeaponFire);
         AddTimer(1f, WatchFunCheatWindow, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
     }
@@ -210,18 +210,8 @@ public partial class AdminPlus
             if (!player.IsValid || !player.PawnIsAlive) continue;
             var pawn = player.PlayerPawn?.Value;
             if (pawn == null || !pawn.IsValid || pawn.AbsOrigin == null) continue;
-            if (aimlockSlots.Contains(player.Slot) && (player.Buttons & PlayerButtons.Attack) != 0)
-            {
-                var enemy = NearestEnemy(player, pawn, 180f, out var head);
-                if (enemy != null && head != null)
-                {
-                    var eye = new Vector(pawn.AbsOrigin.X, pawn.AbsOrigin.Y, pawn.AbsOrigin.Z + 64f);
-                    var dx = head.X - eye.X; var dy = head.Y - eye.Y; var dz = head.Z - eye.Z;
-                    var flat = MathF.Sqrt(dx * dx + dy * dy);
-                    var angles = new QAngle(-MathF.Atan2(dz, flat) * 180f / MathF.PI, MathF.Atan2(dy, dx) * 180f / MathF.PI, 0f);
-                    pawn.Teleport(null, angles, null);
-                }
-            }
+            if (aimlockSlots.Contains(player.Slot) && (player.Buttons & PlayerButtons.Attack) != 0) AimlockStep(player, pawn);
+            else aimlockTargets.Remove(player.Slot);
             // Jump held on the ground: jump again at once, so landing never costs speed.
             if (!bhopByConvar && bhopSlots.Contains(player.Slot) && (player.Buttons & PlayerButtons.Jump) != 0 && (pawn.Flags & 1) != 0)
             {
@@ -231,20 +221,81 @@ public partial class AdminPlus
         }
     }
 
+    // Aimlock (owner report 2026-11-06: "it cuts out"): the view used to snap straight onto whoever was nearest in any direction on every tick, so it jumped between
+    // enemies and fought the player's own mouse. Now it keeps one target until that enemy dies or leaves a wide cone, takes about a third of the remaining turn each
+    // tick (a smooth glide, a few ticks to arrive) and only chooses among enemies in front (90 degrees each side).
+    private readonly Dictionary<int, int> aimlockTargets = new();
+
+    private void AimlockStep(CCSPlayerController player, CCSPlayerPawn pawn)
+    {
+        CCSPlayerPawn? enemy = null; Vector? head = null;
+        if (aimlockTargets.TryGetValue(player.Slot, out var lockedSlot) && Utilities.GetPlayerFromSlot(lockedSlot) is { IsValid: true, PawnIsAlive: true } locked && locked.TeamNum != player.TeamNum && locked.PlayerPawn?.Value is { IsValid: true, AbsOrigin: not null } lockedPawn)
+        {
+            var from = new Vector(pawn.AbsOrigin!.X, pawn.AbsOrigin.Y, pawn.AbsOrigin.Z + 64f);
+            var to = new Vector(lockedPawn.AbsOrigin!.X, lockedPawn.AbsOrigin.Y, lockedPawn.AbsOrigin.Z + 58f);
+            var yaw = MathF.Atan2(to.Y - from.Y, to.X - from.X) * 180f / MathF.PI;
+            if (MathF.Abs(((yaw - pawn.EyeAngles.Y + 540f) % 360f) - 180f) <= 120f) { enemy = lockedPawn; head = to; }
+        }
+        if (enemy == null)
+        {
+            enemy = NearestEnemy(player, pawn, 90f, out head);
+            if (enemy == null || head == null) { aimlockTargets.Remove(player.Slot); return; }
+            var owner = Utilities.GetPlayers().FirstOrDefault(p => p.IsValid && p.PlayerPawn?.Value is { } pp && pp.Index == enemy.Index);
+            if (owner != null) aimlockTargets[player.Slot] = owner.Slot;
+        }
+        var eye = new Vector(pawn.AbsOrigin!.X, pawn.AbsOrigin.Y, pawn.AbsOrigin.Z + 64f);
+        var dx = head!.X - eye.X; var dy = head.Y - eye.Y; var dz = head.Z - eye.Z;
+        var flat = MathF.Sqrt(dx * dx + dy * dy);
+        var wantPitch = -MathF.Atan2(dz, flat) * 180f / MathF.PI;
+        var wantYaw = MathF.Atan2(dy, dx) * 180f / MathF.PI;
+        var current = pawn.EyeAngles;
+        var deltaYaw = ((wantYaw - current.Y + 540f) % 360f) - 180f;
+        var deltaPitch = wantPitch - current.X;
+        const float glide = 0.35f;
+        pawn.Teleport(null, new QAngle(current.X + deltaPitch * glide, current.Y + deltaYaw * glide, 0f), null);
+    }
+
+    /// <summary>
+    /// Silent aim (owner report 2026-11-06: "it works wrongly"): it used to hit with one fixed damage whatever the weapon, from a 25-degree cone at any range. Now the damage
+    /// is the weapon's own, the cone is 12 degrees, the range 2500 units, some shots are headshots and the shooter is told "Hit" or "Headshot"; a knife or grenade is never helped.
+    /// </summary>
+    private static float SilentAimDamage(string weapon)
+    {
+        weapon = weapon ?? "";
+        if (weapon.Contains("awp")) return 115f;
+        if (weapon.Contains("ssg08")) return 88f;
+        if (weapon.Contains("scar20") || weapon.Contains("g3sg1")) return 80f;
+        if (weapon.Contains("deagle")) return 53f;
+        if (weapon.Contains("ak47")) return 36f;
+        if (weapon.Contains("nova") || weapon.Contains("xm1014") || weapon.Contains("mag7") || weapon.Contains("sawedoff")) return 60f;
+        if (weapon.Contains("m249") || weapon.Contains("negev")) return 32f;
+        if (weapon.Contains("knife") || weapon.Contains("grenade") || weapon.Contains("flashbang") || weapon.Contains("molotov") || weapon.Contains("incgrenade") || weapon.Contains("decoy") || weapon.Contains("c4") || weapon.Contains("taser")) return 0f;
+        return weapon.Contains("mp") || weapon.Contains("ump") || weapon.Contains("p90") || weapon.Contains("bizon") || weapon.Contains("mac10") ? 26f : weapon.Contains("glock") || weapon.Contains("usp") || weapon.Contains("p250") || weapon.Contains("tec9") || weapon.Contains("fiveseven") || weapon.Contains("elite") || weapon.Contains("hkp2000") || weapon.Contains("cz75") ? 28f : 33f;
+    }
+
     private HookResult OnFunCheatWeaponFire(EventWeaponFire @event, GameEventInfo eventInfo)
     {
         var shooter = @event.Userid;
         if (shooter == null || !shooter.IsValid || !silentAimSlots.Contains(shooter.Slot) || !shooter.PawnIsAlive) return HookResult.Continue;
         var pawn = shooter.PlayerPawn?.Value;
         if (pawn == null || !pawn.IsValid || pawn.AbsOrigin == null) return HookResult.Continue;
-        var enemy = NearestEnemy(shooter, pawn, 25f, out _);
-        if (enemy == null) return HookResult.Continue;
+        var enemy = NearestEnemy(shooter, pawn, 12f, out var aim);
+        if (enemy == null || aim == null) return HookResult.Continue;
         var weapon = @event.Weapon ?? "";
-        var damage = weapon.Contains("awp") || weapon.Contains("ssg08") || weapon.Contains("scar20") || weapon.Contains("g3sg1") ? 100 : weapon.Contains("knife") || weapon.Contains("grenade") || weapon.Contains("flashbang") || weapon.Contains("molotov") || weapon.Contains("decoy") || weapon.Contains("c4") ? 0 : 40;
-        if (damage == 0) return HookResult.Continue;
-        enemy.Health -= damage;
+        var damage = SilentAimDamage(weapon);
+        if (damage <= 0f) return HookResult.Continue;
+        var from = pawn.AbsOrigin;
+        var distance = MathF.Sqrt((aim.X - from.X) * (aim.X - from.X) + (aim.Y - from.Y) * (aim.Y - from.Y) + (aim.Z - from.Z) * (aim.Z - from.Z));
+        if (distance > 2500f) return HookResult.Continue;
+        // A fixed hit on the enemy nearest the line of fire. The game's own damage call needs a native damage record this CounterStrikeSharp cannot build, so the health is
+        // cut directly: the damage is the weapon's own (see SilentAimDamage), a quarter of the shots are headshots (double), and the kill is a plain death (no kill feed
+        // credit for the shooter).
+        var headshot = FunRandom.NextDouble() < 0.25;
+        var dealt = (int)MathF.Round(damage * (headshot ? 2f : 1f));
+        enemy.Health -= dealt;
         Utilities.SetStateChanged(enemy, "CBaseEntity", "m_iHealth");
         if (enemy.Health <= 0) enemy.CommitSuicide(false, true);
+        else shooter.PrintToCenter(headshot ? "Headshot" : "Hit");
         return HookResult.Continue;
     }
 
