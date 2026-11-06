@@ -1,6 +1,6 @@
 # Deploy checklist, 2026-11-06 (бүх шинэчлэл)
 
-Дараалал: **Backend → Frontend → Discord bot → Plugins (VPS) → Workshop (Windows) → CS2AC → Шалгалт.**
+Дараалал: **Backend → Frontend → Discord bot → Plugins (VPS) → Workshop (Windows) → Шалгалт.**
 Бүх алхмын өмнө `git pull` заавал хийнэ (compile хийхээсээ өмнө).
 
 ## 1. Backend (VPS)
@@ -41,7 +41,6 @@ P=/home/cs2/cs2/game/csgo/addons/counterstrikesharp/plugins
 ls -l --time-style=full-iso $P/LegacyX-Hud/LegacyX-Hud.dll $P/LegacyX-Admin/LegacyX-Admin.dll
 grep -c -a 'lx_welcome_hud' $P/LegacyX-Hud/LegacyX-Hud.dll        # >= 1
 grep -c -a 'lx_troll_hud'   $P/LegacyX-Hud/LegacyX-Hud.dll        # >= 1
-grep -c -a 'css_cs2ac_flag' $P/LegacyX-Admin/LegacyX-Admin.dll    # >= 1
 ```
 Хуучин файл цэвэрлэх: `rm -rf $P/LegacyX-AntiWallhack /home/cs2/cs2/game/csgo/addons/counterstrikesharp/configs/retake` ; `.env`-ээс `ANTIWALLHACK` мөр устгах.
 
@@ -61,18 +60,7 @@ ls -l --time-style=full-iso $D
 for n in legacyx_welcome legacyx_troll legacyx_menu; do echo -n "$n: "; grep -c -a "$n" $D/3830785234_dir.vpk; done
 ```
 
-## 6. CS2AC (нэг удаа)
-```bash
-cd ~/legacyxxx-plugins
-sudo ./scripts/cs2-host.sh cs2ac install
-sudo ./scripts/cs2-host.sh cs2ac whitelist <root-ийн steamid64,steamid64>
-sudo ./scripts/cs2-host.sh cs2ac mode log        # эхлээд log; дараа нь: mode ban
-sudo ./scripts/cs2-host.sh cs2ac status
-sudo systemctl restart cs2@27015
-```
-Серверийн консол: `meta list`, `cs2ac_status`, `cs2ac_check_config`.
-
-## 7. Тоглоомон дээр шалгах
+## 6. Тоглоомон дээр шалгах
 | Шалгах зүйл | Яаж | Хүлээж буй үр дүн |
 |---|---|---|
 | Welcome card | Team сонгох (шинэ restart-ийн дараа) | Голд карт 6 секунд |
@@ -85,14 +73,13 @@ sudo systemctl restart cs2@27015
 | Aimlock | `!aimlock <нэр>` + буудах | Нэг дайсан руу зөөлөн эргэнэ |
 | Fun командууд | `!jetpack`, `!chicken`, `!pop`, `!aura` | Тус бүр ажиллах/эсвэл log-д алдаа |
 
-## 8. Шинэ ban-ы урсгал (профайл, ladder, Discord)
+## 7. Шинэ ban-ы урсгал (профайл, ladder, Discord)
 1. Туршилтын тоглогчид `!ban <нэр> 5 test` өг.
 2. Сайт: `legacyx.cc/profile/<steamid>` → **Banned** гарчиг, карт бүр "Banned".
 3. `legacyx.cc/leaders` → тэр тоглогч алга.
 4. Discord (холбосон бол, ≤5 мин): `Banned` role, зөвхөн support channel харагдана.
 5. `css_unban <steamid64>` → тоо, жагсаалт, role бүгд буцна (≤5 мин).
 
-## 9. Анхаарах
+## 8. Анхаарах
 - `git pull` мартвал хуучин dll/addon үлдэнэ (өнөөдрийн ихэнх асуудал).
-- CS2AC-ийг эхлээд `mode log`-д ажиллуулж detection хараад `mode ban` руу шилжүүл.
-- Aimlock, bhop, fun, troll, ban screen, CS2AC интеграци: тоглоомон дээр **анх удаа** туршигдаж байна. Алдаа гарвал `journalctl -u cs2@27015 --since "10 min ago" | grep -iE "AdminPlus|LEGACY-X"`-ийн гаралтыг явуул.
+- Aimlock, bhop, fun, troll, ban screen: тоглоомон дээр **анх удаа** туршигдаж байна. Алдаа гарвал `journalctl -u cs2@27015 --since "10 min ago" | grep -iE "AdminPlus|LEGACY-X"`-ийн гаралтыг явуул.
