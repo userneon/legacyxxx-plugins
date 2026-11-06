@@ -99,7 +99,8 @@ public sealed partial class LegacyXCommunity
 
     private void ApplyWeaponModels(CCSPlayerController player)
     {
-        if (!weaponModelsOn || !player.IsValid || player.IsBot || !weaponModels.TryGetValue(player.SteamID, out var set)) return;
+        // Nothing for a player who is choosing a team, spectating or dead: there is no gun in their hands to change.
+        if (!weaponModelsOn || !player.IsValid || player.IsBot || !player.PawnIsAlive || player.TeamNum < 2 || !weaponModels.TryGetValue(player.SteamID, out var set)) return;
         var pawn = player.PlayerPawn.Value;
         if (pawn is null || !pawn.IsValid || pawn.WeaponServices is null) return;
         // A knife model made for the M9 or Bayonet animations needs that knife under it: swap the player's knife for it (once, then the model goes on).
