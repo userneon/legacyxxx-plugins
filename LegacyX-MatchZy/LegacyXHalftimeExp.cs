@@ -8,13 +8,15 @@ using CounterStrikeSharp.API.Modules.Utils;
 namespace MatchZy;
 
 /// <summary>
-/// The half time EXP card (owner request 2026-10-30): when the first half of a ranked match ends (round 12 of 24), everyone sees what each player
-/// would have earned so far, and each player sees how their own EXP was made up (result, margin, performance, bonus). The numbers come from the
-/// site, calculated from the stats of the match so far with the same formula as the final result; nothing is stored or paid at this point.
+/// The EXP card (owner request 2026-10-30; overtime and final added 2026-11-06): at half time (round 12 of 24), when overtime starts (the score is level
+/// after the regulation rounds) and when the match is over, everyone sees what each player earned (so far, or in the end), and each player sees how their
+/// own EXP was made up (result, margin, performance, bonus). The numbers come from the site, calculated with the same formula as the final result;
+/// at half time and in overtime nothing is stored or paid, the final card shows what was really applied.
 /// </summary>
 public partial class MatchZy
 {
     private bool halftimeExpShown;
+    private bool overtimeExpShown;
 
     private void RegisterLegacyXHalftimeExp()
     {
@@ -29,12 +31,14 @@ public partial class MatchZy
     {
         try
         {
-            if (halftimeExpShown || !IsMatchCoreEnabled || !matchCoreId.HasValue || matchCoreCreateFailed || !isMatchLive) return;
+            if (!IsMatchCoreEnabled || !matchCoreId.HasValue || matchCoreCreateFailed || !isMatchLive) return;
             var maxRounds = ConVar.Find("mp_maxrounds")?.GetPrimitiveValue<int>() ?? 0;
             if (maxRounds < 2) return;
             var (team1, team2) = GetTeamsScore();
-            if (team1 + team2 != maxRounds / 2) return;
-            halftimeExpShown = true;
+            string title;
+            if (!halftimeExpShown && team1 + team2 == maxRounds / 2) { halftimeExpShown = true; title = "Half time"; }
+            else if (!overtimeExpShown && team1 + team2 == maxRounds && team1 == team2) { overtimeExpShown = true; title = "Overtime"; }
+            else return;
 
             // Built here, on the game thread; the request is made on a worker thread.
             var body = JsonSerializer.Serialize(new { match_id = matchCoreId.Value.ToString(), result = new { competitive_result = BuildCompetitiveResult(team1, team2, true) } });
@@ -55,10 +59,10 @@ public partial class MatchZy
                     var text = await response.Content.ReadAsStringAsync();
                     if (!response.IsSuccessStatusCode)
                     {
-                        Log($"[LegacyXMatchCore] The half time EXP card was refused ({(int)response.StatusCode}): {text[..Math.Min(200, text.Length)]}");
+                        Log($"[LegacyXMatchCore] The {title} EXP card was refused ({(int)response.StatusCode}): {text[..Math.Min(200, text.Length)]}");
                         return;
                     }
-                    Server.NextFrame(() => ShowLegacyXHalftimeExp(text));
+                    Server.NextFrame(() => ShowLegacyXExpCard(text, title, final: false));
                 }
                 catch (Exception exception)
                 {
@@ -72,10 +76,22 @@ public partial class MatchZy
         }
     }
 
-    private void ShowLegacyXHalftimeExp(string responseBody)
+    /// <summary>The final card: what the match really gave each player (the site's answer to the final result), shown when the match is over.</summary>
+    private void ShowLegacyXFinalExp(JsonElement competitive)
+    {
+        if (!competitive.TryGetProperty("players", out var rows) || rows.ValueKind != JsonValueKind.Array) return;
+        ShowLegacyXExpRows(rows, "Match over", final: true);
+    }
+
+    private void ShowLegacyXExpCard(string responseBody, string title, bool final)
     {
         using var document = JsonDocument.Parse(responseBody);
         if (!document.RootElement.TryGetProperty("result", out var result) || !result.TryGetProperty("players", out var rows) || rows.ValueKind != JsonValueKind.Array) return;
+        ShowLegacyXExpRows(rows, title, final);
+    }
+
+    private void ShowLegacyXExpRows(JsonElement rows, string title, bool final)
+    {
 
         static string Signed(int value) => value > 0 ? $"{{green}}+{value}" : value < 0 ? $"{{white}}{value}" : "{white}0";
         var byPlayer = new Dictionary<ulong, JsonElement>();
@@ -85,7 +101,7 @@ public partial class MatchZy
         var humans = Utilities.GetPlayers().Where(player => IsPlayerValid(player) && !player.IsBot && !player.IsHLTV && byPlayer.ContainsKey(player.SteamID)).ToList();
         if (humans.Count == 0) return;
 
-        PrintToAllChat("{white}Half time{grey} · EXP so far (the final result can still change it)");
+        PrintToAllChat(final ? $"{{white}}{title}{{grey}} · EXP of this match" : $"{{white}}{title}{{grey}} · EXP so far (the final result can still change it)");
         foreach (var (label, teamNum) in new[] { ("CT", (byte)CsTeam.CounterTerrorist), ("T", (byte)CsTeam.Terrorist) })
         {
             var side = humans.Where(player => player.TeamNum == teamNum)
@@ -106,7 +122,7 @@ public partial class MatchZy
                     if (breakdown.TryGetProperty(key, out var part) && part.ValueKind == JsonValueKind.Number)
                         parts.Add($"{{grey}}{name} {Signed((int)Math.Round(part.GetDouble()))}");
             }
-            PrintToPlayerChat(player, $"{{white}}Your EXP so far{{grey}}: {Signed(delta)}{{grey}} ({string.Join("{grey} · ", parts)}{{grey}}) → {{white}}{after}");
+            PrintToPlayerChat(player, $"{{white}}{(final ? "Your EXP" : "Your EXP so far")}{{grey}}: {Signed(delta)}{{grey}} ({string.Join("{grey} · ", parts)}{{grey}}) → {{white}}{after}");
         }
     }
 }

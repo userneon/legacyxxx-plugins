@@ -119,6 +119,7 @@ public partial class MatchZy
         }
 
         halftimeExpShown = false;
+        overtimeExpShown = false;
         matchCoreCreateFailed = false;
         matchCoreNumber = null;
         matchCoreId = Guid.NewGuid();
@@ -546,6 +547,12 @@ public partial class MatchZy
                 return;
             }
             using var document = JsonDocument.Parse(responseBody);
+            // The final result answers with what each player got: the final EXP card.
+            if (eventName == "result_final" && document.RootElement.TryGetProperty("competitive", out var competitive) && competitive.ValueKind == JsonValueKind.Object)
+            {
+                var finalCard = competitive.Clone();
+                Server.NextFrame(() => { try { ShowLegacyXFinalExp(finalCard); } catch (Exception cardError) { Log($"[LegacyXMatchCore] The final EXP card failed: {cardError.Message}"); } });
+            }
             if (!document.RootElement.TryGetProperty("result", out var result)) return;
             if (result.TryGetProperty("revision", out var revision) && revision.TryGetInt32(out var parsedRevision)) matchCoreRevision = parsedRevision;
             if (result.TryGetProperty("slots_ready", out var slotsReady) && slotsReady.ValueKind is JsonValueKind.True or JsonValueKind.False) matchCoreRemoteSlotsReady = slotsReady.GetBoolean();
