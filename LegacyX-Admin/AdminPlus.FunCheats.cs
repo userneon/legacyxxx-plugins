@@ -45,8 +45,37 @@ public partial class AdminPlus
     private bool cheatsWereOpen;
 
     /// <summary>Once a second: when the warmup of a non-Fun server ends, every cheat switch is cleared and sv_cheats goes back to 0.</summary>
+    // Bunny hop (owner report 2026-11-06: the hop was jerky and "fake", no speed gained): setting the player's speed from the server fights the client's own
+    // movement and never lets the speed build up. While anyone has css_bhop on, the game's own sv_enablebunnyhopping and sv_autobunnyhopping are switched on
+    // (the client predicts them, so it is smooth and the speed is kept). They are server-wide: while any bhop is on, everyone may hold jump to hop. They go back
+    // to what they were when the last bhop goes off. If the server does not have those convars the old per-player push is used.
+    private static bool bhopByConvar;
+    private bool? bhopSavedEnable, bhopSavedAuto;
+
+    private void SyncBhopConvars()
+    {
+        try
+        {
+            var enable = ConVar.Find("sv_enablebunnyhopping"); var auto = ConVar.Find("sv_autobunnyhopping");
+            if (enable == null || auto == null) { bhopByConvar = false; return; }
+            if (bhopSlots.Count > 0 && !bhopByConvar)
+            {
+                bhopSavedEnable = enable.GetPrimitiveValue<bool>(); bhopSavedAuto = auto.GetPrimitiveValue<bool>();
+                Server.ExecuteCommand("sv_enablebunnyhopping 1;sv_autobunnyhopping 1");
+                bhopByConvar = true;
+            }
+            else if (bhopSlots.Count == 0 && bhopByConvar)
+            {
+                Server.ExecuteCommand($"sv_enablebunnyhopping {(bhopSavedEnable == true ? 1 : 0)};sv_autobunnyhopping {(bhopSavedAuto == true ? 1 : 0)}");
+                bhopByConvar = false;
+            }
+        }
+        catch { bhopByConvar = false; }
+    }
+
     private void WatchFunCheatWindow()
     {
+        SyncBhopConvars();
         var open = CheatsAllowed();
         if (!open && cheatsWereOpen)
         {
@@ -175,7 +204,7 @@ public partial class AdminPlus
 
     private void OnFunCheatTick()
     {
-        if (aimlockSlots.Count == 0 && bhopSlots.Count == 0) return;
+        if (aimlockSlots.Count == 0 && (bhopSlots.Count == 0 || bhopByConvar)) return;
         foreach (var player in Utilities.GetPlayers())
         {
             if (!player.IsValid || !player.PawnIsAlive) continue;
@@ -194,7 +223,7 @@ public partial class AdminPlus
                 }
             }
             // Jump held on the ground: jump again at once, so landing never costs speed.
-            if (bhopSlots.Contains(player.Slot) && (player.Buttons & PlayerButtons.Jump) != 0 && (pawn.Flags & 1) != 0)
+            if (!bhopByConvar && bhopSlots.Contains(player.Slot) && (player.Buttons & PlayerButtons.Jump) != 0 && (pawn.Flags & 1) != 0)
             {
                 var velocity = pawn.AbsVelocity;
                 pawn.Teleport(null, null, new Vector(velocity.X, velocity.Y, 301f));
@@ -280,7 +309,11 @@ public partial class AdminPlus
             {
                 if (!glow.IsValid) continue;
                 var allowed = viewer != null && viewer.IsValid && wallhackSlots.Contains(viewer.Slot) && OwnerIsEnemy(viewer, pawnIndex);
-                if (!allowed) info.TransmitEntities.Remove((int)glow.Index);
+                if (!allowed) { info.TransmitEntities.Remove((int)glow.Index); continue; }
+                // The game sends only what the viewer could see (its visibility set), so an enemy far behind walls or across the map came and went: the glow showed
+                // "sometimes" (owner report 2026-11-06). The glow and the player it follows are sent to a wallhack viewer on every update.
+                info.TransmitEntities.Add((int)pawnIndex);
+                info.TransmitEntities.Add((int)glow.Index);
             }
         }
     }

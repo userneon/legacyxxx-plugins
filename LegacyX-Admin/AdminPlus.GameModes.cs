@@ -89,6 +89,7 @@ public partial class AdminPlus
     {
         try
         {
+            Console.WriteLine($"[AdminPlus] Game mode round: {gameMode}.");
             switch (gameMode)
             {
                 case "retake": SetUpRetakeRound(); break;
@@ -178,6 +179,7 @@ public partial class AdminPlus
     private void SetUpRetakeRound()
     {
         var sites = FindBombSites();
+        Console.WriteLine($"[AdminPlus] Retake: {sites.Count} bomb site(s) found on {Server.MapName}: {string.Join(" | ", sites.Select(v => $"{v.X:0},{v.Y:0},{v.Z:0}"))}");
         if (sites.Count == 0) { ModeSay("{grey}This map has no bomb site to retake."); return; }
         retakeSiteIndex = FunRandom.Next(sites.Count);
         var site = retakeSite = sites[retakeSiteIndex];
@@ -192,6 +194,7 @@ public partial class AdminPlus
         }
         foreach (var attacker in Contenders(3).Where(p => p.PawnIsAlive))
             Arm(attacker, "weapon_knife", "weapon_usp_silencer", RetakeCtPrimary[FunRandom.Next(RetakeCtPrimary.Length)], "item_assaultsuit", "item_defuser", "weapon_flashbang", "weapon_smokegrenade");
+        Console.WriteLine($"[AdminPlus] Retake: site {retakeSiteIndex} at {site.X:0},{site.Y:0},{site.Z:0}; {defenders.Count} defender(s), {Contenders(3).Count(p => p.PawnIsAlive)} retaker(s).");
         ModeSay($"{{white}}Retake{{grey}}: the bomb is planted on site {{white}}{(retakeSiteIndex == 0 ? "A" : "B")}{{grey}}. Terrorists defend it, Counter-Terrorists retake it.");
     }
 
@@ -210,6 +213,7 @@ public partial class AdminPlus
             c4.TimerLength = seconds;
             c4.DispatchSpawn();
             var rules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault()?.GameRules;
+            Console.WriteLine($"[AdminPlus] Retake: the bomb is planted ({seconds:0} s), game rules {(rules != null ? "found" : "missing")}.");
             if (rules != null) { rules.BombPlanted = true; Utilities.SetStateChanged(Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First(), "CCSGameRulesProxy", "m_pGameRules"); }
         }
         catch (Exception exception) { LogError($"retake bomb: {exception.Message}"); }
