@@ -75,6 +75,8 @@ public sealed partial class LegacyXCommunity
         // the site shows at once. Heard both as the css_rs command and as the chat line itself (!rs, /rs, .rs): a chat trigger does not
         // always reach a command listener, and !rs then refreshed the skins but not these.
         AddCommandListener("css_rs", (player, _) => { RefreshLooks(player); return HookResult.Continue; }, HookMode.Post);
+        // The skin menu's Refresh button (LegacyX-Hud) asks for the same: the looks are read again.
+        AddCommand("css_lxlooks", "Read your smoke, trail, flash and weapon model looks again", (player, _) => RefreshLooks(player));
         foreach (var say in new[] { "say", "say_team" })
         {
             AddCommandListener(say, (player, command) =>

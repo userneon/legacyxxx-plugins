@@ -145,6 +145,8 @@ public sealed partial class LegacyXHud
     {
         skinViews.Remove(player.Slot);
         if (menuOpen.Remove(player.Slot)) MenuSound(player, soundBack, LevelBack);
+        // A change made in the menu is put on once more when it closes.
+        if (skinsChanged.Remove(player.Slot)) player.ExecuteClientCommandFromServer("css_lxapply");
         Sc(panel, player, "menu", "shown", false);
         Sc(panel, player, "menu_dim", "shown", false);
         panel.Close(player);

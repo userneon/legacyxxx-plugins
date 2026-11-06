@@ -418,6 +418,7 @@ public sealed partial class LegacyXHud
                 MenuSound(p, soundPick, LevelPick);
                 // Same as typing !rs without its wait between uses: SkinBridge (css_lxapply) reads the loadout from the API and applies it.
                 p.ExecuteClientCommandFromServer("css_lxapply");
+                skinsChanged.Add(playerSlot);
                 // A click came while this one was being saved: save the latest pick now.
                 if (current.EquipAgain)
                 {
@@ -426,6 +427,25 @@ public sealed partial class LegacyXHud
                         SkinsEquip(menu, p, current);
                 }
             });
+        });
+    }
+
+    // Slots whose skins were changed in the menu: when their menu closes, the loadout is put on once more (a pick that was applied while the gun could not take it is not lost).
+    private readonly HashSet<int> skinsChanged = new();
+
+    /// <summary>The Refresh skins button: the same as !rs. The skins are read from the site again and put on, and the looks (smoke, trail, weapon models) with them.</summary>
+    private void SkinsRefresh(PanelHandle panel, CCSPlayerController player)
+    {
+        MenuSound(player, soundClick, LevelClick);
+        SkinsStatus(panel, player, "Refreshing your skins ...");
+        player.ExecuteClientCommandFromServer("css_lxapply");
+        player.ExecuteClientCommandFromServer("css_lxlooks");
+        var slot = player.Slot;
+        var steamId = player.SteamID;
+        AddTimer(1.5f, () =>
+        {
+            if (menu is not { } open || Utilities.GetPlayerFromSlot(slot) is not { IsValid: true } again || again.SteamID != steamId || !open.IsOpenFor(again)) return;
+            SkinsStatus(open, again, "Skins refreshed.");
         });
     }
 
@@ -468,6 +488,7 @@ public sealed partial class LegacyXHud
                         if (current.Slots[i] == tile) current.Slots[i] = bare;
                     if (current.Picked == tile) current.Picked = bare;
                     p.ExecuteClientCommandFromServer("css_lxapply");
+                    skinsChanged.Add(playerSlot);
                     MenuSound(p, soundPick, LevelPick);
                 }
                 SkinsRender(menu, p, current);
@@ -661,6 +682,9 @@ public sealed partial class LegacyXHud
                 return true;
             case "sk_remove":
                 SkinsRemove(panel, player, view);
+                return true;
+            case "sk_refresh":
+                SkinsRefresh(panel, player);
                 return true;
         }
         // Remove on a card that wears a skin (shown while the pointer is on it): sk_w<N>_rm (a gun) and sk_type<N>_rm (a knife or glove type).
