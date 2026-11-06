@@ -9,7 +9,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../LegacyX-Admin/Authorization/*.cs" Link="Authorization/%(Filename)%(Extension)" />
-    <Compile Include="../../LegacyX-AntiWallhack/AntiWallhackLogic.cs" Link="AntiWallhack/AntiWallhackLogic.cs" />
     <Compile Include="../../shared/LegacyX.Shared.Configuration/LegacyXEnvironment.cs" Link="Shared/LegacyXEnvironment.cs" />
     <Compile Include="../../shared/LegacyX.Shared.Configuration/LegacyXChat.cs" Link="Shared/LegacyXChat.cs" />
     <Compile Include="../../shared/LegacyX.Shared.Configuration/LegacyXEnvironmentLoader.cs" Link="Shared/LegacyXEnvironmentLoader.cs" />
