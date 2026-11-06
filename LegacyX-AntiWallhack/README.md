@@ -36,6 +36,18 @@ and a map change start over with everyone shown.
 4. `lx_awh_status` (server console) shows updates, traces, how often the budget was reached and how many enemies are hidden from someone now.
    `LEGACYX_ANTIWALLHACK_DEBUG=true` writes a line every ten seconds.
 
+## Test it without a cheat
+
+`!awh` (Owner only, in chat or `css_awh` in the console) switches on a readout in the middle of your own screen: every living enemy, and whether the server is
+hiding them from you at this moment (`HIDDEN` or `shown`). Use a teammate on the other side, or bots (`bot_add_t`, `bot_add_ct`), and walk round a map:
+
+- An enemy you can **plainly see** must never read `HIDDEN`. If one does, that is a mistake: note the map and the spot.
+- An enemy **behind a wall** should read `HIDDEN` after about a third of a second, and `shown` again the moment a corner brings them into view or just before it.
+- Behind a window, a fence or through a smoke: check that each reads the way it looks on your screen.
+
+Do not use a cheat program for this: a cheat on a server with a game server login token can get the owner's Steam account VAC-banned, and a downloaded one is
+often malware. The readout shows exactly what the server decides, which is what the test is about. `lx_awh_status` adds the totals.
+
 ## Try it on one server first
 
 The layer names the trace uses (`Solid` with `Window`, `PassBullets`, `PlayerClip`, `Trigger` left out) follow the module's own list and have not been

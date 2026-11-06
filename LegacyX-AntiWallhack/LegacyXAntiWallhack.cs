@@ -2,6 +2,8 @@ using System.Numerics;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Modules.Admin;
+using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Commands;
 using LegacyX.Shared.Configuration;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
@@ -42,6 +44,9 @@ public sealed class LegacyXAntiWallhack : BasePlugin
     private Dictionary<int, HashSet<int>> hidden = new();
     private readonly Dictionary<int, (Vector3 Center, float Since)> smokes = new();
     private readonly List<Vector3> samples = new();
+
+    /// <summary>Root players who switched the readout on with !awh (see OnWatch).</summary>
+    private readonly HashSet<int> watchers = new();
 
     private long statUpdates, statTraces, statBudgetHits, statHiddenNow;
     private bool warnedNoTracer;
@@ -87,6 +92,7 @@ public sealed class LegacyXAntiWallhack : BasePlugin
         RegisterEventHandler<EventSmokegrenadeDetonate>((@event, _) => { smokes[@event.Entityid] = (new Vector3(@event.X, @event.Y, @event.Z), Server.CurrentTime); return HookResult.Continue; });
         RegisterEventHandler<EventSmokegrenadeExpired>((@event, _) => { smokes.Remove(@event.Entityid); return HookResult.Continue; });
         RegisterEventHandler<EventRoundStart>((_, _) => { Reset(); return HookResult.Continue; });
+        AddTimer(0.25f, ShowWatch, TimerFlags.REPEAT);
         Console.WriteLine($"[{ModuleName}] On: {mode}, every {updateTicks} tick(s), grace {graceTicks} ticks, padding {padding} units, budget {traceBudget} traces. lx_awh_status shows what it does.");
 #endif
     }
@@ -100,11 +106,48 @@ public sealed class LegacyXAntiWallhack : BasePlugin
 
     private void Forget(int slot)
     {
+        watchers.Remove(slot);
         pairs.Remove(slot);
         foreach (var byEnemy in pairs.Values) byEnemy.Remove(slot);
         var next = new Dictionary<int, HashSet<int>>(hidden);
         next.Remove(slot);
         hidden = next;
+    }
+
+    /// <summary>
+    /// !awh (root): a test with no cheat. While it is on, the middle of your screen lists every living enemy and whether the server is hiding them from
+    /// you right now. Walk round a map with a teammate or a bot as the enemy: one you can plainly see must never read HIDDEN (that is a mistake to report),
+    /// and one behind a wall should read HIDDEN after about a third of a second. The same again to switch it off.
+    /// </summary>
+    [ConsoleCommand("css_awh", "Anti-wallhack test: shows which enemies are hidden from you (root)")]
+    public void OnWatch(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !player.IsValid) return;
+        if (!AdminManager.PlayerHasPermissions(player, "@css/root")) { player.PrintToChat(LegacyXChat.System("This is for the Owner.")); return; }
+        if (!active) { player.PrintToChat(LegacyXChat.System("The anti-wallhack is off on this server.")); return; }
+        var on = watchers.Add(player.Slot);
+        if (!on) watchers.Remove(player.Slot);
+        player.PrintToChat(LegacyXChat.System(on ? "Anti-wallhack readout on: it lists the enemies in the middle of your screen." : "Anti-wallhack readout off."));
+    }
+
+    private void ShowWatch()
+    {
+        if (watchers.Count == 0) return;
+        foreach (var slot in watchers.ToList())
+        {
+            var viewer = Utilities.GetPlayerFromSlot(slot);
+            if (viewer == null || !viewer.IsValid) { watchers.Remove(slot); continue; }
+            var lines = new List<string>();
+            if (pairs.TryGetValue(slot, out var states))
+                foreach (var (enemySlot, state) in states)
+                {
+                    var enemy = Utilities.GetPlayerFromSlot(enemySlot);
+                    if (enemy == null || !enemy.IsValid || !enemy.PawnIsAlive) continue;
+                    var name = System.Net.WebUtility.HtmlEncode(enemy.PlayerName.Length > 18 ? enemy.PlayerName[..18] : enemy.PlayerName);
+                    lines.Add(state.Hidden ? $"<font color='#ef4444'>HIDDEN</font> <font color='#a3a3a3'>{name}</font>" : $"<font color='#22c55e'>shown</font> <font color='#a3a3a3'>{name}</font>");
+                }
+            viewer.PrintToCenterHtml(lines.Count == 0 ? "<font color='#a3a3a3'>No enemy to check yet</font>" : "<font color='#fafafa'>Anti-wallhack</font><br>" + string.Join("<br>", lines));
+        }
     }
 
     [ConsoleCommand("lx_awh_status", "Anti-wallhack: what it has done so far (server console)")]
