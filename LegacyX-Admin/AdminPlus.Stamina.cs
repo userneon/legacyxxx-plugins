@@ -69,12 +69,12 @@ public partial class AdminPlus
     }
 
     /// <summary>Commands the Roles list can grant: the ones with a permission, plus a few fun ones the stamina table never listed.</summary>
-    private static readonly HashSet<string> ExtraGuardedCommands = new(StringComparer.OrdinalIgnoreCase) { "size", "unsize", "launch", "invisible", "rainbow", "spin", "rocket", "aimlock", "bhop", "cheats", "silentaim", "wh" };
+    private static readonly HashSet<string> ExtraGuardedCommands = new(StringComparer.OrdinalIgnoreCase) { "size", "unsize", "launch", "invisible", "rainbow", "spin", "rocket", "burn", "bounce", "lowgrav", "fling", "blink", "tprandom", "drop", "aimlock", "bhop", "cheats", "silentaim", "wh" };
 
     /// <summary>Fun commands outside the two tables above: their permission, and (like the other fun commands) a stamina of 1000.</summary>
     private static readonly Dictionary<string, string> ExtraCommandPermissions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["size"] = "@css/slay", ["unsize"] = "@css/slay", ["launch"] = "@css/slay", ["invisible"] = "@css/slay", ["rainbow"] = "@css/slay", ["spin"] = "@css/slay", ["rocket"] = "@css/slay",
+        ["size"] = "@css/slay", ["unsize"] = "@css/slay", ["launch"] = "@css/slay", ["invisible"] = "@css/slay", ["rainbow"] = "@css/slay", ["spin"] = "@css/slay", ["rocket"] = "@css/slay", ["burn"] = "@css/slay", ["bounce"] = "@css/slay", ["lowgrav"] = "@css/slay", ["fling"] = "@css/slay", ["blink"] = "@css/slay", ["tprandom"] = "@css/slay", ["drop"] = "@css/slay",
     };
     private const int ExtraCommandStamina = 1000;
 

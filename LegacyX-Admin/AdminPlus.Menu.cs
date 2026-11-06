@@ -288,7 +288,7 @@ public partial class AdminPlus
         });
 
         // One entry per command: pick a player and the effect switches on, or off when it is already on.
-        foreach (var (title, command) in new[] { ("Invisible", "css_invisible"), ("Rainbow", "css_rainbow"), ("Spin", "css_spin"), ("Rocket", "css_rocket") })
+        foreach (var (title, command) in new[] { ("Invisible", "css_invisible"), ("Rainbow", "css_rainbow"), ("Spin", "css_spin"), ("Rocket", "css_rocket"), ("Burn", "css_burn"), ("Bounce", "css_bounce"), ("Low gravity", "css_lowgrav"), ("Fling", "css_fling"), ("Blink", "css_blink"), ("Random teleport", "css_tprandom"), ("Drop weapon", "css_drop") })
         {
             var name = command[4..];
             if (!HasCommandAccess(admin, name)) continue;

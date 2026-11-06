@@ -32,6 +32,7 @@ public partial class AdminPlus
         AddPermCmd("@css/slay", "css_rainbow", "<#userid|name|all @ commands> [seconds]", CmdRainbow);
         AddPermCmd("@css/slay", "css_spin", "<#userid|name|all @ commands> [seconds]", CmdSpin);
         AddPermCmd("@css/slay", "css_rocket", "<#userid|name|all @ commands>", CmdRocket);
+        RegisterFunManyCommands();
     }
 
     /// <summary>The effects of this player end (they spawned again, or died).</summary>
@@ -40,6 +41,7 @@ public partial class AdminPlus
         _invisible.Remove(steamId);
         if (_rainbowTimers.Remove(steamId, out var rainbow)) { try { rainbow.Kill(); } catch { } }
         if (_spinTimers.Remove(steamId, out var spin)) { try { spin.Kill(); } catch { } }
+        ClearFunMany(steamId);
     }
 
     private static bool Alive(CCSPlayerController p) => p.IsValid && p.PawnIsAlive && p.PlayerPawn?.Value is { IsValid: true };
