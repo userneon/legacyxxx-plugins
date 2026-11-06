@@ -57,10 +57,15 @@ public sealed partial class LegacyXHud
             Sv(panel, player, "wc_bar_left", rankName);
             Sv(panel, player, "wc_bar_right", nextExp > rankExp && nextName.Length > 0 ? $"{Math.Max(0, nextExp - exp):N0} EXP to {nextName}" : "Top rank");
         }
-        Sc(panel, player, "welcome", "shown", true);
+        var steamId = player.SteamID;
+        // The fade is a transition: the class follows a moment after the panel is opened, or the card pops up at once (see OpenMenu).
+        AddTimer(MenuRiseDelaySeconds, () =>
+        {
+            if (welcomeHud is not { } card || Utilities.GetPlayerFromSlot(slot) is not { IsValid: true } now || now.SteamID != steamId || !card.IsOpenFor(now)) return;
+            Sc(card, now, "welcome", "shown", true);
+        });
         Console.WriteLine($"[{ModuleName}] The welcome card is shown to slot {slot}.");
 
-        var steamId = player.SteamID;
         AddTimer(WelcomeShownSeconds, () =>
         {
             if (Utilities.GetPlayerFromSlot(slot) is not { IsValid: true } again || again.SteamID != steamId || welcomeHud is null || !welcomeHud.IsOpenFor(again)) return;

@@ -127,8 +127,19 @@ public sealed partial class LegacyXHud
         Sv(panel, player, "sk_version", $"LEGACY-X v{ModuleVersion}");
 
         Sc(panel, player, "menu_dim", "shown", true);
-        Sc(panel, player, "menu", "shown", true);
+        // The menu rises in by a transition (legacyx_menu.css). A transition only runs when the class is added after the client has drawn the closed panel; set in the
+        // same moment as the panel is opened it pops up at once, which was why it was smooth sometimes and sudden other times. So the class follows a moment later.
+        var slot = player.Slot;
+        var steamId = player.SteamID;
+        AddTimer(MenuRiseDelaySeconds, () =>
+        {
+            if (menu is not { } open || !menuOpen.Contains(slot)) return;
+            if (Utilities.GetPlayerFromSlot(slot) is not { IsValid: true } again || again.SteamID != steamId || !open.IsOpenFor(again)) return;
+            Sc(open, again, "menu", "shown", true);
+        });
     }
+
+    private const float MenuRiseDelaySeconds = 0.12f;
 
     private void CloseMenu(PanelHandle panel, CCSPlayerController player)
     {
