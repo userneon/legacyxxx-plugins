@@ -184,7 +184,7 @@ public partial class AdminPlus
 
             RememberSteamBan(steamId, expiry, safeName, ip, $"{reason} (Team: {SanitizeForCfg(teamInput)})");
 
-            target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
+            DisconnectBanned(target, minutes == 0 ? "Permanent" : $"{minutes} minutes", reason);
             ReportBan(steamId, minutes, reason, caller);
             bannedCount++;
         }
@@ -264,7 +264,7 @@ public partial class AdminPlus
         if (!string.IsNullOrEmpty(steamId)) RememberSteamBan(steamId, expiry, safeName, ip, reason);
 
         if (target != null)
-            target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
+            DisconnectBanned(target, minutes == 0 ? "Permanent" : $"{minutes} minutes", reason);
 
         string executorName = GetExecutorName(caller);
 
@@ -351,7 +351,7 @@ public partial class AdminPlus
         ReportIpBan(ip, 0, reason, caller);
 
         foreach (var p in Utilities.GetPlayers()!.Where(p => p.IsValid && !string.IsNullOrEmpty(p.IpAddress) && p.IpAddress.StartsWith(ip + ":")))
-            p.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
+            DisconnectBanned(p, "Permanent", reason);
 
         string executorName = GetExecutorName(caller);
 

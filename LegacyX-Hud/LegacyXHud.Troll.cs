@@ -29,7 +29,7 @@ public sealed partial class LegacyXHud
         ["hack"] = new("t-amber", "SUSPICIOUS ACTIVITY DETECTED", "Aim assistance patterns were found. Hold still while the server checks you.", "LEGACY-X CHECK"),
     };
 
-    [ConsoleCommand("lx_troll_hud", "A joke card for one player: lx_troll_hud <slot> <ban|vac|crash|hack|scare|banner> <seconds> [\"<text>\"]")]
+    [ConsoleCommand("lx_troll_hud", "A joke card for one player: lx_troll_hud <slot> <ban|vac|crash|hack|scare|banner|banned> <seconds> [\"<text>\"]")]
     public void OnTrollHudCommand(CCSPlayerController? caller, CommandInfo command)
     {
         if (caller != null || !enabled || command.ArgCount < 4) return;
@@ -53,8 +53,21 @@ public sealed partial class LegacyXHud
         }
         void CloseLater(float after) => AddTimer(after, () => { if (Still(out var p)) trollHud!.Close(p); }, TimerFlags.STOP_ON_MAPCHANGE);
 
+        if (kind == "banned")
+        {
+            // The real ban screen (not a joke): the whole screen red with the length and reason, until the player is disconnected.
+            Sv(panel, player, "tr_ban_sub", text.Length > 0 ? text : "You are banned from this server.");
+            Sc(panel, player, "troll", "shown", false);
+            Sc(panel, player, "scare", "shown", false);
+            AddTimer(MenuRiseDelaySeconds, () => { if (Still(out var p)) Sc(trollHud!, p, "banscreen", "shown", true); }, TimerFlags.STOP_ON_MAPCHANGE);
+            CloseLater(seconds + 1f);
+            Console.WriteLine($"[{ModuleName}] The ban screen is shown to slot {slot}.");
+            return;
+        }
+
         if (kind == "scare")
         {
+            Sc(panel, player, "banscreen", "shown", false);
             Sv(panel, player, "tr_scare_text", text.Length > 0 ? text.ToUpperInvariant() : "BOO!");
             Sc(panel, player, "troll", "shown", false);
             Sc(panel, player, "scare", "shown", true);

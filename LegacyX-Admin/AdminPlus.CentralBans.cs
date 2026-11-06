@@ -118,7 +118,7 @@ public partial class AdminPlus
 
                 var name = SanitizeName(target.PlayerName);
                 var term = ban.IsPermanent ? "permanent" : $"until {ban.ExpiresAt:yyyy-MM-dd HH:mm} UTC";
-                target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
+                DisconnectBanned(target, ban.IsPermanent ? "Permanent" : "Until " + (ban.ExpiresAt?.ToString("yyyy-MM-dd") ?? "later"), ban.Reason);
                 LogAction($"Central ban: removed {name} ({ban.SteamId}), {term}. Reason: {ban.Reason}");
                 Console.WriteLine($"[LEGACY-X Admin] Central ban: removed {name} ({ban.SteamId}), {term}.");
             }
@@ -126,7 +126,7 @@ public partial class AdminPlus
             {
                 foreach (var target in Utilities.GetPlayers().Where(p => p != null && p.IsValid && !p.IsBot && PlayerIp(p) == ipBan.Ip).ToList())
                 {
-                    target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
+                    DisconnectBanned(target, "IP ban", ipBan.Reason);
                     LogAction($"Central IP ban: removed {SanitizeName(target.PlayerName)} ({target.SteamID}), {ipBan.Ip}. Reason: {ipBan.Reason}");
                     Console.WriteLine($"[LEGACY-X Admin] Central IP ban: removed {SanitizeName(target.PlayerName)} ({target.SteamID}).");
                 }
