@@ -67,6 +67,17 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 say() { printf '==> %s\n' "$*"; }
 die() { printf '!! %s\n' "$*" >&2; exit 1; }
 need_root() { [[ $EUID -eq 0 ]] || die "Run with sudo."; }
+# unzip answers 1 for a warning (a zip made on Windows with "\\" in its paths: it converts them and says so): the files are fine, so only 2 and up are errors.
+unzip_pkg() {
+  local rc=0 file target
+  unzip -oq "$1" -d "$2" || rc=$?
+  [[ $rc -le 1 ]] || die "unzip failed ($rc): $1"
+  # A zip whose paths use "\\" can also come out as files with the backslashes in their names: put them in real folders.
+  while IFS= read -r -d '' file; do
+    target="$2/$(printf '%s' "${file#"$2"/}" | tr '\\' '/')"
+    mkdir -p "$(dirname "$target")" && mv -f "$file" "$target"
+  done < <(find "$2" -type f -name '*\\*' -print0)
+}
 # As the cs2 user, in its home, with its HOME (steamcmd writes there).
 as_cs2() { runuser -u "$CS2_USER" -- env HOME="$CS2_HOME" bash -c 'cd "$HOME" && exec "$@"' _ "$@"; }
 ports() { ls "$CONF_DIR" 2>/dev/null | sed -n 's/^\([0-9]\+\)\.conf$/\1/p' | sort -n; }
@@ -215,7 +226,7 @@ install_multiaddonmanager() {
   [[ "$url" == *.tar.gz ]] && file="$tmp/mam.tar.gz"
   if ! curl -fsSL "$url" -o "$file"; then rm -rf "$tmp"; say "MultiAddonManager: download failed, skipped."; return 0; fi
   mkdir -p "$tmp/pkg"
-  if [[ "$file" == *.tar.gz ]]; then tar -xzf "$file" -C "$tmp/pkg"; else unzip -oq "$file" -d "$tmp/pkg"; fi
+  if [[ "$file" == *.tar.gz ]]; then tar -xzf "$file" -C "$tmp/pkg"; else unzip_pkg "$file" "$tmp/pkg"; fi
   # The package is laid out for game/csgo (addons/, cfg/). Program files are replaced on every run;
   # cfg/ keeps whatever is already there (our mm_client_extra_addons line).
   [[ -d "$tmp/pkg/addons" ]] && cp -a "$tmp/pkg/addons/." "$CSGO_DIR/addons/"
@@ -296,7 +307,7 @@ cmd_cs2ac() {
       tmp="$(mktemp -d)"; file="$tmp/cs2ac.${url##*.}"; [[ "$url" == *.tar.gz ]] && file="$tmp/cs2ac.tar.gz"
       curl -fsSL "$url" -o "$file" || { rm -rf "$tmp"; die "CS2AC: download failed."; }
       mkdir -p "$tmp/pkg"
-      if [[ "$file" == *.tar.gz ]]; then tar -xzf "$file" -C "$tmp/pkg"; else unzip -oq "$file" -d "$tmp/pkg"; fi
+      if [[ "$file" == *.tar.gz ]]; then tar -xzf "$file" -C "$tmp/pkg"; else unzip_pkg "$file" "$tmp/pkg"; fi
       # The archive starts with the game folder: it goes into the server root (not game/csgo). An existing cfg/cs2ac.cfg is kept.
       [[ -d "$tmp/pkg/game" ]] || { rm -rf "$tmp"; die "CS2AC: the package has no game/ folder, check it by hand."; }
       [[ -f "$CS2AC_CFG" ]] && cp -a "$CS2AC_CFG" "$tmp/cs2ac.cfg.keep"
