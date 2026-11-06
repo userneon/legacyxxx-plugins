@@ -40,7 +40,6 @@ public partial class AdminPlus
         {
             warmup = InWarmup(),
             funServer = IsFunServer(),
-            gameMode = gameMode.Length > 0,
             cheatToys = online != null && (wallhackSlots.Contains(online.Slot) || aimlockSlots.Contains(online.Slot) || silentAimSlots.Contains(online.Slot) || bhopSlots.Contains(online.Slot)),
         };
         var serverId = LegacyXServerRuntime.Load(LegacyXEnvironmentLoader.Load()).ServerId;
@@ -55,7 +54,7 @@ public partial class AdminPlus
                 try { answer = await PostAntiCheatFlagAsync(payload); }
                 catch (Exception exception) { Console.WriteLine($"[LEGACY-X Admin] Anti-cheat: the website could not be asked ({exception.Message}); deciding here."); }
             }
-            var decided = answer ?? LocalAntiCheatDecision(detector, context.warmup, context.funServer, context.gameMode, context.cheatToys);
+            var decided = answer ?? LocalAntiCheatDecision(detector, context.warmup, context.funServer, context.cheatToys);
             Server.NextFrame(() => ApplyAntiCheatDecision(steamId, name, detector, decided.Action, decided.Reason, decided.Why));
         });
     }
@@ -76,10 +75,10 @@ public partial class AdminPlus
     }
 
     /// <summary>The guards of the website's rules that need no history: the fallback when the website cannot be asked.</summary>
-    private static (string Action, string Reason, string Why) LocalAntiCheatDecision(string detector, bool warmup, bool fun, bool mode, bool toys)
+    private static (string Action, string Reason, string Why) LocalAntiCheatDecision(string detector, bool warmup, bool fun, bool toys)
     {
         var reason = $"CS2AC: {detector}";
-        if (toys || mode || fun || warmup) return ("flag", reason, "Local guard: warmup, a Fun server, a match mode or a cheat toy.");
+        if (toys || fun || warmup) return ("flag", reason, "Local guard: warmup, a Fun server or a cheat toy.");
         var lower = detector.ToLowerInvariant();
         return HeavyDetectors.Any(lower.Contains) ? ("ban", reason, "Website unreachable: a heavy detector bans.") : ("flag", reason, "Website unreachable: only heavy detectors ban.");
     }

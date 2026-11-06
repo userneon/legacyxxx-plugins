@@ -72,7 +72,6 @@ public partial class AdminPlus
         AddPermCmd("@css/slay", "css_roulette", "", CmdRoulette);
         AddPermCmd("@css/slay", "css_chaos", "[seconds]", CmdChaos);
         RegisterFunTrollCommands();
-        RegisterGameModes();
         AddCommand("css_cs2ac_flag", "CS2AC detection: asks the website, then bans or only flags (server console only)", CmdAntiCheatFlag);
         AddCommand("css_cs2ac_notice", "CS2AC log-only detection line (server console only)", CmdAntiCheatNotice);
 

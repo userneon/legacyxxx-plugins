@@ -40,7 +40,7 @@ public partial class AdminPlus
     }
 
     /// <summary>Fun servers: always. Any other mode: only while the server is in warmup.</summary>
-    private static bool CheatsAllowed() => IsFunServer() || InWarmup() || gameMode.Length > 0;
+    private static bool CheatsAllowed() => IsFunServer() || InWarmup();
 
     private bool cheatsWereOpen;
 
