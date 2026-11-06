@@ -81,7 +81,7 @@ public partial class AdminPlus
         AddCommand("css_rcon", "Send RCON command from console", CmdRcon);
         AddCommand("css_cvar", "Get/Set cvar value from console", CmdCvar);
         AddCommand("css_who", "Show player info from console", CmdWho);
-        AddCommand("css_rr", "Restart round from console", CmdRestartRound);
+        AddCommand("css_rr", "Send the server back to warmup", CmdRestartRound);
 
         AddCommand("css_players", "List all players in console", CmdPlayers);
 
@@ -1076,8 +1076,8 @@ public partial class AdminPlus
         }
 
         string executorName = GetExecutorNameCommand(caller);
-        // With LegacyX-MatchZy loaded, !rr is not a round restart: it ends the match and sends the server straight back to warmup
-        // (MatchZy's css_restart). Without it there is no match to end, so the round restarts as before.
+        // !rr is never a round restart (owner request 2026-11-06): with LegacyX-MatchZy loaded it ends the match and sends the server straight back
+        // to warmup (MatchZy's css_restart); without it there is no match to end, so it just starts the warmup.
         if (ConVar.Find("matchzy_smoke_color_enabled") != null)
         {
             // From chat it takes the command twice within 10 seconds, so one slip does not end a match.
@@ -1097,8 +1097,9 @@ public partial class AdminPlus
             return;
         }
 
-        Server.ExecuteCommand("mp_restartgame 1");
-        PlayerExtensions.PrintToAll(Localizer["Round.Restarted", StaffLabel(executorName)]);
+        // No match here (a Fun server, or MatchZy is not loaded): !rr still does not restart the round, it starts the warmup.
+        Server.ExecuteCommand("mp_warmup_start");
+        PlayerExtensions.PrintToAll($"{StaffLabel(executorName)} sent the server back to warmup.");
     }
 
     private void CmdPlayers(CCSPlayerController? caller, CommandInfo info)
