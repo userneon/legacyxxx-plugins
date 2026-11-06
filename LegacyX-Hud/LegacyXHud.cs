@@ -71,6 +71,7 @@ public sealed partial class LegacyXHud : BasePlugin
             RegisterEventHandler<EventRoundFreezeEnd>(OnRoundFreezeEnd);
         }
         RegisterEventHandler<EventPlayerDisconnect>(OnPlayerDisconnect);
+        RegisterEventHandler<EventPlayerTeam>(OnPlayerTeamChanged);
         Console.WriteLine($"[{ModuleName}] Ready. Layout {menuLayout}");
         if (!SkinsReady)
             Console.WriteLine($"[{ModuleName}] No API address or SkinBridge token: the menu opens but cannot read or save skins.");
@@ -179,11 +180,31 @@ public sealed partial class LegacyXHud : BasePlugin
         return handle;
     }
 
-    /// <summary>SetVariableFor / SetClassFor do nothing for a player without a session: open the layout first.</summary>
+    /// <summary>
+    /// SetVariableFor / SetClassFor do nothing for a player without a session: open the layout first. Nothing is ever drawn for a player who has not chosen a
+    /// team or who is spectating (owner request 2026-11-06): every card of this plugin goes through here.
+    /// </summary>
     private static bool OpenFor(PanelHandle panel, CCSPlayerController player)
     {
+        if (player.TeamNum is not (2 or 3)) return false;
         if (!panel.IsOpenFor(player)) panel.Open(player);
         return panel.IsOpenFor(player);
+    }
+
+    /// <summary>A player who moves to spectators, or leaves their team, loses the cards that are on their screen.</summary>
+    private HookResult OnPlayerTeamChanged(EventPlayerTeam e, GameEventInfo info)
+    {
+        if (e.Userid is not { IsValid: true, IsBot: false } who || e.Team is 2 or 3) return HookResult.Continue;
+        var slot = who.Slot;
+        Server.NextFrame(() =>
+        {
+            if (Utilities.GetPlayerFromSlot(slot) is not { IsValid: true } player) return;
+            foreach (var card in new[] { introHud, bombHud })
+                if (card is not null && card.IsOpenFor(player)) card.Close(player);
+            CloseKnifeCards(player);
+            HintHide(player);
+        });
+        return HookResult.Continue;
     }
 
     // ---- classes that replace each other (rank-N, tier-x, pNN) ---------------------------------------
