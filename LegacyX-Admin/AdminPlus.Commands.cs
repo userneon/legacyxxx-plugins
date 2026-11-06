@@ -1017,7 +1017,7 @@ public partial class AdminPlus
 
         if (cvarName.Equals("sv_cheats", StringComparison.OrdinalIgnoreCase))
         {
-            SendErrorMessage(caller, "Cvar.CheatsBlocked", "sv_cheats cannot be changed!");
+            SendErrorMessage(caller, "Cvar.CheatsBlocked", "sv_cheats is not changed here. Use !cheats.");
             return;
         }
 

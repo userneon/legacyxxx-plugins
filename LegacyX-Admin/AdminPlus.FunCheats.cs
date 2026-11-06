@@ -2,6 +2,7 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Utils;
 using LegacyX.Shared.Configuration;
 using System;
@@ -63,7 +64,7 @@ public partial class AdminPlus
         AddPermCmd("@css/root", "css_aimlock", "<#userid|name|all> [0|1] - View snaps to the nearest enemy while firing", (caller, info) => FunCheatSwitch(caller, info, "aimlock", aimlockSlots));
         AddPermCmd("@css/root", "css_silentaim", "<#userid|name|all> [0|1] - Shots hurt the nearest enemy in front", (caller, info) => FunCheatSwitch(caller, info, "silentaim", silentAimSlots));
         AddPermCmd("@css/root", "css_bhop", "<#userid|name|all> [0|1] - Hold jump to bunny hop", (caller, info) => FunCheatSwitch(caller, info, "bhop", bhopSlots));
-        AddPermCmd("@css/root", "css_cheats", "<0|1> - sv_cheats on or off", CmdSvCheats);
+        AddPermCmd("@css/root", "css_cheats", "[0|1] - sv_cheats on or off (root, any server, any time)", CmdSvCheats);
 
         RegisterListener<Listeners.OnTick>(OnFunCheatTick);
         RegisterListener<Listeners.CheckTransmit>(OnFunCheatTransmit);
@@ -101,13 +102,40 @@ public partial class AdminPlus
         });
     }
 
+    /// <summary>
+    /// css_cheats [0|1] (owner request 2026-11-06): someone with root really switches sv_cheats, on any server and at any time (no number
+    /// toggles). The value is read back a moment later and the answer says what it really is. Off a Fun server and outside warmup everyone is
+    /// told in chat, because a round played with cheats on is not an ordinary one; the next warmup end still puts it back to 0.
+    /// </summary>
     private void CmdSvCheats(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!CheatsAllowed()) { FunReply(caller, "sv_cheats can be turned on at Fun servers, and on other modes only during warmup."); return; }
-        if (info.ArgCount < 2 || info.GetArg(1) is not ("0" or "1")) { FunReply(caller, "Usage: css_cheats <0|1>"); return; }
-        Server.ExecuteCommand($"sv_cheats {info.GetArg(1)}");
-        FunReply(caller, $"sv_cheats {(info.GetArg(1) == "1" ? "on" : "off")}.");
-        AddTimer(0.1f, () => _ = Discord.SendAdminActionLog("sv_cheats", "server", 0UL, caller?.PlayerName ?? "Console", caller?.SteamID ?? 0UL, info.GetArg(1), this));
+        var current = SvCheatsValue();
+        bool want;
+        if (info.ArgCount < 2) want = current != true;
+        else if (info.GetArg(1) is "0" or "1") want = info.GetArg(1) == "1";
+        else { FunReply(caller, "Usage: css_cheats [0|1]"); return; }
+        Server.ExecuteCommand($"sv_cheats {(want ? 1 : 0)}");
+        var who = caller?.PlayerName ?? "Console";
+        AddTimer(0.3f, () =>
+        {
+            var now = SvCheatsValue();
+            if (now == want)
+            {
+                FunReply(caller, $"sv_cheats is now {(want ? "ON" : "OFF")}.");
+                if (want && !CheatsAllowed())
+                    foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot))
+                        player.PrintToChat(LegacyXChat.System($"{{white}}{SanitizeName(who)}{{grey}} turned {{white}}sv_cheats{{grey}} on."));
+            }
+            else FunReply(caller, $"sv_cheats could not be changed: it is {(now == null ? "unknown" : now.Value ? "ON" : "OFF")}.");
+            _ = Discord.SendAdminActionLog("sv_cheats", "server", 0UL, who, caller?.SteamID ?? 0UL, want ? "1" : "0", this);
+        });
+    }
+
+    /// <summary>What sv_cheats is right now (null when it cannot be read).</summary>
+    private static bool? SvCheatsValue()
+    {
+        try { return ConVar.Find("sv_cheats")?.GetPrimitiveValue<bool>(); }
+        catch { return null; }
     }
 
     /// <summary>The nearest living enemy of <paramref name="viewer"/> in front of or around them, with the point on it to aim at.</summary>
