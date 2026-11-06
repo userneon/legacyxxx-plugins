@@ -38,6 +38,7 @@ public partial class AdminPlus
         AddPermCmd("@css/root", "css_1v1", "- Duel mode: one T and one CT fight each round", (c, _) => SetGameMode(c, "1v1"));
         AddPermCmd("@css/root", "css_randomcheats", "- Everyone gets a random cheat each round", (c, _) => SetGameMode(c, "cheats"));
         AddPermCmd("@css/root", "css_whwh", "- Wallhack for everyone, both teams", (c, _) => SetGameMode(c, "wh"));
+        RegisterRetakeSpawnCommands();
         AddPermCmd("@css/root", "css_modeoff", "- Back to the ordinary game", (c, _) => SetGameMode(c, "off"));
 
         RegisterEventHandler<EventRoundStart>((_, _) => { retakeSite = null; retakePlanted = false; if (gameMode.Length > 0) AddTimer(0.4f, ApplyGameModeRound, TimerFlags.STOP_ON_MAPCHANGE); return HookResult.Continue; });
@@ -199,25 +200,48 @@ public partial class AdminPlus
     private void SetUpRetakeRound()
     {
         var sites = FindBombSites();
-        Console.WriteLine($"[AdminPlus] Retake: {sites.Count} bomb site(s) found on {Server.MapName}: {string.Join(" | ", sites.Select(v => $"{v.X:0},{v.Y:0},{v.Z:0}"))}");
-        if (sites.Count == 0) { ModeSay("{grey}This map has no bomb site to retake."); return; }
-        retakeSiteIndex = FunRandom.Next(sites.Count);
-        var site = retakeSite = sites[retakeSiteIndex];
+        var recorded = LoadRetakeSpawns();
+        Console.WriteLine($"[AdminPlus] Retake: {sites.Count} bomb site(s) found on {Server.MapName}: {string.Join(" | ", sites.Select(v => $"{v.X:0},{v.Y:0},{v.Z:0}"))}; marked spawns: {(recorded.Count == 0 ? "none" : RetakeSummary(recorded))}");
+        // A site with marked spawns for both teams is played from them; the other sites (or a map with none marked) use the computed fallback below.
+        var marked = new[] { "A", "B" }.Where(letter => recorded.Any(s => s.Site == letter && s.Team == "T") && recorded.Any(s => s.Site == letter && s.Team == "CT")).ToList();
+        if (marked.Count == 0 && sites.Count == 0) { ModeSay("{grey}This map has no bomb site to retake."); return; }
 
+        string letterUsed;
+        Vector site;
         var defenders = Contenders(2).Where(p => p.PawnIsAlive).ToList();
-        for (var i = 0; i < defenders.Count; i++)
+        var attackers = Contenders(3).Where(p => p.PawnIsAlive).ToList();
+        if (marked.Count > 0)
         {
-            var angle = i * 2 * MathF.PI / Math.Max(1, defenders.Count);
-            var pawn = defenders[i].PlayerPawn!.Value!;
-            pawn.Teleport(new Vector(site.X + MathF.Cos(angle) * 90f, site.Y + MathF.Sin(angle) * 90f, site.Z + 8f), null, new Vector(0, 0, 0));
-            Arm(defenders[i], "weapon_knife", FunRandom.Next(2) == 0 ? "weapon_glock" : "weapon_tec9", RetakeTPrimary[FunRandom.Next(RetakeTPrimary.Length)], "item_assaultsuit", "weapon_hegrenade", "weapon_smokegrenade");
+            letterUsed = marked[FunRandom.Next(marked.Count)];
+            retakeSiteIndex = letterUsed == "A" ? 0 : 1;
+            var bomb = recorded.FirstOrDefault(s => s.Site == letterUsed && s.Team == "BOMB");
+            site = bomb != null ? new Vector(bomb.X, bomb.Y, bomb.Z) : (sites.Count > retakeSiteIndex ? sites[retakeSiteIndex] : new Vector(recorded.First(s => s.Site == letterUsed && s.Team == "T").X, recorded.First(s => s.Site == letterUsed && s.Team == "T").Y, recorded.First(s => s.Site == letterUsed && s.Team == "T").Z));
+            var tSpots = RetakeSpawnsFor(recorded, letterUsed, "T");
+            var ctSpots = RetakeSpawnsFor(recorded, letterUsed, "CT");
+            for (var i = 0; i < defenders.Count; i++) PlaceAt(defenders[i], tSpots[i % tSpots.Count], i >= tSpots.Count ? 60f : 0f);
+            for (var i = 0; i < attackers.Count; i++) PlaceAt(attackers[i], ctSpots[i % ctSpots.Count], i >= ctSpots.Count ? 60f : 0f);
         }
-        foreach (var attacker in Contenders(3).Where(p => p.PawnIsAlive))
+        else
+        {
+            retakeSiteIndex = FunRandom.Next(sites.Count);
+            letterUsed = retakeSiteIndex == 0 ? "A" : "B";
+            site = sites[retakeSiteIndex];
+            // No spawns marked here: the Terrorists in a ring round the site, the Counter-Terrorists stay where the map spawns them.
+            for (var i = 0; i < defenders.Count; i++)
+            {
+                var angle = i * 2 * MathF.PI / Math.Max(1, defenders.Count);
+                defenders[i].PlayerPawn!.Value!.Teleport(new Vector(site.X + MathF.Cos(angle) * 90f, site.Y + MathF.Sin(angle) * 90f, site.Z + 8f), null, new Vector(0, 0, 0));
+            }
+        }
+        retakeSite = site;
+        foreach (var defender in defenders)
+            Arm(defender, "weapon_knife", FunRandom.Next(2) == 0 ? "weapon_glock" : "weapon_tec9", RetakeTPrimary[FunRandom.Next(RetakeTPrimary.Length)], "item_assaultsuit", "weapon_hegrenade", "weapon_smokegrenade");
+        foreach (var attacker in attackers)
             Arm(attacker, "weapon_knife", "weapon_usp_silencer", RetakeCtPrimary[FunRandom.Next(RetakeCtPrimary.Length)], "item_assaultsuit", "item_defuser", "weapon_flashbang", "weapon_smokegrenade");
-        Console.WriteLine($"[AdminPlus] Retake: site {retakeSiteIndex} at {site.X:0},{site.Y:0},{site.Z:0}; {defenders.Count} defender(s), {Contenders(3).Count(p => p.PawnIsAlive)} retaker(s).");
+        Console.WriteLine($"[AdminPlus] Retake: site {letterUsed} ({(marked.Count > 0 ? "marked spawns" : "computed")}) bomb at {site.X:0},{site.Y:0},{site.Z:0}; {defenders.Count} defender(s), {attackers.Count} retaker(s).");
         // With no freeze time (or when this ran after it) the freeze-end event has already come and gone: plant now. Otherwise the freeze-end event plants it.
         if (!FreezeTimeOn()) PlantRetakeBomb();
-        ModeSay($"{{white}}Retake{{grey}}: the bomb is planted on site {{white}}{(retakeSiteIndex == 0 ? "A" : "B")}{{grey}}. Terrorists defend it, Counter-Terrorists retake it.");
+        ModeSay($"{{white}}Retake{{grey}}: the bomb is planted on site {{white}}{letterUsed}{{grey}}. Terrorists defend it, Counter-Terrorists retake it.");
     }
 
     private void PlantRetakeBomb()
