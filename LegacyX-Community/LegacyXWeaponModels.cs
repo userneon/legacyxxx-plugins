@@ -20,6 +20,8 @@ public sealed partial class LegacyXCommunity
     // Every model path seen so far: precached again on each map so the server can show it.
     private readonly HashSet<string> weaponModelPaths = new(StringComparer.OrdinalIgnoreCase);
     private bool weaponModelsOn = true;
+    // Swapping a knife for the animation knife removes a weapon entity, which crashed a server once (WriteEnterPVS, 2026-11-06). Off unless LEGACYX_COMMUNITY_KNIFE_SWAP=true.
+    private bool knifeSwapOn;
     // The real knife whose animations a custom knife is made for: a knife model plays the animations of the knife entity it sits on, so the player is given that knife.
     private static readonly Dictionary<string, string> AnimKnives = new() { ["m9"] = "weapon_knife_m9_bayonet", ["bayonet"] = "weapon_bayonet" };
     // When each player's knife was last swapped for the animation knife: at most once every few seconds, so another plugin giving the knife back cannot start a loop.
@@ -27,6 +29,8 @@ public sealed partial class LegacyXCommunity
 
     private void RegisterWeaponModels()
     {
+        knifeSwapOn = string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SWAP"), "true", StringComparison.OrdinalIgnoreCase);
+        Console.WriteLine($"[{ModuleName}] Weapon models: knife swap for the M9/Bayonet animations is {(knifeSwapOn ? "ON" : "off")}.");
         foreach (var path in LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_MODEL_PRECACHE").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             if (ValidModelPath(path)) weaponModelPaths.Add(path);
         RegisterListener<Listeners.OnServerPrecacheResources>(manifest =>
@@ -104,7 +108,7 @@ public sealed partial class LegacyXCommunity
         var pawn = player.PlayerPawn.Value;
         if (pawn is null || !pawn.IsValid || pawn.WeaponServices is null) return;
         // A knife model made for the M9 or Bayonet animations needs that knife under it: swap the player's knife for it (once, then the model goes on).
-        if (set.TryGetValue("knife", out var knifeModel) && knifeModel.AnimBase is { } animBase && AnimKnives.TryGetValue(animBase, out var wanted)
+        if (knifeSwapOn && set.TryGetValue("knife", out var knifeModel) && knifeModel.AnimBase is { } animBase && AnimKnives.TryGetValue(animBase, out var wanted)
             && (!knifeSwappedAt.TryGetValue(player.SteamID, out var swapped) || (DateTime.UtcNow - swapped).TotalSeconds > 5))
         {
             var current = pawn.WeaponServices.MyWeapons.Select(h => h.Value).FirstOrDefault(w => w is { IsValid: true } && (w.DesignerName.Contains("knife", StringComparison.Ordinal) || w.DesignerName.Contains("bayonet", StringComparison.Ordinal)));
