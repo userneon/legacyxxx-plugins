@@ -11,10 +11,16 @@ namespace LegacyX.Admin.Authorization;
 /// What the API says a role may do, as the Owner set it on the staff site (Staff → Roles): the CounterStrikeSharp flags, the commands (without
 /// "css_") and the immunity. When it is present it replaces the built-in grant of the role; the Owner role never carries one.
 /// </summary>
-public sealed record CustomGrant(IReadOnlyList<string> Flags, IReadOnlyList<string> Commands, uint Immunity)
+/// <summary>A limit the Owner set on one command for a role (Staff → Roles): seconds to wait between two uses (0 = none) and uses per map (0 = no cap).</summary>
+public sealed record CommandLimit(int CooldownSeconds, int PerMap);
+
+public sealed record CustomGrant(IReadOnlyList<string> Flags, IReadOnlyList<string> Commands, uint Immunity, IReadOnlyDictionary<string, CommandLimit>? Limits = null)
 {
     public bool SameAs(CustomGrant? other) =>
-        other != null && Immunity == other.Immunity && Flags.OrderBy(f => f).SequenceEqual(other.Flags.OrderBy(f => f)) && Commands.OrderBy(c => c).SequenceEqual(other.Commands.OrderBy(c => c));
+        other != null && Immunity == other.Immunity && Flags.OrderBy(f => f).SequenceEqual(other.Flags.OrderBy(f => f)) && Commands.OrderBy(c => c).SequenceEqual(other.Commands.OrderBy(c => c))
+        && (Limits ?? EmptyLimits).OrderBy(l => l.Key, StringComparer.Ordinal).SequenceEqual((other.Limits ?? EmptyLimits).OrderBy(l => l.Key, StringComparer.Ordinal));
+
+    private static readonly IReadOnlyDictionary<string, CommandLimit> EmptyLimits = new Dictionary<string, CommandLimit>();
 }
 
 public sealed record PlayerAuthorization(ulong SteamId, StaffRole Role, DateTimeOffset? ExpiresAt, DateTimeOffset CheckedAt, string ClanTag = "", CustomGrant? Grant = null)
@@ -130,7 +136,24 @@ public static class AuthorizationResponseParser
             commands.Add(text);
         }
         if (flags.Count > 40 || commands.Count > 200) return null;
-        return new CustomGrant(flags, commands, (uint)immunity);
+        return new CustomGrant(flags, commands, (uint)immunity, ParseLimits(grant));
+    }
+
+    /// <summary>The per-command limits, if the API sent any: { "blind": { "cooldown": 30, "perMap": 5 } }. An entry that is not well-formed is left out; none means no limits.</summary>
+    private static IReadOnlyDictionary<string, CommandLimit>? ParseLimits(JsonElement grant)
+    {
+        if (!grant.TryGetProperty("limits", out var limits) || limits.ValueKind != JsonValueKind.Object) return null;
+        var result = new Dictionary<string, CommandLimit>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in limits.EnumerateObject())
+        {
+            if (result.Count >= 200 || property.Name.Length > 40 || !System.Text.RegularExpressions.Regex.IsMatch(property.Name, "^[a-z0-9_]+$")) continue;
+            if (property.Value.ValueKind != JsonValueKind.Object) continue;
+            var cooldown = property.Value.TryGetProperty("cooldown", out var c) && c.ValueKind == JsonValueKind.Number && c.TryGetInt32(out var cs) ? cs : 0;
+            var perMap = property.Value.TryGetProperty("perMap", out var m) && m.ValueKind == JsonValueKind.Number && m.TryGetInt32(out var pm) ? pm : 0;
+            if (cooldown < 0 || cooldown > 3600 || perMap < 0 || perMap > 999 || (cooldown == 0 && perMap == 0)) continue;
+            result[property.Name] = new CommandLimit(cooldown, perMap);
+        }
+        return result.Count == 0 ? null : result;
     }
 
     /// <summary>The website clan tag, if the API sent one: upper-case letters, digits and - _ . only, at most 8 (it is shown in the Tab tag).</summary>

@@ -23,6 +23,7 @@ public partial class AdminPlus
     private Dictionary<ulong, string> adminStaffRoles = new();
     /// <summary>The commands (without "css_") a player may run when their role was edited on the staff site; absent = the built-in role.</summary>
     private Dictionary<ulong, HashSet<string>> adminCommandAllow = new();
+    private Dictionary<ulong, IReadOnlyDictionary<string, LegacyX.Admin.Authorization.CommandLimit>> adminCommandLimits = new();
     private Dictionary<ulong, string> adminStaffClans = new();
     private Dictionary<ulong, (DateTime seenAt, string ip)> recentSeen = new();
 

@@ -154,6 +154,7 @@ public partial class AdminPlus
     {
         var m = CreateMenu(title);
         if (m == null) return;
+        m.IsPicker = true;
 
         var players = GetAllPlayers();
         if (onlyAlive) players = players.Where(p => p.PawnIsAlive);
@@ -180,6 +181,7 @@ public partial class AdminPlus
     {
         var m = CreateMenu(title);
         if (m == null) return;
+        m.IsPicker = true;
         
         m.AddMenuOption(Localizer["On"], (p, o) => onPicked(1));
         m.AddMenuOption(Localizer["Off"], (p, o) => onPicked(0));
@@ -193,6 +195,7 @@ public partial class AdminPlus
     {
         var m = CreateMenu(title);
         if (m == null) return;
+        m.IsPicker = true;
         
         foreach (var opt in options)
             m.AddMenuOption(opt, (p, o) => onPicked(opt));
@@ -205,6 +208,8 @@ public partial class AdminPlus
     private void RunServerCmd(CCSPlayerController admin, string cmd)
     {
         RunStaminaCheckedServerCommand(admin, cmd);
+        // The menu stays open (owner request 2026-11-06): back to the menu that asked, not closed and not stuck on the target list.
+        ReturnFromPickers(admin);
     }
 
     private void ShowFunTeleportMenu(CCSPlayerController admin)

@@ -233,6 +233,7 @@ public partial class AdminPlus
         AdminManager.SetPlayerImmunity(steamId, immunity);
         adminImmunity[player.SteamID] = (int)immunity;
         if (custom != null) adminCommandAllow[player.SteamID] = new HashSet<string>(custom.Commands, StringComparer.OrdinalIgnoreCase);
+        if (custom?.Limits != null) adminCommandLimits[player.SteamID] = custom.Limits; else adminCommandLimits.Remove(player.SteamID);
         adminStamina[player.SteamID] = role.Stamina;
         adminStaffRoles[player.SteamID] = role.Name;
         adminStaffClans[player.SteamID] = grant.ClanTag;
@@ -246,6 +247,7 @@ public partial class AdminPlus
         adminStamina.Remove(steamId);
         adminStaffRoles.Remove(steamId);
         adminCommandAllow.Remove(steamId);
+        adminCommandLimits.Remove(steamId);
         adminStaffClans.Remove(steamId);
     }
 

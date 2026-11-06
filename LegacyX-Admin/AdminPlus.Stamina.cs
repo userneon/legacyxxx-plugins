@@ -49,10 +49,11 @@ public partial class AdminPlus
         if (caller == null || !caller.IsValid || caller.IsBot) return true;
         var normalized = (command ?? string.Empty).Trim().ToLowerInvariant();
         if (normalized.StartsWith("css_", StringComparison.Ordinal)) normalized = normalized[4..];
+        if (ToggleTwins.TryGetValue(normalized, out var twinOf)) normalized = twinOf;
         // A role edited on the staff site is exactly its list of commands: one not on it is refused, one on it is allowed (stamina does not apply).
         if (adminCommandAllow.TryGetValue(caller.SteamID, out var allowed) && IsAdminCommand(normalized))
         {
-            if (allowed.Contains(normalized)) return true;
+            if (allowed.Contains(normalized)) return TryUseLimitedCommand(caller, normalized);
             caller.PrintToChat(LegacyXChat.System("Your role can't use this."));
             return false;
         }
@@ -73,6 +74,7 @@ public partial class AdminPlus
         if (caller == null || !caller.IsValid || caller.IsBot) return false;
         var normalized = (command ?? string.Empty).Trim().ToLowerInvariant();
         if (normalized.StartsWith("css_", StringComparison.Ordinal)) normalized = normalized[4..];
+        if (ToggleTwins.TryGetValue(normalized, out var twinOf)) normalized = twinOf;
         if (!CommandPermissionRequirements.TryGetValue(normalized, out var permission)) return false;
         if (adminCommandAllow.TryGetValue(caller.SteamID, out var allowed)) return allowed.Contains(normalized) && HasEffectivePermission(caller, permission);
         if (!CommandStaminaRequirements.TryGetValue(normalized, out var required)) return false;
@@ -91,6 +93,10 @@ public partial class AdminPlus
             RequireCommandStamina(admin, token);
             return;
         }
+        // A command run from the menu reaches the server as the console, so the limits of the role are applied here.
+        var baseName = token.StartsWith("css_", StringComparison.Ordinal) ? token[4..] : token;
+        if (ToggleTwins.TryGetValue(baseName, out var twin)) baseName = twin;
+        if (!TryUseLimitedCommand(admin, baseName)) return;
         AdminPlus._menuInvokerName = admin.PlayerName;
         Server.ExecuteCommand(safeCommand);
         AddTimer(0.1f, () => { AdminPlus._menuInvokerName = null; });

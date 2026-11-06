@@ -35,6 +35,8 @@ internal sealed class AdminPlusMenu
     public string Title { get; set; } = string.Empty;
     public bool ExitButton { get; set; } = true;
     public bool IsSubMenu { get; set; }
+    /// <summary>A short question inside a menu (who? on or off? how much?): after the command runs the menu goes back to the one that asked.</summary>
+    public bool IsPicker { get; set; }
     public bool SuppressHistoryPush { get; set; }
     public Action<CCSPlayerController>? CustomBackAction { get; set; }
     public bool IsExitable { get; set; } = true;
@@ -250,7 +252,9 @@ public partial class AdminPlus
         var state = GetOrCreateMenuState(player);
         var currentMenu = state.ActiveMenu;
         bool replacingActiveMenu = currentMenu != null;
-        if (replacingActiveMenu && currentMenu != null && !menu.SuppressHistoryPush)
+        // Showing the same menu again (after a command ran) replaces it instead of piling copies onto the way back, and keeps the cursor.
+        bool sameMenu = replacingActiveMenu && currentMenu != null && !menu.IsPicker && !currentMenu.IsPicker && currentMenu.Title == menu.Title;
+        if (replacingActiveMenu && currentMenu != null && !menu.SuppressHistoryPush && !sameMenu)
             state.History.Push(currentMenu);
         state.ActiveMenu = menu;
         state.SelectedIndex = ClampToSelectableIndex(state, state.SelectedIndex);
@@ -270,6 +274,14 @@ public partial class AdminPlus
         _menuStates.Remove(slot);
         _frozenSlots.Remove(slot);
         _savedSpeed.Remove(slot);
+    }
+
+    /// <summary>After a menu command ran: leave the little who/on-off/how-much pickers and land on the menu that asked, still open.</summary>
+    internal static void ReturnFromPickers(CCSPlayerController player)
+    {
+        if (!player.IsValid || !_menuStates.TryGetValue(player.Slot, out var state)) return;
+        while (state.ActiveMenu is { IsPicker: true } && state.History.Count > 0)
+            state.ActiveMenu = state.History.Pop();
     }
 
     internal static void CloseMenu(CCSPlayerController player)

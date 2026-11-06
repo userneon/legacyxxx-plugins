@@ -41,6 +41,7 @@ public partial class AdminPlus
         if (p == null || !p.IsValid) return HookResult.Continue;
 
         RemoveAllFunTimers(p);
+        ClearToggledFun(p.SteamID);
 
         _lastDeathPosFun.Remove(p.SteamID);
 
@@ -87,22 +88,22 @@ public partial class AdminPlus
     public void RegisterFunCommands()
     {
         RegisterFunMoreCommands();
-        AddPermCmd("@css/slay", "css_freeze", "<#userid|name|all @ commands> [time]", CmdFreeze);
+        AddPermCmd("@css/slay", "css_freeze", "<#userid|name|all @ commands> [time]", (c, i) => ToggleFun(c, i, true, IsFrozen, CmdFreeze, CmdUnfreeze));
         AddPermCmd("@css/slay", "css_unfreeze", "<#userid|name|all @ commands>", CmdUnfreeze);
         AddPermCmd("@css/slay", "css_gravity", "<gravity>", CmdGravity);
-        AddPermCmd("@css/slay", "css_bury", "<#userid|name|all @ commands>", CmdBury);
+        AddPermCmd("@css/slay", "css_bury", "<#userid|name|all @ commands>", (c, i) => ToggleFun(c, i, true, p => _toggledBury.Contains(p.SteamID), CmdBury, CmdUnBury, _toggledBury, 2));
         AddPermCmd("@css/slay", "css_unbury", "<#userid|name|all @ commands>", CmdUnBury);
         AddPermCmd("@css/slay", "css_beacon", "<#userid|name|all @ commands> <0|1>", CmdBeacon);
-        AddPermCmd("@css/slay", "css_shake", "<#userid|name|all @ commands> <time>", CmdShake);
+        AddPermCmd("@css/slay", "css_shake", "<#userid|name|all @ commands> <time>", (c, i) => ToggleFun(c, i, true, IsShaking, CmdShake, CmdUnShake));
         AddPermCmd("@css/slay", "css_unshake", "<#userid|name|all @ commands>", CmdUnShake);
-        AddPermCmd("@css/slay", "css_blind", "<#userid|name|all @ commands> <time>", CmdBlind);
+        AddPermCmd("@css/slay", "css_blind", "<#userid|name|all @ commands> <time>", (c, i) => ToggleFun(c, i, true, p => HasFunTimer(p, FunTimer.Blind), CmdBlind, CmdUnBlind));
         AddPermCmd("@css/slay", "css_unblind", "<#userid|name|all @ commands>", CmdUnBlind);
         AddPermCmd("@css/slay", "css_clean", "- Clean weapons on the ground", CmdClean);
         AddPermCmd("@css/slay", "css_goto", "<#userid|name> - Teleport to player", CmdGoto);
         AddPermCmd("@css/slay", "css_bring", "<#userid|name|all @ commands> - Bring", CmdBring);
         AddPermCmd("@css/slay", "css_hrespawn", "<#userid|name> - Respawn at last pos", CmdHRespawn);
         AddPermCmd("@css/slay", "css_1up", "<#userid|name> - Respawn at last pos", CmdHRespawn);
-        AddPermCmd("@css/slay", "css_drug", "<#userid|name|all @ commands> <time>", CmdDrug);
+        AddPermCmd("@css/slay", "css_drug", "<#userid|name|all @ commands> <time>", (c, i) => ToggleFun(c, i, true, p => HasFunTimer(p, FunTimer.Drug) || HasFunTimer(p, FunTimer.DrugEnd), CmdDrug, CmdUnDrug));
         AddPermCmd("@css/slay", "css_undrug", "<#userid|name|all @ commands>", CmdUnDrug);
         AddPermCmd("@css/slay", "css_glow", "<#userid|name|all @ commands> <color>", CmdGlow);
         AddPermCmd("@css/slay", "css_color", "<#userid|name|all @ commands> <color>", CmdColor);
@@ -114,7 +115,7 @@ public partial class AdminPlus
         AddPermCmd("@css/cheats", "css_strip", "<#userid|name|all @ commands> [filter]", CmdStrip);
         AddPermCmd("@css/cheats", "css_sethp", "<team> <health>", CmdSetTeamHp);
         AddPermCmd("@css/cheats", "css_hp", "<#userid|name|all @ commands> <health>", CmdHp);
-        AddPermCmd("@css/cheats", "css_speed", "<#userid|name|all @ commands> <value>", CmdSpeed);
+        AddPermCmd("@css/cheats", "css_speed", "<#userid|name|all @ commands> <value>", (c, i) => ToggleFun(c, i, false, p => _toggledSpeed.Contains(p.SteamID), CmdSpeed, CmdUnSpeed, _toggledSpeed, 3));
         AddPermCmd("@css/cheats", "css_unspeed", "<#userid|name|all @ commands>", CmdUnSpeed);
         AddPermCmd("@css/cheats", "css_god", "<#userid|name|all @ commands> <0|1>", CmdGod);
 

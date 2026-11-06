@@ -234,6 +234,7 @@ public partial class AdminPlus : BasePlugin
 
         RegisterListener<Listeners.OnMapStart>((mapName) =>
         {
+            ResetCommandLimitCounts();
             DisconnectedPlayers.Clear();
             if (!_communicationInitialized)
             {

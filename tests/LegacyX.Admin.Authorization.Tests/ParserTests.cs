@@ -146,6 +146,25 @@ public class ParserTests
         Assert.Equal(120u, player.Grant.Immunity);
     }
 
+    [Fact]
+    public void Reads_the_limits_of_a_command_and_leaves_out_bad_ones()
+    {
+        var entry = WithGrant(Entry(A, true, "creator"),
+            "{\"flags\":[\"@css/slay\"],\"commands\":[\"blind\",\"freeze\"],\"immunity\":120,\"limits\":{\"blind\":{\"cooldown\":30,\"perMap\":5},\"freeze\":{\"cooldown\":-1},\"Bad Name\":{\"cooldown\":5},\"bury\":{\"cooldown\":0,\"perMap\":0}}}");
+        var player = AuthorizationResponseParser.Parse(Body("srv-1", entry), "srv-1", new[] { A }, Now, out _)![A];
+        Assert.NotNull(player.Grant!.Limits);
+        Assert.Single(player.Grant.Limits!);
+        Assert.Equal(new CommandLimit(30, 5), player.Grant.Limits!["blind"]);
+    }
+
+    [Fact]
+    public void A_role_without_limits_has_none()
+    {
+        var entry = WithGrant(Entry(A, true, "creator"), "{\"flags\":[],\"commands\":[\"blind\"],\"immunity\":1}");
+        var player = AuthorizationResponseParser.Parse(Body("srv-1", entry), "srv-1", new[] { A }, Now, out _)![A];
+        Assert.Null(player.Grant!.Limits);
+    }
+
     [Theory]
     [InlineData("{\"flags\":[\"css/slay\"],\"commands\":[],\"immunity\":1}")]       // not a flag
     [InlineData("{\"flags\":[],\"commands\":[\"No Clip\"],\"immunity\":1}")]         // not a command name
