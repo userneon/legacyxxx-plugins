@@ -1,4 +1,5 @@
 using CounterStrikeSharp.API.Core;
+using LegacyX.Shared.Configuration;
 using System;
 using System.Collections.Generic;
 
