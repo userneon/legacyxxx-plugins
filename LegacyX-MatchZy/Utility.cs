@@ -1803,11 +1803,13 @@ namespace MatchZy
             return false;
         }
 
-        public void KickPlayer(CCSPlayerController player)
+        public void KickPlayer(CCSPlayerController player, string? reason = null)
         {
             if (player.UserId.HasValue)
             {
-                Server.ExecuteCommand($"kickid {(ushort)player.UserId}");
+                // The reason (plain words, no quotes) is what the player reads on their screen after they are removed.
+                var text = new string((reason ?? "").Where(c => c >= ' ' && c != '"' && c != ';' && c != '\\').ToArray()).Trim();
+                Server.ExecuteCommand(text.Length > 0 ? $"kickid {(ushort)player.UserId} \"{text}\"" : $"kickid {(ushort)player.UserId}");
             }
         }
 
@@ -1930,7 +1932,7 @@ namespace MatchZy
                 {
                     Log($"[EventPlayerConnectFull] KICKING PLAYER STEAMID: {steamId}, Name: {player.PlayerName} (Not whitelisted!)");
                     PrintToAllChat($"{ChatColors.White}{player.PlayerName}{ChatColors.Grey} was kicked: not on the player list.");
-                    KickPlayer(player);
+                    KickPlayer(player, "You are not on this server's player list.");
                     return true;
                 }
             }

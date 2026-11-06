@@ -30,7 +30,7 @@ public partial class MatchZy
                     {
                         Log($"[EventPlayerConnectFull] KICKING PLAYER STEAMID: {steamId}, Name: {player.PlayerName} (NOT ALLOWED!)");
                         PrintToAllChat($"{ChatColors.White}{player.PlayerName}{ChatColors.Grey} was kicked: not in this match.");
-                        KickPlayer(player);
+                        KickPlayer(player, "A match is being played here and you are not in it.");
                         return HookResult.Continue;
                     }
                 }
