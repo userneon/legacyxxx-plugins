@@ -40,7 +40,7 @@ public partial class AdminPlus
         {
             warmup = InWarmup(),
             funServer = IsFunServer(),
-            cheatToys = online != null && (wallhackSlots.Contains(online.Slot) || aimlockSlots.Contains(online.Slot) || silentAimSlots.Contains(online.Slot) || bhopSlots.Contains(online.Slot)),
+            cheatToys = online != null && (wallhackSlots.Contains(online.Slot) || aimlockSlots.Contains(online.Slot) || bhopSlots.Contains(online.Slot)),
         };
         var serverId = LegacyXServerRuntime.Load(LegacyXEnvironmentLoader.Load()).ServerId;
         var map = Server.MapName ?? "";

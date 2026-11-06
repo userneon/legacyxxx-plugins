@@ -15,7 +15,7 @@ namespace AdminPlus;
 
 /// <summary>
 /// Cheat toys for Fun servers (owner request 2026-10-27), owner only (@css/root): css_wh (see enemies through walls), css_aimlock (view
-/// snaps to the nearest enemy while the fire button is held), css_silentaim (shots hurt the nearest enemy in front, the view does not move),
+/// glides onto one enemy while the fire button is held),
 /// css_bhop (jump held = automatic bunny hop) and css_cheats (sv_cheats). Each takes a player or <c>all</c> and 1/0 (no number toggles).
 /// On a Fun server they work all the time; on every other mode (owner request 2026-10-30, "all modes") they work only while the server is in
 /// warmup, so a round that counts is never played with them: when the warmup ends every switch is cleared and sv_cheats is put back to 0.
@@ -23,7 +23,7 @@ namespace AdminPlus;
 /// </summary>
 public partial class AdminPlus
 {
-    private readonly HashSet<int> wallhackSlots = new(), aimlockSlots = new(), silentAimSlots = new(), bhopSlots = new();
+    private readonly HashSet<int> wallhackSlots = new(), aimlockSlots = new(), bhopSlots = new();
     // One glowing copy of each player's model, drawn only for the players who switched the wallhack on (see CheckTransmit below).
     private readonly Dictionary<uint, CDynamicProp> wallhackGlows = new();
     private bool funCheatTimerRunning;
@@ -79,8 +79,8 @@ public partial class AdminPlus
         var open = CheatsAllowed();
         if (!open && cheatsWereOpen)
         {
-            var any = wallhackSlots.Count + aimlockSlots.Count + silentAimSlots.Count + bhopSlots.Count > 0;
-            wallhackSlots.Clear(); aimlockSlots.Clear(); silentAimSlots.Clear(); bhopSlots.Clear();
+            var any = wallhackSlots.Count + aimlockSlots.Count + bhopSlots.Count > 0;
+            wallhackSlots.Clear(); aimlockSlots.Clear(); bhopSlots.Clear();
             ClearWallhackGlows();
             Server.ExecuteCommand("sv_cheats 0");
             if (any) Console.WriteLine("[AdminPlus] The warmup ended: the cheat switches are off and sv_cheats is 0.");
@@ -92,7 +92,6 @@ public partial class AdminPlus
     {
         AddPermCmd("@css/root", "css_wh", "<#userid|name|all> [0|1] - See enemies through walls", (caller, info) => FunCheatSwitch(caller, info, "wh", wallhackSlots));
         AddPermCmd("@css/root", "css_aimlock", "<#userid|name|all> [0|1] - View snaps to the nearest enemy while firing", (caller, info) => FunCheatSwitch(caller, info, "aimlock", aimlockSlots));
-        AddPermCmd("@css/root", "css_silentaim", "<#userid|name|all> [0|1] - Shots hurt the nearest enemy in front", (caller, info) => FunCheatSwitch(caller, info, "silentaim", silentAimSlots));
         AddPermCmd("@css/root", "css_bhop", "<#userid|name|all> [0|1] - Hold jump to bunny hop", (caller, info) => FunCheatSwitch(caller, info, "bhop", bhopSlots));
         // "sv_cheats 1" typed in a root player's own developer console (owner request 2026-11-06). The game engine may keep a client from sending
         // it at all (it is a server-only setting); when it does reach the server it is run here as css_cheats, for root only. Everyone else's goes on as before.
@@ -106,9 +105,8 @@ public partial class AdminPlus
 
         RegisterListener<Listeners.OnTick>(OnFunCheatTick);
         RegisterListener<Listeners.CheckTransmit>(OnFunCheatTransmit);
-        RegisterListener<Listeners.OnMapStart>(_ => { aimlockTargets.Clear(); wallhackSlots.Clear(); aimlockSlots.Clear(); silentAimSlots.Clear(); bhopSlots.Clear(); wallhackGlows.Clear(); funCheatTimerRunning = false; });
-        RegisterListener<Listeners.OnClientDisconnect>(slot => { aimlockTargets.Remove(slot); wallhackSlots.Remove(slot); aimlockSlots.Remove(slot); silentAimSlots.Remove(slot); bhopSlots.Remove(slot); });
-        RegisterEventHandler<EventWeaponFire>(OnFunCheatWeaponFire);
+        RegisterListener<Listeners.OnMapStart>(_ => { aimlockTargets.Clear(); wallhackSlots.Clear(); aimlockSlots.Clear(); bhopSlots.Clear(); wallhackGlows.Clear(); funCheatTimerRunning = false; });
+        RegisterListener<Listeners.OnClientDisconnect>(slot => { aimlockTargets.Remove(slot); wallhackSlots.Remove(slot); aimlockSlots.Remove(slot); bhopSlots.Remove(slot); });
         AddTimer(1f, WatchFunCheatWindow, CounterStrikeSharp.API.Modules.Timers.TimerFlags.REPEAT);
     }
 
@@ -253,73 +251,6 @@ public partial class AdminPlus
         var deltaPitch = wantPitch - current.X;
         const float glide = 0.35f;
         pawn.Teleport(null, new QAngle(current.X + deltaPitch * glide, current.Y + deltaYaw * glide, 0f), null);
-    }
-
-    /// <summary>
-    /// Silent aim (owner report 2026-11-06: "it works wrongly"): it used to hit with one fixed damage whatever the weapon, from a 25-degree cone at any range. Now the damage
-    /// is the weapon's own, the cone is 12 degrees, the range 2500 units, some shots are headshots and the shooter is told "Hit" or "Headshot"; a knife or grenade is never helped.
-    /// </summary>
-    private static float SilentAimDamage(string weapon)
-    {
-        weapon = weapon ?? "";
-        if (weapon.Contains("awp")) return 115f;
-        if (weapon.Contains("ssg08")) return 88f;
-        if (weapon.Contains("scar20") || weapon.Contains("g3sg1")) return 80f;
-        if (weapon.Contains("deagle")) return 53f;
-        if (weapon.Contains("ak47")) return 36f;
-        if (weapon.Contains("nova") || weapon.Contains("xm1014") || weapon.Contains("mag7") || weapon.Contains("sawedoff")) return 60f;
-        if (weapon.Contains("m249") || weapon.Contains("negev")) return 32f;
-        if (weapon.Contains("knife") || weapon.Contains("grenade") || weapon.Contains("flashbang") || weapon.Contains("molotov") || weapon.Contains("incgrenade") || weapon.Contains("decoy") || weapon.Contains("c4") || weapon.Contains("taser")) return 0f;
-        return weapon.Contains("mp") || weapon.Contains("ump") || weapon.Contains("p90") || weapon.Contains("bizon") || weapon.Contains("mac10") ? 26f : weapon.Contains("glock") || weapon.Contains("usp") || weapon.Contains("p250") || weapon.Contains("tec9") || weapon.Contains("fiveseven") || weapon.Contains("elite") || weapon.Contains("hkp2000") || weapon.Contains("cz75") ? 28f : 33f;
-    }
-
-    /// <summary>
-    /// A thin bright line from the shooter to the enemy for a moment, so the shot is seen going to them (owner request 2026-11-06: "the bullet goes straight at the enemy").
-    /// Where the player's real bullet flies cannot be changed from the server (CounterStrikeSharp 1.0.342 has no hook on the player's input), so this line and the damage are what
-    /// a silent aim shows. Never fails the shot.
-    /// </summary>
-    private void DrawShotBeam(Vector from, Vector to)
-    {
-        try
-        {
-            var beam = Utilities.CreateEntityByName<CBeam>("beam");
-            if (beam == null || !beam.IsValid) return;
-            beam.Render = Color.FromArgb(255, 255, 80, 60);
-            beam.Width = 1.5f;
-            beam.Teleport(from, new QAngle(0, 0, 0), new Vector(0, 0, 0));
-            beam.EndPos.X = to.X; beam.EndPos.Y = to.Y; beam.EndPos.Z = to.Z;
-            beam.DispatchSpawn();
-            Utilities.SetStateChanged(beam, "CBeam", "m_vecEndPos");
-            AddTimer(0.15f, () => { if (beam.IsValid) beam.Remove(); });
-        }
-        catch (Exception exception) { LogError($"shot line: {exception.Message}"); }
-    }
-
-    private HookResult OnFunCheatWeaponFire(EventWeaponFire @event, GameEventInfo eventInfo)
-    {
-        var shooter = @event.Userid;
-        if (shooter == null || !shooter.IsValid || !silentAimSlots.Contains(shooter.Slot) || !shooter.PawnIsAlive) return HookResult.Continue;
-        var pawn = shooter.PlayerPawn?.Value;
-        if (pawn == null || !pawn.IsValid || pawn.AbsOrigin == null) return HookResult.Continue;
-        var enemy = NearestEnemy(shooter, pawn, 12f, out var aim);
-        if (enemy == null || aim == null) return HookResult.Continue;
-        var weapon = @event.Weapon ?? "";
-        var damage = SilentAimDamage(weapon);
-        if (damage <= 0f) return HookResult.Continue;
-        var from = pawn.AbsOrigin;
-        var distance = MathF.Sqrt((aim.X - from.X) * (aim.X - from.X) + (aim.Y - from.Y) * (aim.Y - from.Y) + (aim.Z - from.Z) * (aim.Z - from.Z));
-        if (distance > 2500f) return HookResult.Continue;
-        // A fixed hit on the enemy nearest the line of fire. The game's own damage call needs a native damage record this CounterStrikeSharp cannot build, so the health is
-        // cut directly: the damage is the weapon's own (see SilentAimDamage), a quarter of the shots are headshots (double), and the kill is a plain death (no kill feed
-        // credit for the shooter).
-        DrawShotBeam(new Vector(from.X, from.Y, from.Z + 60f), aim);
-        var headshot = FunRandom.NextDouble() < 0.25;
-        var dealt = (int)MathF.Round(damage * (headshot ? 2f : 1f));
-        enemy.Health -= dealt;
-        Utilities.SetStateChanged(enemy, "CBaseEntity", "m_iHealth");
-        if (enemy.Health <= 0) enemy.CommitSuicide(false, true);
-        else shooter.PrintToCenter(headshot ? "Headshot" : "Hit");
-        return HookResult.Continue;
     }
 
     // ---- Wallhack: a glowing copy of each living player's model that only the wallhack players are sent ----
