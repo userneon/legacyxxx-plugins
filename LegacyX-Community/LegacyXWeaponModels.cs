@@ -20,8 +20,10 @@ public sealed partial class LegacyXCommunity
     // Every model path seen so far: precached again on each map so the server can show it.
     private readonly HashSet<string> weaponModelPaths = new(StringComparer.OrdinalIgnoreCase);
     private bool weaponModelsOn = true;
-    // CS2 item definitions whose animations a custom knife is made for.
-    private static readonly Dictionary<string, ushort> AnimDefs = new() { ["m9"] = 508, ["bayonet"] = 500 };
+    // The real knife whose animations a custom knife is made for: a knife model plays the animations of the knife entity it sits on, so the player is given that knife.
+    private static readonly Dictionary<string, string> AnimKnives = new() { ["m9"] = "weapon_knife_m9_bayonet", ["bayonet"] = "weapon_bayonet" };
+    // When each player's knife was last swapped for the animation knife: at most once every few seconds, so another plugin giving the knife back cannot start a loop.
+    private readonly Dictionary<ulong, DateTime> knifeSwappedAt = new();
 
     private void RegisterWeaponModels()
     {
@@ -84,7 +86,7 @@ public sealed partial class LegacyXCommunity
             var view = StringOrNull(entry, "view") ?? world;
             if (world is null || view is null || !ValidModelPath(world) || !ValidModelPath(view)) continue;
             var anim = StringOrNull(entry, "anim_base");
-            set[weapon] = new WeaponModel(world, view, anim is not null && AnimDefs.ContainsKey(anim) ? anim : null);
+            set[weapon] = new WeaponModel(world, view, anim is not null && AnimKnives.ContainsKey(anim) ? anim : null);
             foreach (var path in new[] { world, view })
                 if (weaponModelPaths.Add(path))
                 {
@@ -100,6 +102,25 @@ public sealed partial class LegacyXCommunity
         if (!weaponModelsOn || !player.IsValid || player.IsBot || !weaponModels.TryGetValue(player.SteamID, out var set)) return;
         var pawn = player.PlayerPawn.Value;
         if (pawn is null || !pawn.IsValid || pawn.WeaponServices is null) return;
+        // A knife model made for the M9 or Bayonet animations needs that knife under it: swap the player's knife for it (once, then the model goes on).
+        if (set.TryGetValue("knife", out var knifeModel) && knifeModel.AnimBase is { } animBase && AnimKnives.TryGetValue(animBase, out var wanted)
+            && (!knifeSwappedAt.TryGetValue(player.SteamID, out var swapped) || (DateTime.UtcNow - swapped).TotalSeconds > 5))
+        {
+            var current = pawn.WeaponServices.MyWeapons.Select(h => h.Value).FirstOrDefault(w => w is { IsValid: true } && (w.DesignerName.Contains("knife", StringComparison.Ordinal) || w.DesignerName.Contains("bayonet", StringComparison.Ordinal)));
+            if (current is not null && current.DesignerName != wanted)
+            {
+                knifeSwappedAt[player.SteamID] = DateTime.UtcNow;
+                try
+                {
+                    current.Remove();
+                    player.GiveNamedItem(wanted);
+                    Console.WriteLine($"[{ModuleName}] Knife of {player.PlayerName} swapped for {wanted} (animations of the {animBase}).");
+                }
+                catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not swap the knife for {wanted}: {problem.Message}"); }
+                AddTimer(0.3f, () => { if (player.IsValid) ApplyWeaponModels(player); });
+                return;
+            }
+        }
         foreach (var handle in pawn.WeaponServices.MyWeapons)
         {
             var weapon = handle.Value;
@@ -109,9 +130,6 @@ public sealed partial class LegacyXCommunity
             if (kind is null || !set.TryGetValue(kind, out var model)) continue;
             try
             {
-                // A knife made for the M9 or Bayonet animations is given that knife's definition so its animations play.
-                if (kind == "knife" && model.AnimBase is { } anim && weapon.AttributeManager.Item.ItemDefinitionIndex != AnimDefs[anim])
-                    weapon.AttributeManager.Item.ItemDefinitionIndex = AnimDefs[anim];
                 weapon.SetModel(model.World);
                 Console.WriteLine($"[{ModuleName}] Weapon model {model.World} put on {player.PlayerName}'s {kind}.");
                 // The first-person model: the view model entity that is showing this weapon.
