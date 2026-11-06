@@ -263,7 +263,7 @@
   "Reason.VoteResult": "Wynik głosowania",
   "Duration.Day": "Dzień",
   "Duration.Temporary": "{0} minut",
-  "Player.Kick.Success": "{red}{0}{default} został wyrzucony z serwera przez {red}{1}{default}. Powód: {yellow}{2}{default}",
+  "Player.Kick.Success": "{red}{1}{default} został wyrzucony z serwera przez {red}{0}{default}. Powód: {yellow}{2}{default}",
   "Player.Ban.Success": "{red}{0}{default} zbanowany {red}{1}{default} z serwera dla {red}{2}{default}. Powód: {yellow}{3}{default}",
   "Team.Ban.Success": "{red}{0}{default} zbanował graczy drużyny {red}{1}{default} z serwera za {red}{2}{default}. Powód: {yellow}{3}{default}",
   "Team.Ban.PlayerCount": "Łącznie {red}{0}{default} graczy zbanowanych na serwerze.",

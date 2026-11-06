@@ -263,7 +263,7 @@
   "Reason.VoteResult": "Oylama Sonucu",
   "Duration.Day": "Gün",
   "Duration.Temporary": "{0} dakika",
-  "Player.Kick.Success": "{red}{0}{default} oyuncusu, {red}{1}{default} tarafından sunucudan atıldı. Sebep: {yellow}{2}{default}",
+  "Player.Kick.Success": "{red}{1}{default} oyuncusu, {red}{0}{default} tarafından sunucudan atıldı. Sebep: {yellow}{2}{default}",
   "Player.Ban.Success": "{red}{0}{default}, {red}{1}{default} oyuncusunu sunucudan {red}{2}{default} boyunca yasakladı. Sebep: {yellow}{3}{default}",
   "Team.Ban.Success": "{red}{0}{default}, {red}{1}{default} takımı oyuncularını sunucudan {red}{2}{default} boyunca yasakladı. Sebep: {yellow}{3}{default}",
   "Team.Ban.PlayerCount": "Toplam {red}{0}{default} oyuncu sunucudan yasaklandı.",

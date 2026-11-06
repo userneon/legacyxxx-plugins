@@ -263,7 +263,7 @@
   "Reason.VoteResult": "Abstimmungsergebnis",
   "Duration.Day": "Tag",
   "Duration.Temporary": "{0} Minuten",
-  "Player.Kick.Success": "{red}{0}{default} wurde von {red}{1}{default} vom Server gekickt. Grund: {yellow}{2}{default}",
+  "Player.Kick.Success": "{red}{1}{default} wurde von {red}{0}{default} vom Server gekickt. Grund: {yellow}{2}{default}",
   "Player.Ban.Success": "{red}{0}{default} hat {red}{1}{default} für {red}{2}{default} vom Server gebannt. Grund: {yellow}{3}{default}",
   "Team.Ban.Success": "{red}{0}{default} hat {red}{1}{default} Team-Spieler für {red}{2}{default} vom Server gebannt. Grund: {yellow}{3}{default}",
   "Team.Ban.PlayerCount": "Insgesamt {red}{0}{default} Spieler vom Server gebannt.",

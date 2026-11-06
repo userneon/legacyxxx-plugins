@@ -263,7 +263,7 @@
   "Reason.VoteResult": "Vote",
   "Duration.Day": "day",
   "Duration.Temporary": "{0} minutes",
-  "Player.Kick.Success": "{white}{1}{grey} kicked {white}{0}{grey}. Reason: {white}{2}{grey}.",
+  "Player.Kick.Success": "{white}{0}{grey} kicked {white}{1}{grey}. Reason: {white}{2}{grey}.",
   "Player.Ban.Success": "{white}{0}{grey} banned {white}{1}{grey}. Length: {white}{2}{grey}. Reason: {white}{3}{grey}.",
   "Team.Ban.Success": "{white}{0}{grey} banned team {white}{1}{grey}. Length: {white}{2}{grey}. Reason: {white}{3}{grey}.",
   "Team.Ban.PlayerCount": "{white}{0}{grey} players banned.",

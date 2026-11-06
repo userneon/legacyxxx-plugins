@@ -263,7 +263,7 @@
   "Reason.VoteResult": "Результат голосования",
   "Duration.Day": "День",
   "Duration.Temporary": "{0} минут",
-  "Player.Kick.Success": "{red}{0}{default} был кикнут с сервера {red}{1}{default}. Причина: {yellow}{2}{default}",
+  "Player.Kick.Success": "{red}{1}{default} был кикнут с сервера {red}{0}{default}. Причина: {yellow}{2}{default}",
   "Player.Ban.Success": "{red}{0}{default} заблокировал {red}{1}{default} на сервере на {red}{2}{default}. Причина: {yellow}{3}{default}",
   "Team.Ban.Success": "{red}{0}{default} заблокировал игроков команды {red}{1}{default} на сервере на {red}{2}{default}. Причина: {yellow}{3}{default}",
   "Team.Ban.PlayerCount": "Всего {red}{0}{default} игроков забанено на сервере.",
