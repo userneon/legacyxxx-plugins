@@ -20,11 +20,15 @@ namespace AdminPlus;
 /// </summary>
 public partial class AdminPlus
 {
-    private static readonly HttpClient StaffPanelHttp = new() { Timeout = TimeSpan.FromSeconds(5) };
+    private static readonly HttpClient StaffPanelHttp = new() { Timeout = TimeSpan.FromSeconds(35) };   // the claim may be held up to StaffPanelWaitSeconds by the API
     private string _staffPanelApi = "";
     private string _staffPanelToken = "";
     private string _staffPanelServerId = "";
     private bool _staffPanelBusy;
+    /// <summary>The API holds a claim with nothing queued for this long and answers the moment an action is queued (older APIs answer at once).</summary>
+    private const int StaffPanelWaitSeconds = 20;
+    /// <summary>How long one action may take on the server's main thread before it is reported as failed and asking goes on.</summary>
+    private static readonly TimeSpan StaffActionRunLimit = TimeSpan.FromSeconds(15);
     private DateTime _staffPanelLastErrorUtc = DateTime.MinValue;
 
     private void InitializeStaffPanel()
@@ -50,15 +54,19 @@ public partial class AdminPlus
         _staffPanelBusy = true;
         _ = Task.Run(async () =>
         {
+            var answered = false;
+            var handled = false;
+            var started = DateTime.UtcNow;
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Post, _staffPanelApi + "/api/v1/plugin/staffpanel/claim")
                 {
-                    Content = new StringContent(JsonSerializer.Serialize(new { serverId = _staffPanelServerId }), Encoding.UTF8, "application/json"),
+                    Content = new StringContent(JsonSerializer.Serialize(new { serverId = _staffPanelServerId, wait = StaffPanelWaitSeconds }), Encoding.UTF8, "application/json"),
                 };
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _staffPanelToken);
                 using var response = await StaffPanelHttp.SendAsync(request);
                 if (!response.IsSuccessStatusCode) { StaffPanelError($"claim returned {(int)response.StatusCode}"); return; }
+                answered = true;
                 using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
                 if (!document.RootElement.TryGetProperty("actions", out var actions) || actions.ValueKind != JsonValueKind.Array) return;
                 foreach (var action in actions.EnumerateArray())
@@ -72,7 +80,11 @@ public partial class AdminPlus
                         try { done.SetResult(RunStaffPanelAction(type, payload)); }
                         catch (Exception exception) { done.SetResult((false, $"Failed: {exception.Message}")); }
                     });
-                    var (ok, message) = await done.Task;
+                    // If the game never runs the frame (the server sleeps with nobody on it) the action is reported as failed and asking goes on,
+                    // instead of waiting for ever and stopping every later action.
+                    (bool Ok, string Message) outcome = await Task.WhenAny(done.Task, Task.Delay(StaffActionRunLimit)) == done.Task ? done.Task.Result : (false, "The game server did not run it in time.");
+                    var (ok, message) = outcome;
+                    handled = true;
                     Console.WriteLine($"[LEGACY-X Admin] Website staff console: {type} {(ok ? "done" : "failed")}: {message}");
                     await ReportStaffPanelAction(id, ok, message);
                 }
@@ -84,6 +96,9 @@ public partial class AdminPlus
             finally
             {
                 _staffPanelBusy = false;
+                // The API answered: ask again at once (a held claim already waited for the next action); after an error the timer asks again.
+                // An answer that came at once with nothing in it (an API that does not hold claims) is left to the timer, so it is never asked every frame.
+                if (answered && (handled || DateTime.UtcNow - started >= TimeSpan.FromSeconds(1))) Server.NextFrame(PollStaffPanel);
             }
         });
     }
