@@ -271,9 +271,9 @@ cs2ac_announcements_ours() {
 cs2ac_mode() {
   case "$1" in
     ban) cs2ac_announcements_ours
-         cs2ac_set cs2ac_punishment_command "css_ban {steamid64} 0 CS2AC: {detection}"
+         cs2ac_set cs2ac_punishment_command "css_cs2ac_flag {steamid64} {detection}"
          cs2ac_set cs2ac_kick_command "css_kick #{userid} CS2AC: {detection}"
-         say "CS2AC: a detection bans (permanent, css_ban) or kicks. Lift one with: css_unban <steamid64>" ;;
+         say "CS2AC: a detection is sent to the website, which stores it and answers ban (permanent css_ban) or flag (staff are told, nobody is banned). Lift a ban with: css_unban <steamid64>" ;;
     log) cs2ac_announcements_ours
          cs2ac_set cs2ac_punishment_command "css_cs2ac_notice {steamid64} {detection}"
          cs2ac_set cs2ac_kick_command "css_cs2ac_notice {steamid64} {detection}"
