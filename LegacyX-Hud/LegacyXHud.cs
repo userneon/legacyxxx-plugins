@@ -45,6 +45,7 @@ public sealed partial class LegacyXHud : BasePlugin
         }
         menuLayout = env.Get("LEGACYX_HUD_MENU_LAYOUT", menuLayout);
         knifeLayout = env.Get("LEGACYX_HUD_KNIFE_LAYOUT", knifeLayout);
+        welcomeLayout = env.Get("LEGACYX_HUD_WELCOME_LAYOUT", welcomeLayout);
         hintLayout = env.Get("LEGACYX_HUD_HINT_LAYOUT", hintLayout);
         apiBase = env.Get("LEGACYX_API_BASE_URL", "").TrimEnd('/');
         // The menu reads and saves the loadout with SkinBridge's own token (skinchanger:read and :write).
@@ -87,6 +88,8 @@ public sealed partial class LegacyXHud : BasePlugin
         introHud = null;
         bombHud?.Dispose();
         bombHud = null;
+        welcomeHud?.Dispose();
+        welcomeHud = null;
         knifeHudWin?.Dispose();
         knifeHudWin = null;
         knifeHud?.Dispose();
@@ -199,7 +202,7 @@ public sealed partial class LegacyXHud : BasePlugin
         Server.NextFrame(() =>
         {
             if (Utilities.GetPlayerFromSlot(slot) is not { IsValid: true } player) return;
-            foreach (var card in new[] { introHud, bombHud })
+            foreach (var card in new[] { introHud, bombHud, welcomeHud })
                 if (card is not null && card.IsOpenFor(player)) card.Close(player);
             CloseKnifeCards(player);
             HintHide(player);

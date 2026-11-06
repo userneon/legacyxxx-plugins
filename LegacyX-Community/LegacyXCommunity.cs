@@ -100,6 +100,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         RegisterGrenadeTrail();
         RegisterFlashEffects();
         RegisterWeaponModels();
+        RegisterWelcomeCard();
         RegisterDiscordAd();
         RegisterMoneyLines();
         RegisterRadioLines();
@@ -188,7 +189,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         // The worn Smoke colour rides along with the profile; a player the site does not know has none.
         if (profile is { } colored) { var hex = StringOrNull(colored, "smoke_color"); var hex2 = StringOrNull(colored, "smoke_color2"); var trail = StringOrNull(colored, "grenade_trail"); var trailFx = StringOrNull(colored, "grenade_trail_fx"); var glow = StringOrNull(colored, "grenade_light"); var flash = StringOrNull(colored, "flash_effect"); var flashFx = StringOrNull(colored, "flash_effect_fx"); var nadeSlots = ReadGrenadeSlots(colored); Server.NextFrame(() => { StoreSmokeColor(steamId, hex, hex2); StoreGrenadeLooks(steamId, trail, trailFx, glow, nadeSlots); StoreFlashEffect(steamId, flash, flashFx); StoreWeaponModels(steamId, colored); }); }
         else if (status == System.Net.HttpStatusCode.NotFound) Server.NextFrame(() => { StoreSmokeColor(steamId, null); StoreGrenadeLooks(steamId, null, null, null); StoreFlashEffect(steamId, null, null); });
-        if (welcome) Server.NextFrame(() => ScheduleWelcome(player, WelcomeRankLine(status, profile)));
+        if (welcome) Server.NextFrame(() => { ScheduleWelcome(player, WelcomeRankLine(status, profile)); QueueWelcomeCard(player, status, profile); });
         if (!Config.ScoreboardRanks) return;
         if (status == System.Net.HttpStatusCode.NotFound)
         {
