@@ -770,5 +770,11 @@
   "css_chaos<player>": "{white}{0}{grey} started the chaos for {2} s.",
   "css_chaos<multiple>": "{white}{0}{grey} started the chaos for {2} s.",
   "css_chaos_off<player>": "{white}{0}{grey} stopped the chaos.",
-  "css_chaos_off<multiple>": "{white}{0}{grey} stopped the chaos."
+  "css_chaos_off<multiple>": "{white}{0}{grey} stopped the chaos.",
+  "Fun.Fakeban.Usage": "Use {white}!fakeban <target> [seconds]{grey}.",
+  "Fun.Fakevac.Usage": "Use {white}!fakevac <target> [seconds]{grey}.",
+  "Fun.Fakecrash.Usage": "Use {white}!fakecrash <target> [seconds]{grey}.",
+  "Fun.Fakehack.Usage": "Use {white}!fakehack <target> [seconds]{grey}.",
+  "Fun.Scare.Usage": "Use {white}!scare <target> [text]{grey}.",
+  "Fun.Banner.Usage": "Use {white}!banner <target> <text>{grey}."
 }
