@@ -96,8 +96,8 @@ public sealed partial class LegacyXCommunity
                 weapon.SetModel(model.World);
                 // The first-person model: the view model entity that is showing this weapon.
                 if (weapon.Handle == pawn.WeaponServices.ActiveWeapon.Value?.Handle)
-                    foreach (var view in Utilities.FindAllEntitiesByDesignerName<CBaseViewModel>("predicted_viewmodel"))
-                        if (view.IsValid && view.Weapon.Value?.Handle == weapon.Handle) view.SetModel(model.View);
+                    foreach (var view in Utilities.FindAllEntitiesByDesignerName<CBaseModelEntity>("predicted_viewmodel"))
+                        if (view.IsValid && Schema.GetSchemaValue<CHandle<CBasePlayerWeapon>>(view.Handle, "CBaseViewModel", "m_hWeapon").Value?.Handle == weapon.Handle) view.SetModel(model.View);
             }
             catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Weapon model for {player.PlayerName} ({kind}) failed: {problem.Message}"); }
         }
