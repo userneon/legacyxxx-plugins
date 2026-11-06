@@ -39,6 +39,7 @@ public partial class AdminPlus
         AddPermCmd("@css/root", "css_randomcheats", "- Everyone gets a random cheat each round", (c, _) => SetGameMode(c, "cheats"));
         AddPermCmd("@css/root", "css_whwh", "- Wallhack for everyone, both teams", (c, _) => SetGameMode(c, "wh"));
         RegisterRetakeSpawnCommands();
+        RegisterRetakeLearning();
         AddPermCmd("@css/root", "css_modeoff", "- Back to the ordinary game", (c, _) => SetGameMode(c, "off"));
 
         RegisterEventHandler<EventRoundStart>((_, _) => { retakeSite = null; retakePlanted = false; if (gameMode.Length > 0) AddTimer(0.4f, ApplyGameModeRound, TimerFlags.STOP_ON_MAPCHANGE); return HookResult.Continue; });
@@ -202,7 +203,15 @@ public partial class AdminPlus
         var sites = FindBombSites();
         var recorded = LoadRetakeSpawns();
         Console.WriteLine($"[AdminPlus] Retake: {sites.Count} bomb site(s) found on {Server.MapName}: {string.Join(" | ", sites.Select(v => $"{v.X:0},{v.Y:0},{v.Z:0}"))}; marked spawns: {(recorded.Count == 0 ? "none" : RetakeSummary(recorded))}");
-        // A site with marked spawns for both teams is played from them; the other sites (or a map with none marked) use the computed fallback below.
+        // A site is played from spots in this order: marked by hand (both teams), else learned from where players stood in ordinary rounds, else the computed fallback below.
+        var learnedFor = new Dictionary<string, (List<RetakeSpawn> T, List<RetakeSpawn> CT)>();
+        for (var index = 0; index < Math.Min(2, sites.Count); index++)
+        {
+            var letter = index == 0 ? "A" : "B";
+            if (recorded.Any(s => s.Site == letter && s.Team == "T") && recorded.Any(s => s.Site == letter && s.Team == "CT")) continue;
+            var learned = LearnedSpots(letter, sites[index]);
+            if (learned.T.Count > 0) { learnedFor[letter] = learned; recorded.AddRange(learned.T); recorded.AddRange(learned.CT); }
+        }
         var marked = new[] { "A", "B" }.Where(letter => recorded.Any(s => s.Site == letter && s.Team == "T") && recorded.Any(s => s.Site == letter && s.Team == "CT")).ToList();
         if (marked.Count == 0 && sites.Count == 0) { ModeSay("{grey}This map has no bomb site to retake."); return; }
 
@@ -238,7 +247,7 @@ public partial class AdminPlus
             Arm(defender, "weapon_knife", FunRandom.Next(2) == 0 ? "weapon_glock" : "weapon_tec9", RetakeTPrimary[FunRandom.Next(RetakeTPrimary.Length)], "item_assaultsuit", "weapon_hegrenade", "weapon_smokegrenade");
         foreach (var attacker in attackers)
             Arm(attacker, "weapon_knife", "weapon_usp_silencer", RetakeCtPrimary[FunRandom.Next(RetakeCtPrimary.Length)], "item_assaultsuit", "item_defuser", "weapon_flashbang", "weapon_smokegrenade");
-        Console.WriteLine($"[AdminPlus] Retake: site {letterUsed} ({(marked.Count > 0 ? "marked spawns" : "computed")}) bomb at {site.X:0},{site.Y:0},{site.Z:0}; {defenders.Count} defender(s), {attackers.Count} retaker(s).");
+        Console.WriteLine($"[AdminPlus] Retake: site {letterUsed} ({(marked.Count == 0 ? "computed" : learnedFor.ContainsKey(letterUsed) ? "learned places" : "marked spawns")}) bomb at {site.X:0},{site.Y:0},{site.Z:0}; {defenders.Count} defender(s), {attackers.Count} retaker(s).");
         // With no freeze time (or when this ran after it) the freeze-end event has already come and gone: plant now. Otherwise the freeze-end event plants it.
         if (!FreezeTimeOn()) PlantRetakeBomb();
         ModeSay($"{{white}}Retake{{grey}}: the bomb is planted on site {{white}}{letterUsed}{{grey}}. Terrorists defend it, Counter-Terrorists retake it.");
