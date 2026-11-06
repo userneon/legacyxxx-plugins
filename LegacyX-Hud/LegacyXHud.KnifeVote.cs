@@ -100,13 +100,15 @@ public sealed partial class LegacyXHud
         Ss(panel, target, "kv_btn_stay", "opt", "opt-" + stayTone);
         Ss(panel, target, "kv_btn_switch", "opt", "opt-" + switchTone);
         Ss(panel, target, "kv_wait_ic", "side", winningSide);
-        Sv(panel, target, "kv_wait_title", "Enemy team is choosing, please wait!");
-        Sv(panel, target, "kv_wait_sub", winner == 2 ? "Terrorists won the knife round: stay or switch" : "Counter-Terrorists won the knife round: stay or switch");
-        Sv(panel, target, "kv_time", mode == "win" ? $"No answer in {left} s means stay" : $"{left} s");
+        // The waiting card (the team that lost): who is choosing, what happens next, and the countdown in the colour of that side.
+        Sv(panel, target, "kv_wait_title", winner == 2 ? "Terrorists are choosing a side" : "Counter-Terrorists are choosing a side");
+        Sv(panel, target, "kv_wait_sub", "They won the knife round. Stay or switch: the match goes on as soon as they choose.");
+        Sv(panel, target, "kv_time", $"No answer in {left} s means stay");
         Sv(panel, target, "kv_count", left.ToString());
         Sv(panel, target, "kv_stay_hint", winner == 2 ? "Keep Terrorists · attack" : "Keep Counter-Terrorists · defend");
         Sv(panel, target, "kv_switch_hint", winner == 2 ? "Move to Counter-Terrorists · defend" : "Move to Terrorists · attack");
         Ss(panel, target, "kv_fill", "p", "p" + percent);
+        Ss(panel, target, "kv_fill", "tone", mode == "wait" ? (winner == 2 ? "tone-t" : "tone-ct") : "tone-none");
         Sc(panel, target, "kv", "shown", true);
         // Tell MatchZy the card is really open for this player: without this word it shows its own centre text and menu instead.
         if (knifeHudAcked.Add(slot)) Server.ExecuteCommand($"lx_knife_ack {slot}");
