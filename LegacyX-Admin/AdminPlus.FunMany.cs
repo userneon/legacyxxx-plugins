@@ -38,6 +38,7 @@ public partial class AdminPlus
         AddPermCmd("@css/slay", "css_blink", "<#userid|name|all @ commands> [distance]", CmdBlink);
         AddPermCmd("@css/slay", "css_tprandom", "<#userid|name|all @ commands>", CmdTpRandom);
         AddPermCmd("@css/slay", "css_drop", "<#userid|name|all @ commands>", CmdDrop);
+        RegisterFunWildCommands();
     }
 
     private void ClearFunMany(ulong steamId)

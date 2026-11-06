@@ -42,6 +42,7 @@ public partial class AdminPlus
         if (_rainbowTimers.Remove(steamId, out var rainbow)) { try { rainbow.Kill(); } catch { } }
         if (_spinTimers.Remove(steamId, out var spin)) { try { spin.Kill(); } catch { } }
         ClearFunMany(steamId);
+        ClearFunWild(steamId);
     }
 
     private static bool Alive(CCSPlayerController p) => p.IsValid && p.PawnIsAlive && p.PlayerPawn?.Value is { IsValid: true };
