@@ -25,7 +25,7 @@ public sealed partial class LegacyXCommunity
 
     private void RegisterWeaponModels()
     {
-        foreach (var path in (Environment.GetEnvironmentVariable("LEGACYX_COMMUNITY_MODEL_PRECACHE") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var path in LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_MODEL_PRECACHE").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             if (ValidModelPath(path)) weaponModelPaths.Add(path);
         RegisterListener<Listeners.OnServerPrecacheResources>(manifest =>
         {
