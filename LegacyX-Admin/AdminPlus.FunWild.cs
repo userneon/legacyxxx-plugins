@@ -72,6 +72,7 @@ public partial class AdminPlus
         AddPermCmd("@css/slay", "css_roulette", "", CmdRoulette);
         AddPermCmd("@css/slay", "css_chaos", "[seconds]", CmdChaos);
         RegisterFunTrollCommands();
+        RegisterGameModes();
 
         // The Workshop addon's effects and the chicken must be precached when the map loads, or spawning them does nothing.
         RegisterListener<Listeners.OnServerPrecacheResources>(manifest =>
