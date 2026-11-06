@@ -2,7 +2,7 @@
 
 # LegacyX-Status
 
-Reports the CS2 server to the LEGACY-X API every `LEGACYX_STATUS_INTERVAL_SECONDS` (30):
+Reports the CS2 server to the LEGACY-X API every `LEGACYX_STATUS_INTERVAL_SECONDS` (10):
 
 - `POST /api/v1/plugin/servers/heartbeat`: server id, name, connect address, GOTV address, map, mode and the human players on it (SteamID and name). The website's Play pages, home "Players Online", the Discord `/servers` and `/status` boards and "playing now" on profiles read this.
 - `POST /api/v1/plugin/live-match/snapshots`: state (waiting, live, paused, ended), round, T and CT score, and each team's players with ping, kills, deaths and assists.
@@ -21,7 +21,7 @@ Game → API → database; nothing is stored on the game server. If the API can'
 | `LEGACYX_SERVER_GOTV_ADDRESS` | Optional GOTV `host:port` |
 | `LEGACYX_STATUS_PLUGIN_TOKEN` | API token with `servers:write` |
 | `LEGACYX_STATUS_PLUGIN_ID` | `legacyx-live-snapshot` (the snapshot route only accepts this) |
-| `LEGACYX_STATUS_INTERVAL_SECONDS` | 10–60, default 30 |
+| `LEGACYX_STATUS_INTERVAL_SECONDS` | 5–60, default 10 |
 | `LEGACYX_STATUS_ENABLED` | `false` turns it off |
 | `LEGACYX_STATUS_KEEP_AWAKE` | default `true`: sets `sv_hibernate_when_empty 0` so an empty server keeps reporting (a hibernating server runs no timers) |
 

@@ -11,7 +11,7 @@ using LegacyX.Shared.Configuration;
 namespace LegacyXStatus;
 
 /// <summary>
-/// Game → API → database: every LEGACYX_STATUS_INTERVAL_SECONDS (30) the server reports who it is,
+/// Game → API → database: every LEGACYX_STATUS_INTERVAL_SECONDS (10) the server reports who it is,
 /// what it is playing and who is on it (POST /plugin/servers/heartbeat), plus the live score, round
 /// and teams (POST /plugin/live-match/snapshots). The website's Play pages and home tiles, the
 /// Discord boards and "playing now" on profiles all read these rows. Nothing is stored locally;
@@ -228,7 +228,7 @@ public sealed record StatusSettings(
             environment.Get("LEGACYX_SERVER_NAME").Trim(),
             environment.Get("LEGACYX_SERVER_GOTV_ADDRESS").Trim(),
             environment.Get("LEGACYX_SERVER_MODE", "competitive_5v5").Trim(),
-            environment.GetModuleInt("STATUS", "INTERVAL_SECONDS", 30, 10, 60),
+            environment.GetModuleInt("STATUS", "INTERVAL_SECONDS", 10, 5, 60),
             environment.GetModuleBoolean("STATUS", "KEEP_AWAKE", true),
             missing);
     }
