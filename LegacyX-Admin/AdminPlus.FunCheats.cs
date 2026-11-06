@@ -1,6 +1,7 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
+using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Utils;
@@ -64,6 +65,14 @@ public partial class AdminPlus
         AddPermCmd("@css/root", "css_aimlock", "<#userid|name|all> [0|1] - View snaps to the nearest enemy while firing", (caller, info) => FunCheatSwitch(caller, info, "aimlock", aimlockSlots));
         AddPermCmd("@css/root", "css_silentaim", "<#userid|name|all> [0|1] - Shots hurt the nearest enemy in front", (caller, info) => FunCheatSwitch(caller, info, "silentaim", silentAimSlots));
         AddPermCmd("@css/root", "css_bhop", "<#userid|name|all> [0|1] - Hold jump to bunny hop", (caller, info) => FunCheatSwitch(caller, info, "bhop", bhopSlots));
+        // "sv_cheats 1" typed in a root player's own developer console (owner request 2026-11-06). The game engine may keep a client from sending
+        // it at all (it is a server-only setting); when it does reach the server it is run here as css_cheats, for root only. Everyone else's goes on as before.
+        AddCommandListener("sv_cheats", (caller, info) =>
+        {
+            if (caller == null || !caller.IsValid || caller.IsBot || !AdminManager.PlayerHasPermissions(caller, "@css/root")) return HookResult.Continue;
+            CmdSvCheats(caller, info);
+            return HookResult.Handled;
+        }, HookMode.Pre);
         AddPermCmd("@css/root", "css_cheats", "[0|1] - sv_cheats on or off (root, any server, any time)", CmdSvCheats);
 
         RegisterListener<Listeners.OnTick>(OnFunCheatTick);
