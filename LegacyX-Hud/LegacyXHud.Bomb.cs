@@ -70,15 +70,24 @@ public sealed partial class LegacyXHud
         var shown = new List<(int Slot, ulong SteamId)>();
         foreach (var player in Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }))
         {
+            // A closed card is gone from the client: what was sent for it before (the title, the picture) is forgotten, or a second banner would stay empty.
+            if (!panel.IsOpenFor(player)) ForgetBombCardState(player.Slot);
             if (!OpenFor(panel, player)) continue;
             Sv(panel, player, "bomb_title", title);
             Sv(panel, player, "bomb_sub", sub);
             SetState(panel, player, "bomb_bar", "kind", kind);
             Sc(panel, player, "bomb_agent", "hidden", agentPicture is null);
             Ss(panel, player, "bomb_agent", "ag", agentPicture);
-            panel.SetClassFor(player, "bomb", "shown", true);
             shown.Add((player.Slot, player.SteamID));
         }
+        Console.WriteLine($"[{ModuleName}] The bomb banner ({kind}) is shown to {shown.Count} player(s).");
+        // The slide is a transition: the class follows a moment after the card is opened, or it appears at once (see OpenMenu).
+        AddTimer(MenuRiseDelaySeconds, () =>
+        {
+            if (id != bombShowId || bombHud is not { } card) return;
+            foreach (var (slot, steamId) in shown)
+                if (Utilities.GetPlayerFromSlot(slot) is { IsValid: true } now && now.SteamID == steamId && card.IsOpenFor(now)) card.SetClassFor(now, "bomb", "shown", true);
+        });
         AddTimer(BombShownSeconds, () =>
         {
             // A newer banner (the bomb was planted, then defused) keeps the card on screen and sets its own timers.
@@ -99,5 +108,12 @@ public sealed partial class LegacyXHud
                 }
             });
         }, TimerFlags.STOP_ON_MAPCHANGE);
+    }
+
+    private void ForgetBombCardState(int slot)
+    {
+        if (menuSent.TryGetValue(slot, out var known))
+            foreach (var key in known.Keys.Where(key => key.Contains(":bomb_", StringComparison.Ordinal)).ToList()) known.Remove(key);
+        foreach (var key in applied.Keys.Where(key => key.Slot == slot && key.PanelId.StartsWith("bomb", StringComparison.Ordinal)).ToList()) applied.Remove(key);
     }
 }
