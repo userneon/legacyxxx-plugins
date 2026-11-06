@@ -20,3 +20,4 @@ LegacyX-WeaponPaints/website/
 
 # Deployable package (scripts/package.sh)
 dist/
+LegacyX-AntiWallhack/libs/*.dll
