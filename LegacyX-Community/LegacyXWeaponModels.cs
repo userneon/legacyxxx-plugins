@@ -27,7 +27,24 @@ public sealed partial class LegacyXCommunity
     {
         foreach (var path in (Environment.GetEnvironmentVariable("LEGACYX_COMMUNITY_MODEL_PRECACHE") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             if (ValidModelPath(path)) weaponModelPaths.Add(path);
-        RegisterListener<Listeners.OnServerPrecacheResources>(manifest => { foreach (var path in weaponModelPaths) manifest.AddResource(path); });
+        RegisterListener<Listeners.OnServerPrecacheResources>(manifest =>
+        {
+            foreach (var path in weaponModelPaths) manifest.AddResource(path);
+            Console.WriteLine($"[{ModuleName}] Weapon models: {weaponModelPaths.Count} path(s) added to the precache manifest.");
+        });
+        // A second chance once the map is running: a model the manifest missed is loaded now (clients that join later still get it in their list).
+        RegisterListener<Listeners.OnMapStart>(_ => Server.NextFrame(() =>
+        {
+            foreach (var path in weaponModelPaths)
+                try { Server.PrecacheModel(path); } catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not precache {path}: {problem.Message}"); }
+        }));
+        // A player types !wm to see what the server has for them (the console commands below are for the server's own console only).
+        AddCommand("css_wm", "Weapon models: what is worn", (player, _) =>
+        {
+            if (player is null || !player.IsValid) return;
+            if (!weaponModels.TryGetValue(player.SteamID, out var worn)) { player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System($"{{grey}}No weapon model is worn (or the server has not read your profile yet). {weaponModelPaths.Count} model path(s) known.")); return; }
+            foreach (var (weapon, model) in worn) player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System($"{{white}}{weapon}{{grey}}: {model.World}{(model.AnimBase is null ? "" : $" ({model.AnimBase} animations)")}"));
+        });
         RegisterEventHandler<EventPlayerSpawn>((@event, _) =>
         {
             if (@event.Userid is { IsValid: true } player) Server.NextFrame(() => ApplyWeaponModels(player));
@@ -96,6 +113,7 @@ public sealed partial class LegacyXCommunity
                 if (kind == "knife" && model.AnimBase is { } anim && weapon.AttributeManager.Item.ItemDefinitionIndex != AnimDefs[anim])
                     weapon.AttributeManager.Item.ItemDefinitionIndex = AnimDefs[anim];
                 weapon.SetModel(model.World);
+                Console.WriteLine($"[{ModuleName}] Weapon model {model.World} put on {player.PlayerName}'s {kind}.");
                 // The first-person model: the view model entity that is showing this weapon.
                 if (weapon.Handle == pawn.WeaponServices.ActiveWeapon.Value?.Handle)
                     foreach (var view in Utilities.FindAllEntitiesByDesignerName<CBaseModelEntity>("predicted_viewmodel"))
