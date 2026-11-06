@@ -36,7 +36,9 @@ public partial class AdminPlus
         var environment = LegacyXEnvironmentLoader.Load();
         if (!environment.GetModuleBoolean("ADMIN", "STAFF_PANEL_ENABLED", true)) return;
         _staffPanelApi = environment.GetModule("ADMIN", "API_BASE_URL").TrimEnd('/');
-        _staffPanelToken = environment.GetModule("ADMIN", "PLUGIN_SECRET", environment.Get("LEGACYX_PLUGIN_TOKEN"));
+        // The website staff console needs servers:write, which the game server's own token has and the admin (bans) token does not.
+        _staffPanelToken = environment.Get("LEGACYX_PLUGIN_TOKEN");
+        if (string.IsNullOrWhiteSpace(_staffPanelToken)) _staffPanelToken = environment.GetModule("ADMIN", "PLUGIN_SECRET", "");
         _staffPanelServerId = LegacyXServerRuntime.Load(environment).ServerId;
         if (string.IsNullOrWhiteSpace(_staffPanelApi) || string.IsNullOrWhiteSpace(_staffPanelToken) || !Regex.IsMatch(_staffPanelServerId, "^[A-Za-z0-9_-]{1,80}$"))
         {
