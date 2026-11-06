@@ -13,6 +13,7 @@ namespace LegacyXHud;
 public sealed partial class LegacyXHud
 {
     private readonly HashSet<int> knifeHudLogged = new();
+    private readonly HashSet<int> knifeHudAcked = new();
     private PanelHandle? knifeHudWin;
     private bool knifeWinListening;
 
@@ -63,6 +64,7 @@ public sealed partial class LegacyXHud
         if (mode == "off")
         {
             knifeHudLogged.Remove(slot);
+            knifeHudAcked.Remove(slot);
             CloseKnifeCards(target);
             ForgetKnifeCardState(slot);
             return;
@@ -106,6 +108,8 @@ public sealed partial class LegacyXHud
         Sv(panel, target, "kv_switch_hint", winner == 2 ? "Move to Counter-Terrorists · defend" : "Move to Terrorists · attack");
         Ss(panel, target, "kv_fill", "p", "p" + percent);
         Sc(panel, target, "kv", "shown", true);
+        // Tell MatchZy the card is really open for this player: without this word it shows its own centre text and menu instead.
+        if (knifeHudAcked.Add(slot)) Server.ExecuteCommand($"lx_knife_ack {slot}");
     }
 
     private void ForgetKnifeCardState(int slot)

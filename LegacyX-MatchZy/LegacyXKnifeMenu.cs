@@ -28,6 +28,20 @@ public partial class MatchZy
     // The knife vote card drawn by the LegacyX-Hud plugin (lx_knife_hud). MATCHZY_KNIFE_HUD=false goes back to the centre text and the left menu.
     private bool knifeHudOn = true;
 
+    // The HUD card tells MatchZy it is open for a player (lx_knife_ack <slot>). A player it did not answer for within a moment (the HUD plugin
+    // is not loaded, off, or its card could not open) gets the centre text and the left menu instead, so the vote is never invisible.
+    private readonly HashSet<int> knifeHudAcked = new();
+    private readonly HashSet<int> knifeFallbackShown = new();
+    private float knifeMenuStartedAt;
+    private const float KnifeCardWaitSeconds = 1.5f;
+
+    [ConsoleCommand("lx_knife_ack", "The knife vote card is open for a player: lx_knife_ack <slot> (sent by LegacyX-Hud)")]
+    public void OnKnifeCardAck(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player != null || command.ArgCount < 2 || !int.TryParse(command.ArgByIndex(1), out var slot)) return;
+        knifeHudAcked.Add(slot);
+    }
+
     private void RegisterLegacyXKnifeMenu()
     {
         knifeHudOn = LegacyXEnvironmentLoader.Load().GetModuleBoolean("MATCHZY", "KNIFE_HUD", true);
@@ -58,6 +72,9 @@ public partial class MatchZy
     private void StartLegacyXKnifeMenu()
     {
         knifeMenuEndsAt = Server.CurrentTime + KnifeVoteSeconds;
+        knifeMenuStartedAt = Server.CurrentTime;
+        knifeHudAcked.Clear();
+        knifeFallbackShown.Clear();
         knifeMenuTimer?.Kill();
         knifeMenuTimer = AddTimer(0.5f, DrawLegacyXKnifeMenu, TimerFlags.REPEAT);
         // With the HUD card the winners click a side; the numbered menu on the left is only for the centre text fallback.
@@ -80,17 +97,17 @@ public partial class MatchZy
         {
             if (!IsPlayerValid(player) || player.IsBot || player.IsHLTV) continue;
             if (knifeHudOn) Server.ExecuteCommand($"lx_knife_hud {player.Slot} off");
-            else SendKnifeMenu(player, open: false);
+            if (!knifeHudOn || knifeFallbackShown.Contains(player.Slot)) SendKnifeMenu(player, open: false);
         }
     }
 
     /// <summary>Opens (or closes, with no slots and no time) the numbered menu on one player's screen.</summary>
-    private void SendKnifeMenu(CCSPlayerController player, bool open)
+    private void SendKnifeMenu(CCSPlayerController player, bool open, bool withText = false)
     {
         if (knifeMenuMessage == "off") return;
         try
         {
-            var text = !open ? "" : knifeHudOn ? " " : "You won the knife round\n->1. Stay on your side\n->2. Switch sides\n";
+            var text = !open ? "" : knifeHudOn && !withText ? " " : "You won the knife round\n->1. Stay on your side\n->2. Switch sides\n";
             var slots = open ? 0b11 : 0;
             var seconds = open ? (int)KnifeVoteSeconds : 0;
             UserMessage message;
@@ -134,19 +151,34 @@ public partial class MatchZy
                 if (!IsPlayerValid(player) || player.IsBot || player.IsHLTV) continue;
                 var role = player.TeamNum == knifeWinner ? "win" : "wait";
                 Server.ExecuteCommand($"lx_knife_hud {player.Slot} {role} {knifeWinner} {left} {(int)KnifeVoteSeconds}");
+                // No answer from the card in time: this player gets the centre text and the left menu.
+                if (!knifeHudAcked.Contains(player.Slot) && Server.CurrentTime - knifeMenuStartedAt >= KnifeCardWaitSeconds)
+                {
+                    if (knifeFallbackShown.Add(player.Slot))
+                    {
+                        Log($"[KnifeMenu] The card is not open for slot {player.Slot}: the centre text is shown instead.");
+                        if (player.TeamNum == knifeWinner) SendKnifeMenu(player, open: true, withText: true);
+                    }
+                    player.PrintToCenterHtml(KnifeCenterText(player));
+                }
             }
             return;
         }
-        var winners = $"<font class='fontSize-m' color='#fafafa'>You won the knife round</font><br>"
-            + "<font class='fontSize-m' color='#fafafa'>[<font color='#a78bfa'>1</font>] Stay &nbsp;&nbsp; [<font color='#a78bfa'>2</font>] Switch</font><br>"
-            + $"<font class='fontSize-s' color='#a3a3a3'>{left}s · no answer means stay</font>";
-        var others = $"<font class='fontSize-m' color='#fafafa'>{System.Net.WebUtility.HtmlEncode(knifeWinnerName)} won the knife round</font><br>"
-            + $"<font class='fontSize-s' color='#a3a3a3'>choosing a side · {left}s</font>";
-
         foreach (var player in Utilities.GetPlayers())
         {
             if (!IsPlayerValid(player) || player.IsBot || player.IsHLTV) continue;
-            player.PrintToCenterHtml(player.TeamNum == knifeWinner ? winners : others);
+            player.PrintToCenterHtml(KnifeCenterText(player));
         }
+    }
+
+    private string KnifeCenterText(CCSPlayerController player)
+    {
+        var left = Math.Max(0, (int)Math.Ceiling(knifeMenuEndsAt - Server.CurrentTime));
+        if (player.TeamNum == knifeWinner)
+            return "<font class='fontSize-m' color='#fafafa'>You won the knife round</font><br>"
+                + "<font class='fontSize-m' color='#fafafa'>[<font color='#a78bfa'>1</font>] Stay &nbsp;&nbsp; [<font color='#a78bfa'>2</font>] Switch</font><br>"
+                + $"<font class='fontSize-s' color='#a3a3a3'>{left}s · no answer means stay</font>";
+        return $"<font class='fontSize-m' color='#fafafa'>{System.Net.WebUtility.HtmlEncode(knifeWinnerName)} won the knife round</font><br>"
+            + $"<font class='fontSize-s' color='#a3a3a3'>choosing a side · {left}s</font>";
     }
 }
