@@ -13,7 +13,7 @@ namespace AdminPlus;
 
 /// <summary>
 /// Turn the running match into another mode on the spot (owner request 2026-11-06, "make the match another type straight away: retake, 1v1, random cheats,
-/// wh vs wh"). Owner only (@css/root) and ONLY on a Fun server: a ranked or tournament match must never be changed under its players' feet. Switching restarts
+/// wh vs wh"). Owner only (@css/root), on any server at any time (owner request 2026-11-06: root may use them whenever; everyone is told in chat who switched it). Switching restarts
 /// the game (mp_restartgame 1); a map change or `off` ends the mode. UNTESTED in game, so try each on a test Fun server first.
 ///   css_retake        every round the bomb is already planted on a random site, the Ts are around it, the CTs come from their spawn with a kit
 ///   css_1v1           every round one T and one CT fight with the same random weapon, the rest wait dead (the ones who fought least go next)
@@ -23,7 +23,7 @@ namespace AdminPlus;
 /// </summary>
 public partial class AdminPlus
 {
-    private string gameMode = "";
+    private static string gameMode = "";
     private readonly Dictionary<ulong, int> duelsPlayed = new();
     private readonly List<Vector> retakeSites = new();
 
@@ -63,7 +63,6 @@ public partial class AdminPlus
     {
         if (mode == null) { FunReply(caller, $"Game mode: {(gameMode.Length == 0 ? "ordinary" : gameMode)}. Use css_gamemode retake|1v1|cheats|wh|off."); return; }
         if (mode is not ("retake" or "1v1" or "cheats" or "wh" or "off")) { FunReply(caller, "Use css_gamemode retake|1v1|cheats|wh|off."); return; }
-        if (mode != "off" && !IsFunServer()) { FunReply(caller, "Game modes work on a Fun server only: a ranked match is never changed."); return; }
 
         EndGameMode();
         var who = caller?.PlayerName ?? "Console";
