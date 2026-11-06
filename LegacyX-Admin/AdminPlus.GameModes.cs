@@ -40,7 +40,7 @@ public partial class AdminPlus
         AddPermCmd("@css/root", "css_whwh", "- Wallhack for everyone, both teams", (c, _) => SetGameMode(c, "wh"));
         AddPermCmd("@css/root", "css_modeoff", "- Back to the ordinary game", (c, _) => SetGameMode(c, "off"));
 
-        RegisterEventHandler<EventRoundStart>((_, _) => { if (gameMode.Length > 0) AddTimer(0.4f, ApplyGameModeRound, TimerFlags.STOP_ON_MAPCHANGE); return HookResult.Continue; });
+        RegisterEventHandler<EventRoundStart>((_, _) => { retakeSite = null; retakePlanted = false; if (gameMode.Length > 0) AddTimer(0.4f, ApplyGameModeRound, TimerFlags.STOP_ON_MAPCHANGE); return HookResult.Continue; });
         RegisterEventHandler<EventRoundFreezeEnd>((_, _) => { if (gameMode == "retake") PlantRetakeBomb(); return HookResult.Continue; });
         RegisterEventHandler<EventPlayerSpawn>((@event, _) =>
         {
@@ -72,7 +72,8 @@ public partial class AdminPlus
             gameMode = mode;
             var name = mode switch { "retake" => "Retake", "1v1" => "1v1 duels", "cheats" => "Random cheats", _ => "WH vs WH" };
             ModeSay($"{{white}}{SanitizeName(who)}{{grey}} switched the match to {{white}}{name}{{grey}}. The game restarts.");
-            Server.ExecuteCommand("mp_restartgame 1");
+            // A warmup has no teams, bombs or round rules: it is ended first (the "restart" players saw while still at their base).
+            Server.ExecuteCommand("mp_warmup_end;mp_restartgame 1");
         }
         FunReply(caller, $"Game mode: {(mode == "off" ? "ordinary" : mode)}.");
         AdminPlus.LogAction($"{who} set the game mode to {mode}");
@@ -159,6 +160,18 @@ public partial class AdminPlus
     private List<Vector> FindBombSites()
     {
         if (retakeSites.Count > 0) return retakeSites;
+        // The game's own player resource knows the middle of both sites (the radar and the bots use them): the first choice. The trigger boxes are the fallback.
+        try
+        {
+            var resource = Utilities.FindAllEntitiesByDesignerName<CCSPlayerResource>("cs_player_manager").FirstOrDefault();
+            if (resource != null)
+            {
+                foreach (var centre in new[] { resource.BombsiteCenterA, resource.BombsiteCenterB })
+                    if (centre != null && (MathF.Abs(centre.X) + MathF.Abs(centre.Y) + MathF.Abs(centre.Z)) > 1f) retakeSites.Add(new Vector(centre.X, centre.Y, centre.Z));
+            }
+        }
+        catch (Exception exception) { Console.WriteLine($"[AdminPlus] Retake: the bomb site centres could not be read ({exception.Message})."); }
+        if (retakeSites.Count > 0) return retakeSites;
         foreach (var target in Utilities.FindAllEntitiesByDesignerName<CBaseEntity>("func_bomb_target"))
         {
             try
@@ -168,12 +181,19 @@ public partial class AdminPlus
                 // The middle of the trigger's box in the world, whether the entity sits at the origin or in the site.
                 retakeSites.Add(new Vector(origin.X + (mins.X + maxs.X) / 2f, origin.Y + (mins.Y + maxs.Y) / 2f, origin.Z + mins.Z + 20f));
             }
-            catch { }
+            catch (Exception exception) { Console.WriteLine($"[AdminPlus] Retake: a bomb target box could not be read ({exception.Message})."); }
         }
         return retakeSites;
     }
 
+    private static bool FreezeTimeOn()
+    {
+        try { return Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").FirstOrDefault()?.GameRules?.FreezePeriod == true; }
+        catch { return false; }
+    }
+
     private Vector? retakeSite;
+    private bool retakePlanted;
     private int retakeSiteIndex;
 
     private void SetUpRetakeRound()
@@ -195,12 +215,15 @@ public partial class AdminPlus
         foreach (var attacker in Contenders(3).Where(p => p.PawnIsAlive))
             Arm(attacker, "weapon_knife", "weapon_usp_silencer", RetakeCtPrimary[FunRandom.Next(RetakeCtPrimary.Length)], "item_assaultsuit", "item_defuser", "weapon_flashbang", "weapon_smokegrenade");
         Console.WriteLine($"[AdminPlus] Retake: site {retakeSiteIndex} at {site.X:0},{site.Y:0},{site.Z:0}; {defenders.Count} defender(s), {Contenders(3).Count(p => p.PawnIsAlive)} retaker(s).");
+        // With no freeze time (or when this ran after it) the freeze-end event has already come and gone: plant now. Otherwise the freeze-end event plants it.
+        if (!FreezeTimeOn()) PlantRetakeBomb();
         ModeSay($"{{white}}Retake{{grey}}: the bomb is planted on site {{white}}{(retakeSiteIndex == 0 ? "A" : "B")}{{grey}}. Terrorists defend it, Counter-Terrorists retake it.");
     }
 
     private void PlantRetakeBomb()
     {
-        if (retakeSite is not { } site) return;
+        if (retakeSite is not { } site || retakePlanted) return;
+        retakePlanted = true;
         try
         {
             var c4 = Utilities.CreateEntityByName<CPlantedC4>("planted_c4");
