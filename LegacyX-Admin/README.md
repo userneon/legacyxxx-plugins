@@ -23,6 +23,8 @@ The module reads `CounterStrikeSharp/.env` through `LegacyX.Shared.Configuration
 
 **Fun commands.** Besides freeze, beacon, shake, blind, drug, speed, god and the rest, `!launch <target> [power]` (100 to 1500, default 600) throws a player up in the air and `!size <target> <0.3-3>` / `!unsize <target>` makes the player's model big or small (the hit box stays the same). All need `@css/slay` and are in the `!admin` menu under Fun, Player FX.
 
+**`!cc`** (content creators only): opens the Fun menu as the "Creator" menu in the same centre HTML menu as `!admin`, which a creator cannot open. It lists only the commands the website grants the creator's role (Staff → Roles); the servers read a change there within a minute, so ticking or unticking a command on the site adds it to or removes it from the menu. Anyone else is told it is for content creators. Not built or run yet.
+
 **The `!admin` menu.** `!admin` opens the chat menu (Staff, Players, Server, Bans).
 
 **Typed commands stay out of chat.** `.r`, `!r`, `!admin` and the like still run, but the game's own chat line for them (`[ALL] Name: .r`) is dropped (a `!`, `/` or `.`, a letter, one word, then the end or a space; `...gg` is ordinary chat).

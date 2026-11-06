@@ -43,6 +43,7 @@ public partial class AdminPlus
         AddCommand("admin", Localizer["Menu.AdminDesc"], AdminMenu);
         AddCommand("css_admin", "Open admin menu from console", AdminMenu);
         AddCommand("css_adminmenu", "Open admin menu from console", AdminMenu);
+        AddCommand("css_cc", "Content creator menu", CreatorMenu);
         AddCommand("banlist", Localizer["BanList.Header"], BanListMenu);
         AddCommand("css_banlist", "Show ban list menu from console", BanListMenu);
     }
@@ -105,15 +106,31 @@ public partial class AdminPlus
         }
     }
 
-    private void ShowFunRootMenu(CCSPlayerController admin)
+    /// <summary>
+    /// !cc (owner request 2026-11-06): the menu of a content creator, in the same centre HTML menu as the admin menu. Only creators
+    /// (Content Creator and Main Content Creator) open it. What it lists is what the website grants their role (Staff → Roles, read
+    /// into adminCommandAllow within a minute): a command the Owner unticks there disappears from this menu, one they tick appears.
+    /// </summary>
+    private void CreatorMenu(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!new[] { "freeze", "weapon" }.Any(command => HasCommandAccess(admin, command)))
+        if (caller == null || !caller.IsValid || caller.IsBot) return;
+        if (!adminStaffRoles.TryGetValue(caller.SteamID, out var role) || (role != "CREATOR" && role != "MAIN CREATOR"))
+        {
+            caller.Print("!cc is for content creators.");
+            return;
+        }
+        ShowFunRootMenu(caller, "Creator");
+    }
+
+    private void ShowFunRootMenu(CCSPlayerController admin, string title = "Fun")
+    {
+        if (!new[] { "freeze", "weapon", "goto", "gravity", "glow" }.Any(command => HasCommandAccess(admin, command)))
         {
             admin.Print(Localizer["NoPermission"]);
             return;
         }
 
-        var m = CreateMenu("Fun");
+        var m = CreateMenu(title);
         if (m == null) return;
         
         if (HasCommandAccess(admin, "goto")) m.AddMenuOption(Localizer["Menu.Fun.Cat.Teleport"], (p, o) => ShowFunTeleportMenu(admin));
