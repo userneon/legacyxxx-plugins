@@ -24,6 +24,7 @@ public partial class AdminPlus
         AddPermCmd("@css/slay", "css_size", "<#userid|name|all @ commands> <0.3-3>", (c, i) => ToggleFun(c, i, true, p => _toggledSize.Contains(p.SteamID), CmdSize, CmdUnSize, _toggledSize, 3));
         AddPermCmd("@css/slay", "css_unsize", "<#userid|name|all @ commands>", CmdUnSize);
         RegisterFunCheatCommands();
+        RegisterFunExtraCommands();
     }
 
     private void CmdLaunch(CCSPlayerController? caller, CommandInfo info)

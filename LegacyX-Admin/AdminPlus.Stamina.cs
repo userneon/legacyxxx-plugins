@@ -57,7 +57,11 @@ public partial class AdminPlus
             caller.PrintToChat(LegacyXChat.System("Your role can't use this."));
             return false;
         }
-        if (!CommandStaminaRequirements.TryGetValue(normalized, out var required)) return true;
+        if (!CommandStaminaRequirements.TryGetValue(normalized, out var required))
+        {
+            if (!ExtraCommandPermissions.ContainsKey(normalized)) return true;
+            required = ExtraCommandStamina;
+        }
         adminStamina.TryGetValue(caller.SteamID, out var available);
         if (available >= required) return true;
         caller.PrintToChat(LegacyXChat.System("Your role can't use this."));
@@ -65,7 +69,17 @@ public partial class AdminPlus
     }
 
     /// <summary>Commands the Roles list can grant: the ones with a permission, plus a few fun ones the stamina table never listed.</summary>
-    private static readonly HashSet<string> ExtraGuardedCommands = new(StringComparer.OrdinalIgnoreCase) { "size", "unsize", "launch", "aimlock", "bhop", "cheats", "silentaim", "wh" };
+    private static readonly HashSet<string> ExtraGuardedCommands = new(StringComparer.OrdinalIgnoreCase) { "size", "unsize", "launch", "invisible", "rainbow", "spin", "rocket", "aimlock", "bhop", "cheats", "silentaim", "wh" };
+
+    /// <summary>Fun commands outside the two tables above: their permission, and (like the other fun commands) a stamina of 1000.</summary>
+    private static readonly Dictionary<string, string> ExtraCommandPermissions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["size"] = "@css/slay", ["unsize"] = "@css/slay", ["launch"] = "@css/slay", ["invisible"] = "@css/slay", ["rainbow"] = "@css/slay", ["spin"] = "@css/slay", ["rocket"] = "@css/slay",
+    };
+    private const int ExtraCommandStamina = 1000;
+
+    private static bool TryGetCommandPermission(string normalized, out string permission)
+        => CommandPermissionRequirements.TryGetValue(normalized, out permission!) || ExtraCommandPermissions.TryGetValue(normalized, out permission!);
 
     private static bool IsAdminCommand(string normalized) => CommandPermissionRequirements.ContainsKey(normalized) || ExtraGuardedCommands.Contains(normalized);
 
@@ -75,9 +89,13 @@ public partial class AdminPlus
         var normalized = (command ?? string.Empty).Trim().ToLowerInvariant();
         if (normalized.StartsWith("css_", StringComparison.Ordinal)) normalized = normalized[4..];
         if (ToggleTwins.TryGetValue(normalized, out var twinOf)) normalized = twinOf;
-        if (!CommandPermissionRequirements.TryGetValue(normalized, out var permission)) return false;
+        if (!TryGetCommandPermission(normalized, out var permission)) return false;
         if (adminCommandAllow.TryGetValue(caller.SteamID, out var allowed)) return allowed.Contains(normalized) && HasEffectivePermission(caller, permission);
-        if (!CommandStaminaRequirements.TryGetValue(normalized, out var required)) return false;
+        if (!CommandStaminaRequirements.TryGetValue(normalized, out var required))
+        {
+            if (!ExtraCommandPermissions.ContainsKey(normalized)) return false;
+            required = ExtraCommandStamina;
+        }
         adminStamina.TryGetValue(caller.SteamID, out var available);
         return available >= required && HasEffectivePermission(caller, permission);
     }

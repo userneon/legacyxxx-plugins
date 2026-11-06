@@ -42,6 +42,7 @@ public partial class AdminPlus
 
         RemoveAllFunTimers(p);
         ClearToggledFun(p.SteamID);
+        ClearFunExtra(p.SteamID);
 
         _lastDeathPosFun.Remove(p.SteamID);
 

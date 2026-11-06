@@ -287,6 +287,21 @@ public partial class AdminPlus
             }, onlyAlive: true);
         });
 
+        // One entry per command: pick a player and the effect switches on, or off when it is already on.
+        foreach (var (title, command) in new[] { ("Invisible", "css_invisible"), ("Rainbow", "css_rainbow"), ("Spin", "css_spin"), ("Rocket", "css_rocket") })
+        {
+            var name = command[4..];
+            if (!HasCommandAccess(admin, name)) continue;
+            m.AddMenuOption(title, (p, o) =>
+            {
+                ShowTargetMenu(admin, Localizer["Menu.Fun.Prompt.SelectTarget"], target =>
+                {
+                    RunServerCmd(admin, $"{command} {target}");
+                    ShowFunPlayerFxMenu(admin);
+                }, onlyAlive: true);
+            });
+        }
+
         m.AddMenuOption(Localizer["Menu.Fun.PlayerFx.Size"], (p, o) =>
         {
             ShowTargetMenu(admin, Localizer["Menu.Fun.Prompt.SelectTarget"], target =>
