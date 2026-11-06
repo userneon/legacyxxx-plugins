@@ -36,11 +36,6 @@
 #       server folder and writes cfg/cs2ac.cfg so a detection runs OUR css_ban / css_kick (permanent ban, reason "CS2AC: <detection>"). whitelist lists the SteamID64s it never
 #       punishes (the owners who use the !bhop / !aimlock / !silentaim toys, which it would flag). mode log only writes the detection to the console and bans nobody.
 #       It prints a credit line for its author every 6 rounds (cannot be switched off). Restart the servers after.
-#   sudo ./scripts/cs2-host.sh cs2fow [install] | on | off | status
-#       CS2FOW (github.com/karola3vax/CS2FOW, MIT, legacy version, no longer updated): a Metamod anti-wallhack that does not send an enemy to a player who cannot see them
-#       (it bakes its own copy of each map's walls the first time a map loads: no Ray-Trace, no CounterStrikeSharp needed). Needs a CPU with AVX. install downloads the latest
-#       Linux release into the server folder; on / off set cs2fow_enable in cfg/cs2fow.cfg. It loads on EVERY server of this install (a Fun server too: switch it off there or
-#       accept that the !wh toy sees less). After a CS2 update it may switch itself off: cs2fow_status in a server console says so. Restart the servers after.
 #   sudo ./scripts/cs2-host.sh remove <port>        stops and deletes that server's service and config
 #   sudo ./scripts/cs2-host.sh name-sync
 #       takes the old per-server in-game name (GAME_NAME) out of every server's config; names now come from the website.
@@ -318,6 +313,10 @@ cmd_cs2ac() {
       [[ -f "$CS2AC_CFG" ]] && cp -a "$CS2AC_CFG" "$tmp/cs2ac.cfg.keep"
       cp -a "$tmp/pkg/game/." "$CS2_DIR/game/"
       [[ -f "$tmp/cs2ac.cfg.keep" ]] && cp -a "$tmp/cs2ac.cfg.keep" "$CS2AC_CFG"
+      # A zip made on Windows can leave folders without the x bit and files with odd modes; Metamod then says "File not found" for a file that is there.
+      find "$CSGO_DIR/addons/cs2ac" -type d -exec chmod 755 {} + 2>/dev/null || true
+      find "$CSGO_DIR/addons/cs2ac" -type f -exec chmod 644 {} + 2>/dev/null || true
+      find "$CSGO_DIR/addons/cs2ac" -type f -name '*.so' -exec chmod 755 {} + 2>/dev/null || true
       chown -R "$CS2_USER:$CS2_USER" "$CSGO_DIR/addons" "$CSGO_DIR/cfg"
       rm -rf "$tmp"
       cs2ac_mode ban
@@ -333,59 +332,6 @@ cmd_cs2ac() {
   esac
 }
 
-
-# CS2FOW (owner request 2026-11-06): an anti-wallhack Metamod plugin. The newest version is closed-source (karola3vax.com); the MIT legacy one on GitHub is installed here.
-CS2FOW_CFG="$CSGO_DIR/cfg/cs2fow.cfg"
-
-# Sets one cvar in cs2fow.cfg in place; the file's last line, cs2fow_config_loaded, must stay last, so a new line goes in before it.
-cs2fow_set() {
-  local name="$1" value="$2"
-  [[ -f "$CS2FOW_CFG" ]] || { mkdir -p "$(dirname "$CS2FOW_CFG")"; : > "$CS2FOW_CFG"; }
-  if grep -qE "^[[:space:]]*${name}[[:space:]]" "$CS2FOW_CFG"; then
-    sed -i -E "s|^([[:space:]]*${name}[[:space:]]+).*|\\1${value}|" "$CS2FOW_CFG"
-  elif grep -q '^[[:space:]]*cs2fow_config_loaded' "$CS2FOW_CFG"; then
-    sed -i "/^[[:space:]]*cs2fow_config_loaded/i ${name} ${value}" "$CS2FOW_CFG"
-  else
-    printf '%s %s\n' "$name" "$value" >> "$CS2FOW_CFG"
-  fi
-  chown "$CS2_USER:$CS2_USER" "$CS2FOW_CFG" 2>/dev/null || true
-}
-
-cmd_cs2fow() {
-  need_root
-  local sub="${1:-install}"; [[ $# -gt 0 ]] && shift
-  case "$sub" in
-    install)
-      [[ -d "$CSGO_DIR/addons/metamod" ]] || die "Metamod is not installed here: run install first."
-      grep -qm1 -w avx /proc/cpuinfo || die "CS2FOW needs a CPU with AVX and this one has none (grep avx /proc/cpuinfo is empty)."
-      local release url tag tmp file root
-      release="$(curl -fsSL https://api.github.com/repos/karola3vax/CS2FOW/releases/latest)" || die "CS2FOW: no release found (GitHub not reachable, or the repository has none: see github.com/karola3vax/CS2FOW/releases)."
-      url="$(printf '%s' "$release" | { grep -oiE '"browser_download_url": *"[^"]*"' || true; } | sed 's/.*"\(https[^"]*\)"/\1/' | { grep -iE 'linux[^/]*\.(tar\.gz|zip)$' || true; } | head -n1)"
-      [[ -n "$url" ]] || die "CS2FOW: no Linux package in the latest release (see github.com/karola3vax/CS2FOW/releases)."
-      tag="$(printf '%s' "$release" | release_tag || true)"
-      tmp="$(mktemp -d)"; file="$tmp/cs2fow.${url##*.}"; [[ "$url" == *.tar.gz ]] && file="$tmp/cs2fow.tar.gz"
-      curl -fsSL "$url" -o "$file" || { rm -rf "$tmp"; die "CS2FOW: download failed."; }
-      mkdir -p "$tmp/pkg"
-      if [[ "$file" == *.tar.gz ]]; then tar -xzf "$file" -C "$tmp/pkg"; else unzip_pkg "$file" "$tmp/pkg"; fi
-      # The package goes into game/csgo; it may start at game/, at csgo/ or at addons/ itself.
-      if [[ -d "$tmp/pkg/game" ]]; then root="$CS2_DIR/game"; cp -a "$tmp/pkg/game/." "$root/"
-      elif [[ -d "$tmp/pkg/csgo" ]]; then cp -a "$tmp/pkg/csgo/." "$CSGO_DIR/"
-      elif [[ -d "$tmp/pkg/addons" || -d "$tmp/pkg/cfg" ]]; then cp -a "$tmp/pkg/." "$CSGO_DIR/"
-      else rm -rf "$tmp"; die "CS2FOW: the package has no game/, csgo/ or addons/ folder, check it by hand."; fi
-      rm -rf "$tmp"
-      # The map baker and its helper programs must be allowed to run.
-      find "$CSGO_DIR/addons" -ipath '*cs2fow*' -type f \( -name '*.sh' -o -perm /111 -o ! -name '*.*' \) -exec chmod +x {} + 2>/dev/null || true
-      chown -R "$CS2_USER:$CS2_USER" "$CSGO_DIR/addons" "$CSGO_DIR/cfg"
-      cs2fow_set cs2fow_enable 1
-      say "CS2FOW ${tag:-installed}. Restart a server; the first load of each map bakes its walls (everyone stays visible until it is done)."
-      say "In its console: meta list ; cs2fow_status ; cs2fow_check_config ; cs2fow_metrics" ;;
-    on)  cs2fow_set cs2fow_enable 1; say "CS2FOW on (restart the servers, or cs2fow_reload in their console)." ;;
-    off) cs2fow_set cs2fow_enable 0; say "CS2FOW off (restart the servers, or cs2fow_reload in their console)." ;;
-    status) grep -E '^[[:space:]]*cs2fow_' "$CS2FOW_CFG" 2>/dev/null || echo "CS2FOW is not configured."
-            grep -qm1 -w avx /proc/cpuinfo && echo "CPU: AVX present" || echo "CPU: NO AVX, CS2FOW cannot run here" ;;
-    *) die "Usage: $0 cs2fow [install] | on | off | status" ;;
-  esac
-}
 
 # Workshop addon IDs that every client downloads on connect. Written to MultiAddonManager's own cfg.
 cmd_client_addons() {
@@ -819,7 +765,6 @@ case "${1:-}" in
   css-hotfix) cmd_css_hotfix ;;
   client-addons) shift; cmd_client_addons "$@" ;;
   cs2ac) shift; cmd_cs2ac "$@" ;;
-  cs2fow) shift; cmd_cs2fow "$@" ;;
   remove) shift; cmd_remove "$@" ;;
   status) cmd_status ;;
   logs) [[ -n "${2:-}" ]] || die "Usage: $0 logs <port>"; journalctl -u "cs2@$2" -f ;;
