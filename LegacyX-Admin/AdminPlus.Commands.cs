@@ -158,7 +158,7 @@ public partial class AdminPlus
 
         target.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_KICKED);
 
-        string executorName = GetExecutorNameCommand(caller);
+        string executorName = caller == null && reason.StartsWith("CS2AC:", StringComparison.Ordinal) ? "Anti-cheat" : GetExecutorNameCommand(caller);
         string targetName = target.PlayerName;
 
         PlayerExtensions.PrintToAll(Localizer["Player.Kick.Success", StaffLabel(executorName), EscapeForStringFormat(targetName), reason]);

@@ -48,4 +48,20 @@ public partial class AdminPlus
                 again.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_STEAM_BANNED);
         }, TimerFlags.STOP_ON_MAPCHANGE);
     }
+
+    /// <summary>
+    /// css_cs2ac_notice &lt;steamid64&gt; &lt;detection...&gt; (server console only): the CS2AC anti-cheat's own chat and center messages are switched off and, in log-only
+    /// mode, this is the command it runs on a detection, so the line players read is in our chat format and nobody is punished.
+    /// </summary>
+    private void CmdAntiCheatNotice(CCSPlayerController? caller, CounterStrikeSharp.API.Modules.Commands.CommandInfo info)
+    {
+        if (caller != null || info.ArgCount < 3) return;
+        var steamId = info.GetArg(1);
+        var detection = string.Join(" ", Enumerable.Range(2, info.ArgCount - 2).Select(info.GetArg));
+        var who = Utilities.GetPlayers().FirstOrDefault(p => p != null && p.IsValid && !p.IsBot && p.SteamID.ToString() == steamId);
+        var name = who != null ? SanitizeName(who.PlayerName) : steamId;
+        PlayerExtensions.PrintToAll($"{{white}}Anti-cheat{{grey}} flagged {{white}}{EscapeForStringFormat(name)}{{grey}}: {{white}}{EscapeForStringFormat(BanScreenText("", detection))}{{grey}}.");
+        LogAction($"Anti-cheat flagged {name} ({steamId}): {detection}");
+    }
 }
+

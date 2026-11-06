@@ -261,13 +261,22 @@ cs2ac_set() {
   chown "$CS2_USER:$CS2_USER" "$CS2AC_CFG"
 }
 
+# CS2AC's own chat and center lines are in its own style and cannot be given our prefix, so they are switched off: a ban is announced by LegacyX-Admin
+# ("Anti-cheat banned <name>. Length: ... Reason: CS2AC: <detection>") and in log-only mode css_cs2ac_notice prints the same kind of line, both in our chat format.
+cs2ac_announcements_ours() {
+  cs2ac_set cs2ac_chat_announcements 0
+  cs2ac_set cs2ac_center_announcements 0
+}
+
 cs2ac_mode() {
   case "$1" in
-    ban) cs2ac_set cs2ac_punishment_command "css_ban {steamid64} 0 CS2AC: {detection}"
+    ban) cs2ac_announcements_ours
+         cs2ac_set cs2ac_punishment_command "css_ban {steamid64} 0 CS2AC: {detection}"
          cs2ac_set cs2ac_kick_command "css_kick #{userid} CS2AC: {detection}"
          say "CS2AC: a detection bans (permanent, css_ban) or kicks. Lift one with: css_unban <steamid64>" ;;
-    log) cs2ac_set cs2ac_punishment_command "echo [CS2AC] ban would apply: {steamid64} {detection}"
-         cs2ac_set cs2ac_kick_command "echo [CS2AC] kick would apply: #{userid} {detection}"
+    log) cs2ac_announcements_ours
+         cs2ac_set cs2ac_punishment_command "css_cs2ac_notice {steamid64} {detection}"
+         cs2ac_set cs2ac_kick_command "css_cs2ac_notice {steamid64} {detection}"
          say "CS2AC: log only. Detections are announced and written to the console; nobody is banned or kicked." ;;
     *) die "Usage: $0 cs2ac mode ban|log" ;;
   esac

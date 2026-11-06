@@ -266,7 +266,8 @@ public partial class AdminPlus
         if (target != null)
             DisconnectBanned(target, minutes == 0 ? "Permanent" : $"{minutes} minutes", reason);
 
-        string executorName = GetExecutorName(caller);
+        // A ban the CS2AC anti-cheat gave through this command (reason "CS2AC: <detection>") is announced as the anti-cheat's, in our own chat format.
+        string executorName = caller == null && reason.StartsWith("CS2AC:", StringComparison.Ordinal) ? "Anti-cheat" : GetExecutorName(caller);
 
         if (minutes == 0)
             PlayerExtensions.PrintToAll(Localizer["Player.Ban.Success", StaffLabel(executorName), safeName, Localizer["Duration.Forever"], reason]);
