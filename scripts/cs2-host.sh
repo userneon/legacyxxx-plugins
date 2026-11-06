@@ -31,6 +31,11 @@
 #   sudo ./scripts/cs2-host.sh client-addons [id,id,...]
 #       Workshop addon IDs every player downloads on connect (MultiAddonManager mm_client_extra_addons): LEGACY-X's particle
 #       effects are 3830785234. No IDs prints the current value; "none" clears it. Restart the servers after.
+#   sudo ./scripts/cs2-host.sh cs2ac [install] | whitelist <steamid64,...|none> | mode ban|log | status
+#       CS2AC (github.com/karola3vax/CS2AC, AGPL-3.0): a server-side anti-cheat (aimbot, bhop, autostrafe, ...). install downloads the latest Linux release into the
+#       server folder and writes cfg/cs2ac.cfg so a detection runs OUR css_ban / css_kick (permanent ban, reason "CS2AC: <detection>"). whitelist lists the SteamID64s it never
+#       punishes (the owners who use the !bhop / !aimlock / !silentaim toys, which it would flag). mode log only writes the detection to the console and bans nobody.
+#       It prints a credit line for its author every 6 rounds (cannot be switched off). Restart the servers after.
 #   sudo ./scripts/cs2-host.sh remove <port>        stops and deletes that server's service and config
 #   sudo ./scripts/cs2-host.sh name-sync
 #       takes the old per-server in-game name (GAME_NAME) out of every server's config; names now come from the website.
@@ -241,6 +246,66 @@ ensure_mam_client_cache() {
     printf '%s "%s"\n' "$name" "$value" >> "$cfg"
   done
   chown -R "$CS2_USER:$CS2_USER" "$(dirname "$cfg")"
+}
+
+
+# CS2AC (owner request 2026-11-06): a server-side anti-cheat Metamod plugin (github.com/karola3vax/CS2AC). A detection runs the commands in cs2ac.cfg: here our own
+# css_ban (permanent, 0 minutes) and css_kick, both of which the LegacyX-Admin plugin answers from the console, so the ban goes through the same penalty system.
+CS2AC_CFG="$CSGO_DIR/cfg/cs2ac.cfg"
+
+cs2ac_set() {
+  local name="$1" value="$2"
+  mkdir -p "$(dirname "$CS2AC_CFG")"; touch "$CS2AC_CFG"
+  sed -i "/^[[:space:]]*${name}[[:space:]]/d" "$CS2AC_CFG"
+  printf '%s "%s"\n' "$name" "$value" >> "$CS2AC_CFG"
+  chown "$CS2_USER:$CS2_USER" "$CS2AC_CFG"
+}
+
+cs2ac_mode() {
+  case "$1" in
+    ban) cs2ac_set cs2ac_punishment_command "css_ban {steamid64} 0 CS2AC: {detection}"
+         cs2ac_set cs2ac_kick_command "css_kick #{userid} CS2AC: {detection}"
+         say "CS2AC: a detection bans (permanent, css_ban) or kicks. Lift one with: css_unban <steamid64>" ;;
+    log) cs2ac_set cs2ac_punishment_command "echo [CS2AC] ban would apply: {steamid64} {detection}"
+         cs2ac_set cs2ac_kick_command "echo [CS2AC] kick would apply: #{userid} {detection}"
+         say "CS2AC: log only. Detections are announced and written to the console; nobody is banned or kicked." ;;
+    *) die "Usage: $0 cs2ac mode ban|log" ;;
+  esac
+}
+
+cmd_cs2ac() {
+  need_root
+  local sub="${1:-install}"; [[ $# -gt 0 ]] && shift
+  case "$sub" in
+    install)
+      [[ -d "$CSGO_DIR/addons/metamod" ]] || die "Metamod is not installed here: run install first."
+      local release url tag tmp file
+      release="$(curl -fsSL https://api.github.com/repos/karola3vax/CS2AC/releases/latest)" || die "CS2AC: GitHub is not reachable."
+      url="$(printf '%s' "$release" | { grep -oiE '"browser_download_url": *"[^"]*"' || true; } | sed 's/.*"\(https[^"]*\)"/\1/' | { grep -iE 'linux[^/]*\.(tar\.gz|zip)$' || true; } | head -n1)"
+      [[ -n "$url" ]] || die "CS2AC: no Linux package in the latest release (see github.com/karola3vax/CS2AC/releases)."
+      tag="$(printf '%s' "$release" | release_tag || true)"
+      tmp="$(mktemp -d)"; file="$tmp/cs2ac.${url##*.}"; [[ "$url" == *.tar.gz ]] && file="$tmp/cs2ac.tar.gz"
+      curl -fsSL "$url" -o "$file" || { rm -rf "$tmp"; die "CS2AC: download failed."; }
+      mkdir -p "$tmp/pkg"
+      if [[ "$file" == *.tar.gz ]]; then tar -xzf "$file" -C "$tmp/pkg"; else unzip -oq "$file" -d "$tmp/pkg"; fi
+      # The archive starts with the game folder: it goes into the server root (not game/csgo). An existing cfg/cs2ac.cfg is kept.
+      [[ -d "$tmp/pkg/game" ]] || { rm -rf "$tmp"; die "CS2AC: the package has no game/ folder, check it by hand."; }
+      [[ -f "$CS2AC_CFG" ]] && cp -a "$CS2AC_CFG" "$tmp/cs2ac.cfg.keep"
+      cp -a "$tmp/pkg/game/." "$CS2_DIR/game/"
+      [[ -f "$tmp/cs2ac.cfg.keep" ]] && cp -a "$tmp/cs2ac.cfg.keep" "$CS2AC_CFG"
+      chown -R "$CS2_USER:$CS2_USER" "$CSGO_DIR/addons" "$CSGO_DIR/cfg"
+      rm -rf "$tmp"
+      cs2ac_mode ban
+      say "CS2AC ${tag:-installed}. Add the owners to the whitelist: $0 cs2ac whitelist <steamid64,steamid64>"
+      say "Restart a server, then in its console: meta list ; cs2ac_status ; cs2ac_check_config" ;;
+    whitelist)
+      local ids="${1:-}"; [[ "$ids" == none ]] && ids=""
+      [[ -z "$ids" || "$ids" =~ ^[0-9]{17}(,[0-9]{17})*$ ]] || die "Usage: $0 cs2ac whitelist <steamid64,steamid64,...|none> (no spaces)"
+      cs2ac_set cs2ac_whitelist "$ids"; say "CS2AC whitelist: ${ids:-empty}" ;;
+    mode) cs2ac_mode "${1:-}" ;;
+    status) grep -E '^[[:space:]]*(cs2ac_enabled|cs2ac_whitelist|cs2ac_punishment_command|cs2ac_kick_command|cs2ac_webhook_url)' "$CS2AC_CFG" 2>/dev/null | sed -E 's#(cs2ac_webhook_url[[:space:]]+").*#\1(set)"#' || echo "CS2AC is not configured."; ;;
+    *) die "Usage: $0 cs2ac [install] | whitelist <ids|none> | mode ban|log | status" ;;
+  esac
 }
 
 # Workshop addon IDs that every client downloads on connect. Written to MultiAddonManager's own cfg.
@@ -674,6 +739,7 @@ case "${1:-}" in
   autoupdate) shift; cmd_autoupdate "$@" ;;
   css-hotfix) cmd_css_hotfix ;;
   client-addons) shift; cmd_client_addons "$@" ;;
+  cs2ac) shift; cmd_cs2ac "$@" ;;
   remove) shift; cmd_remove "$@" ;;
   status) cmd_status ;;
   logs) [[ -n "${2:-}" ]] || die "Usage: $0 logs <port>"; journalctl -u "cs2@$2" -f ;;
