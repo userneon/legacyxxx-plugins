@@ -935,6 +935,21 @@ public static class PlayerExtensions
         controller.PrintToChat(LegacyXChat.System(message));
     }
     
+        /// <summary>Like <see cref="PrintToAll"/>, in red (<see cref="LegacyXChat.Alert"/>): ban announcements.</summary>
+        public static void PrintToAllAlert(string message)
+        {
+            try
+            {
+                var fullMessage = LegacyXChat.Alert(message);
+                foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot)) player.PrintToChat(fullMessage);
+                Console.WriteLine($"[LEGACY-X Admin] {message}");
+            }
+            catch (Exception ex)
+            {
+                AdminPlus.LogError($"PrintToAllAlert error: {ex.Message}");
+            }
+        }
+
         public static void PrintToAll(string message)
         {
             try

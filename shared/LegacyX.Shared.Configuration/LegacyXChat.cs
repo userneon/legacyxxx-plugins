@@ -7,7 +7,7 @@ namespace LegacyX.Shared.Configuration;
 /// <summary>
 /// Canonical presentation for system-generated LEGACY-X chat messages, the same look as legacyx.cc:
 /// "LEGACY-" white and "X" crimson, then dim grey sentences with names and numbers in white. Green
-/// only for something that worked or is on. Every other chat color becomes white here, so no module
+/// only for something that worked or is on. (The one exception is <see cref="Alert"/>, a red line for ban announcements.) Every other chat color becomes white here, so no module
 /// can bring its own palette back. Player-authored chat must not be sent through this formatter.
 /// </summary>
 public static class LegacyXChat
@@ -93,6 +93,29 @@ public static class LegacyXChat
     {
         var body = string.IsNullOrWhiteSpace(message) ? string.Empty : Palette(message.Trim());
         return (Colorize(Prefix) + body).TrimEnd();
+    }
+
+    private const char Red = '\x07';
+
+    /// <summary>
+    /// A warning line in red (owner request 2026-11-06: a ban is announced to the whole match in red, who banned whom and why). The one place the neutral palette
+    /// is left on purpose: "{grey}" text becomes red, "{white}" (names, lengths) stays white, "{red}" is red. The prefix is the usual one. Callers put
+    /// only sanitised text inside it.
+    /// </summary>
+    public static string Alert(string message)
+    {
+        var body = string.IsNullOrWhiteSpace(message) ? string.Empty : message.Trim();
+        body = body.Replace("{grey}", Red.ToString(), StringComparison.OrdinalIgnoreCase).Replace("{gray}", Red.ToString(), StringComparison.OrdinalIgnoreCase)
+            .Replace("{default}", Red.ToString(), StringComparison.OrdinalIgnoreCase).Replace("{red}", Red.ToString(), StringComparison.OrdinalIgnoreCase)
+            .Replace("{white}", White.ToString(), StringComparison.OrdinalIgnoreCase);
+        var result = new StringBuilder(body.Length + 24);
+        // A translated line already carries the grey/silver codes the language file's {grey} became: they turn red too.
+        foreach (var c in body)
+        {
+            if (c is Grey or Silver) result.Append(Red);
+            else if (c >= ' ' || c is White or Red) result.Append(c);
+        }
+        return (Colorize(Prefix) + Red + result).TrimEnd();
     }
 
     public static string MatchConnect(string address) => System($"Connect with {{white}}connect {address}");

@@ -90,4 +90,16 @@ public class ChatTests
         Assert.Equal(string.Empty, LegacyXChat.Role(null));
         Assert.Contains("Owner 777", LegacyXChat.System("{white}" + LegacyXChat.Role("OWNER") + "777{grey} restarted the round."));
     }
+
+    [Fact]
+    public void An_alert_line_is_red_with_white_names_and_never_shows_a_tag()
+    {
+        // The one place the palette is left on purpose (a ban is announced to the whole match in red): grey text, tag or already-translated, turns red.
+        var tagged = LegacyXChat.Alert("{white}Anti-cheat{grey} banned {white}Temuujin{grey}. Reason: {white}Aimbot{grey}.");
+        Assert.DoesNotContain("{", tagged);
+        Assert.Equal(" \u0001LEGACY-\u000EX \u0008| \u0007\u0001Anti-cheat\u0007 banned \u0001Temuujin\u0007. Reason: \u0001Aimbot\u0007.", tagged);
+        var translated = LegacyXChat.Alert("\u0001Anti-cheat\u0008 banned \u0001Temuujin\u0008.");
+        Assert.Equal(" \u0001LEGACY-\u000EX \u0008| \u0007\u0001Anti-cheat\u0007 banned \u0001Temuujin\u0007.", translated);
+    }
 }
+

@@ -39,6 +39,7 @@ public partial class AdminPlus
             return;
         }
         if (!banScreenPending.Add(steamId)) return;
+        FreezeForBan(target);
         try { Server.ExecuteCommand($"lx_troll_hud {slot} banned {BanScreenSeconds.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)} \"{BanScreenText(durationText, reason)}\""); }
         catch (Exception exception) { LogError($"ban screen: {exception.Message}"); }
         AddTimer(BanScreenSeconds, () =>
@@ -62,6 +63,38 @@ public partial class AdminPlus
         var name = who != null ? SanitizeName(who.PlayerName) : steamId;
         PlayerExtensions.PrintToAll($"{{white}}Anti-cheat{{grey}} flagged {{white}}{EscapeForStringFormat(name)}{{grey}}: {{white}}{EscapeForStringFormat(BanScreenText("", detection))}{{grey}}.");
         LogAction($"Anti-cheat flagged {name} ({steamId}): {detection}");
+    }
+
+    /// <summary>
+    /// Holds a banned player where they stand until they are disconnected (owner request 2026-11-06: "freeze, the HUD, then the ban"): no movement, no weapons, the
+    /// view is theirs. The same hold as css_freeze; it ends with the disconnect (the timer is dropped when the player leaves).
+    /// </summary>
+    private void FreezeForBan(CCSPlayerController target)
+    {
+        try
+        {
+            var pawn = target.PlayerPawn?.Value;
+            if (pawn == null || !pawn.IsValid || !target.PawnIsAlive) return;
+            var anchor = pawn.AbsOrigin == null ? null : new Vector(pawn.AbsOrigin.X, pawn.AbsOrigin.Y, pawn.AbsOrigin.Z);
+            try { pawn.MoveType = MoveType_t.MOVETYPE_NONE; } catch { }
+            SetActualMoveType(pawn, (int)MoveType_t.MOVETYPE_NONE);
+            pawn.VelocityModifier = 0f; Utilities.SetStateChanged(pawn, "CCSPlayerPawn", "m_flVelocityModifier");
+            Utilities.SetStateChanged(pawn, "CBaseEntity", "m_MoveType");
+            try { target.RemoveWeapons(); } catch { }
+            StopTimer(target, FunTimer.FreezeLoop);
+            RememberTimer(target, FunTimer.FreezeLoop, AddTimer(0.05f, () =>
+            {
+                if (!target.IsValid) { StopTimer(target, FunTimer.FreezeLoop); return; }
+                var p = target.PlayerPawn?.Value; if (p == null || !p.IsValid) return;
+                try { p.MoveType = MoveType_t.MOVETYPE_NONE; } catch { }
+                SetActualMoveType(p, (int)MoveType_t.MOVETYPE_NONE);
+                p.VelocityModifier = 0f;
+                Utilities.SetStateChanged(p, "CCSPlayerPawn", "m_flVelocityModifier");
+                Utilities.SetStateChanged(p, "CBaseEntity", "m_MoveType");
+                if (anchor != null) p.Teleport(anchor, null, new Vector(0, 0, 0));
+            }, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE));
+        }
+        catch (Exception exception) { LogError($"ban freeze: {exception.Message}"); }
     }
 }
 
