@@ -17,7 +17,7 @@ Game → API → database; nothing is stored on the game server. If the API can'
 | `LEGACYX_SERVER_ID` | Unique per server (`srv-1`) |
 | `LEGACYX_SERVER_ADDRESS` | `host:port` players connect to |
 | `LEGACYX_SERVER_MODE` | `competitive_5v5`, `fun…` or `proleague`: picks the Play page |
-| `LEGACYX_SERVER_NAME` | Optional display name (default: `hostname`) |
+| `LEGACYX_SERVER_NAME` | Only a fallback: the website names each server and the server sets its own hostname from it (Staff → Servers → Name) |
 | `LEGACYX_SERVER_GOTV_ADDRESS` | Optional GOTV `host:port` |
 | `LEGACYX_STATUS_PLUGIN_TOKEN` | API token with `servers:write` |
 | `LEGACYX_STATUS_PLUGIN_ID` | `legacyx-live-snapshot` (the snapshot route only accepts this) |

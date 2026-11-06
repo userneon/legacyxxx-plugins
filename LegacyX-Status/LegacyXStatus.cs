@@ -78,7 +78,7 @@ public sealed class LegacyXStatus : BasePlugin
         {
             try
             {
-                await Post("/api/v1/plugin/servers/heartbeat", heartbeat);
+                ApplySiteName(await Post("/api/v1/plugin/servers/heartbeat", heartbeat));
                 await Post("/api/v1/plugin/live-match/snapshots", snapshot);
             }
             finally
@@ -159,7 +159,7 @@ public sealed class LegacyXStatus : BasePlugin
         return (heartbeat, snapshot);
     }
 
-    private async Task Post(string path, object body)
+    private async Task<string?> Post(string path, object body)
     {
         try
         {
@@ -172,12 +172,41 @@ public sealed class LegacyXStatus : BasePlugin
             {
                 // Status code only: the body could echo request details, and the token is never logged.
                 Console.WriteLine($"[{ModuleName}] {path} answered {(int)response.StatusCode}.");
+                return null;
             }
+            return await response.Content.ReadAsStringAsync();
         }
         catch (Exception exception)
         {
             Console.WriteLine($"[{ModuleName}] {path} unreachable: {exception.GetType().Name}.");
+            return null;
         }
+    }
+
+    // The server's name is the website's (owner request 2026-11-06): the heartbeat answer carries it and the server sets its own hostname,
+    // so no name is written in each server's .env, cfg or service file. It is set when the website's name changes (and once at the start),
+    // not on every heartbeat, so a match's own hostname (MatchZy) is not undone a few seconds later.
+    private string appliedSiteName = "";
+
+    private void ApplySiteName(string? answer)
+    {
+        if (string.IsNullOrWhiteSpace(answer)) return;
+        string name;
+        try
+        {
+            using var document = JsonDocument.Parse(answer);
+            if (!document.RootElement.TryGetProperty("displayName", out var value) || value.ValueKind != JsonValueKind.String) return;
+            // Nothing that could end the console command or add another one.
+            name = new string((value.GetString() ?? "").Where(c => c >= ' ' && c != '\u007F' && c != '"' && c != ';' && c != '\\').ToArray()).Trim();
+        }
+        catch (JsonException) { return; }
+        if (name.Length == 0 || name.Length > 60 || name == appliedSiteName) return;
+        Server.NextFrame(() =>
+        {
+            Server.ExecuteCommand($"hostname \"{name}\"");
+            appliedSiteName = name;
+            Console.WriteLine($"[{ModuleName}] The server's name from the website: {name}.");
+        });
     }
 
     private static string Clip(string? value, int max)

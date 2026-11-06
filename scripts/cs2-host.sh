@@ -5,10 +5,11 @@
 #   sudo ./scripts/cs2-host.sh install --env legacyx-srv-HOST.env [--package legacyx-cs2.zip]
 #       steamcmd, the CS2 dedicated server, Metamod:Source, CounterStrikeSharp, MultiAddonManager, the LEGACY-X plugins
 #       and the .env from create-game-server.mjs (legacyxxx-backend). Safe to run again.
-#   sudo ./scripts/cs2-host.sh add <port> <GSLT> [competitive|wingman|casual|deathmatch] [map] [maxplayers] [site-mode] [name…]
+#   sudo ./scripts/cs2-host.sh add <port> <GSLT> [competitive|wingman|casual|deathmatch] [map] [maxplayers] [site-mode]
 #       a server on <port>: config, firewall, systemd service, started now and at boot. site-mode picks the
-#       website Play page (competitive_5v5, fun, proleague, tournaments; default from the .env) and name
-#       the name shown there; both are written to the .env as LEGACYX_<port>_SERVER_MODE / _NAME.
+#       website Play page (competitive_5v5, fun, proleague, tournaments; default from the .env) and is written to the
+#       .env as LEGACYX_<port>_SERVER_MODE. No name is written anywhere: the website names the server ("Fun #2" on its
+#       first heartbeat; rename it in Staff → Servers) and the server sets its own hostname from that within seconds.
 #       GSLT: a Steam game server login token, one per server (steamcommunity.com/dev/managegameservers, app 730).
 #   sudo ./scripts/cs2-host.sh update [--package legacyx-cs2.zip]
 #       stops the servers, updates CS2, Metamod, CounterStrikeSharp, MultiAddonManager and the plugins, starts them again.
@@ -31,11 +32,9 @@
 #       Workshop addon IDs every player downloads on connect (MultiAddonManager mm_client_extra_addons): LEGACY-X's particle
 #       effects are 3830785234. No IDs prints the current value; "none" clears it. Restart the servers after.
 #   sudo ./scripts/cs2-host.sh remove <port>        stops and deletes that server's service and config
-#   sudo ./scripts/cs2-host.sh name <port> "<website name>" ["<in-game name>"]
-#       two separate names for one server: the website's (e.g. "Match 1") and the one players see in the server
-#       browser, scoreboard and console (e.g. "Match 10"). No second name makes the in-game one the same as the website name.
 #   sudo ./scripts/cs2-host.sh name-sync
-#       every server's in-game name = its website name, in one go.
+#       takes the old per-server in-game name (GAME_NAME) out of every server's config; names now come from the website.
+#       A LEGACYX_<port>_SERVER_NAME left in the .env is only a fallback and can be deleted.
 #       Restarts nothing:
 #       run  sudo systemctl restart cs2@<port>  when no match is running.
 #   sudo ./scripts/cs2-migrate.sh pack | unpack <file> <new host>   move the servers to another VPS (.env + server configs; see the script header)
@@ -299,7 +298,7 @@ Type=simple
 User=$CS2_USER
 WorkingDirectory=$CS2_DIR
 EnvironmentFile=$CONF_DIR/%i.conf
-ExecStart=/bin/bash -c 'exec $CS2_DIR/game/cs2.sh -dedicated -port %i -maxplayers \${MAXPLAYERS} +map \${MAP} \${GAME_ARGS} +sv_setsteamaccount \${GSLT} +hostname "\$\${GAME_NAME:-LEGACY-X}"'
+ExecStart=/bin/bash -c 'exec $CS2_DIR/game/cs2.sh -dedicated -port %i -maxplayers \${MAXPLAYERS} +map \${MAP} \${GAME_ARGS} +sv_setsteamaccount \${GSLT} +hostname "LEGACY-X"'
 Restart=always
 RestartSec=10
 LimitNOFILE=100000
@@ -411,16 +410,13 @@ cmd_install() {
 cmd_add() {
   need_root
   local port="${1:-}" gslt="${2:-}" mode="${3:-competitive}" map="${4:-de_dust2}" maxplayers="${5:-10}" site_mode="${6:-}"
-  local name="${*:7}"
-  [[ "$port" =~ ^[0-9]{4,5}$ && "$port" -le 65535 ]] || die "Usage: $0 add <port> <GSLT> [mode] [map] [maxplayers] [site-mode] [name…]"
+  [[ "$port" =~ ^[0-9]{4,5}$ && "$port" -le 65535 ]] || die "Usage: $0 add <port> <GSLT> [mode] [map] [maxplayers] [site-mode]"
   [[ "$gslt" =~ ^[A-Fa-f0-9]{32}$ ]] || die "The GSLT is a 32-character code from steamcommunity.com/dev/managegameservers (app 730)."
   [[ "$map" =~ ^[a-z0-9_]{2,64}$ ]] || die "Map name like de_dust2."
   [[ "$maxplayers" =~ ^[0-9]{1,2}$ && "$maxplayers" -ge 2 && "$maxplayers" -le 64 ]] || die "maxplayers: 2-64."
   [[ -z "$site_mode" || "$site_mode" =~ ^[a-z0-9_]{1,40}$ ]] || die "site-mode like competitive_5v5, fun, proleague or tournaments."
-  name="$(printf '%s' "$name" | tr -d '\r\n"=' | cut -c1-60)"
   [[ -f "$UNIT" ]] || die "Run install first."
   set_env_value "LEGACYX_${port}_SERVER_MODE" "$site_mode"
-  set_env_value "LEGACYX_${port}_SERVER_NAME" "$name"
   local args
   args="$(game_args "$mode")"
   mkdir -p "$CONF_DIR"
@@ -431,7 +427,6 @@ GSLT=$gslt
 MAP=$map
 MAXPLAYERS=$maxplayers
 GAME_ARGS="$args"
-GAME_NAME="${name:-LEGACY-X $port}"
 EOF
   open_port "$port"
   systemctl enable --now "cs2@$port" >/dev/null
@@ -439,38 +434,16 @@ EOF
   say "On the website it is srv-$port (it appears within 30 s of starting)."
 }
  
-cmd_name() {
-  need_root
-  local port="${1:-}" site="${2:-}" game="${3:-}"
-  [[ "$port" =~ ^[0-9]+$ && -n "$site" ]] || die "Usage: $0 name <port> \"<website name>\" [\"<in-game name>\"]"
-  [[ -f "$CONF_DIR/$port.conf" ]] || die "No server on port $port."
-  site="$(printf '%s' "$site" | tr -d '\r\n"=' | cut -c1-60)"
-  set_env_value "LEGACYX_${port}_SERVER_NAME" "$site"
-  say "Website name for $port: $site (shown within 30 s of the next heartbeat)"
-  [[ -n "$game" ]] || game="$site"
-  if [[ -n "$game" ]]; then
-    game="$(printf '%s' "$game" | tr -d '\r\n"=$`\\' | cut -c1-60)"
-    sed -i '/^GAME_NAME=/d' "$CONF_DIR/$port.conf"
-    printf 'GAME_NAME="%s"\n' "$game" >> "$CONF_DIR/$port.conf"
-    write_unit
-    say "In-game name for $port: $game (applies at the next restart: sudo systemctl restart cs2@$port)"
-  fi
-}
-
-# Makes every server's in-game name the same as its website name (LEGACYX_<port>_SERVER_NAME in the .env).
+# The old in-game name per server is gone: the website names each server and the server sets its own hostname from it.
 cmd_name_sync() {
   need_root
-  local env="$CSGO_DIR/addons/counterstrikesharp/.env" port site changed=0
-  [[ -f "$env" ]] || die "No $env."
+  local port
   for port in $(ports); do
-    site="$(grep -m1 "^LEGACYX_${port}_SERVER_NAME=" "$env" | cut -d= -f2- | tr -d '\r\n"=$`\\' | cut -c1-60 || true)"
-    [[ -n "$site" ]] || { say "$port: no website name in the .env, skipped (set one: $0 name $port \"<name>\")"; continue; }
-    sed -i '/^GAME_NAME=/d' "$CONF_DIR/$port.conf"
-    printf 'GAME_NAME="%s"\n' "$site" >> "$CONF_DIR/$port.conf"
-    say "$port: in-game name = $site"; changed=1
+    [[ -f "$CONF_DIR/$port.conf" ]] && sed -i '/^GAME_NAME=/d' "$CONF_DIR/$port.conf"
   done
-  [[ $changed -eq 1 ]] && write_unit && say "Applies at each server's next restart: sudo systemctl restart cs2@<port>"
-  return 0
+  write_unit
+  say "Names come from the website now (Staff → Servers → Name); the in-game hostname follows it within seconds. Nothing else to set."
+  say "Applies at each server's next restart: sudo systemctl restart cs2@<port>"
 }
 
 cmd_update() {
@@ -693,7 +666,7 @@ cmd_status() {
 case "${1:-}" in
   install) shift; cmd_install "$@" ;;
   add) shift; cmd_add "$@" ;;
-  name) shift; cmd_name "$@" ;;
+  name) shift; say "A server's name is set on the website now: Staff → Servers → Name."; ;;
   name-sync) cmd_name_sync ;;
   update) shift; cmd_update "$@" ;;
   deploy) shift; cmd_deploy "$@" ;;
