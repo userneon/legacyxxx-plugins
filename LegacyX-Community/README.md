@@ -47,3 +47,7 @@ dotnet build -c Release
 Одоогоор server байхгүй тул энэ repository нь source/build preparation л агуулна. Future host батлагдсаны дараа central `.env`, secret-free config default болон release artifact-ийг reviewed deployment procedure-ээр байрлуулна.
 
 **Revenge.** Kill the player who killed you last (on this map) and you both get one line in your own chat: `LEGACY-X | Name: 3 vs Name: 2`, the kills each of you has on the other on this map (the prefix and the numbers are red, each name is in its team's color (CT blue, T yellow) and a colon sets it apart from its number, the one place chat uses red). Nobody else sees it; bots, suicides and team kills do not count, and a revenge clears itself so the next kill is not one. `LEGACYX_COMMUNITY_REVENGE=false` switches it off.
+
+## Weapon models (Shop → Weapons)
+
+`LegacyXWeaponModels.cs` puts a player's worn knife, Desert Eagle and AK-47 model (from `weapon_models` in the profile) on their weapon at spawn and pickup. The models come from the Workshop addon. Put their `.vmdl` paths, comma separated, in `LEGACYX_COMMUNITY_MODEL_PRECACHE` so the server precaches them each map. Not built or run yet: test on a test server first. Console: `lx_wm_status`, `lx_wm_off 1|0` (0 = off).

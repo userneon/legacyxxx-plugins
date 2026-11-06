@@ -1,0 +1,104 @@
+using CounterStrikeSharp.API;
+using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Commands;
+using System.Text.Json;
+
+namespace LegacyXCommunity;
+
+/// <summary>
+/// Shop weapon models (owner request 2026-11-06): a player's worn knife, Desert Eagle and AK-47 models (Shop → Weapons) come with the
+/// profile as <c>weapon_models</c> (per weapon: world path, view path, <c>anim_base</c>). They are put on the player's weapon when it
+/// spawns, is picked up or the player respawns. UNTESTED in game: try it on a test server first (lx_wm_status, lx_wm_off).
+/// </summary>
+public sealed partial class LegacyXCommunity
+{
+    private sealed record WeaponModel(string World, string View, string? AnimBase);
+    // SteamID64 -> weapon (knife / deagle / ak47) -> model; players wearing none are not in it.
+    private readonly Dictionary<ulong, Dictionary<string, WeaponModel>> weaponModels = new();
+    // Every model path seen so far: precached again on each map so the server can show it.
+    private readonly HashSet<string> weaponModelPaths = new(StringComparer.OrdinalIgnoreCase);
+    private bool weaponModelsOn = true;
+    // CS2 item definitions whose animations a custom knife is made for.
+    private static readonly Dictionary<string, ushort> AnimDefs = new() { ["m9"] = 508, ["bayonet"] = 500 };
+
+    private void RegisterWeaponModels()
+    {
+        foreach (var path in (Environment.GetEnvironmentVariable("LEGACYX_COMMUNITY_MODEL_PRECACHE") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            if (ValidModelPath(path)) weaponModelPaths.Add(path);
+        RegisterListener<Listeners.OnServerPrecacheResources>(manifest => { foreach (var path in weaponModelPaths) manifest.AddResource(path); });
+        RegisterEventHandler<EventPlayerSpawn>((@event, _) =>
+        {
+            if (@event.Userid is { IsValid: true } player) Server.NextFrame(() => ApplyWeaponModels(player));
+            return HookResult.Continue;
+        });
+        RegisterEventHandler<EventItemPickup>((@event, _) =>
+        {
+            if (@event.Userid is { IsValid: true } player) Server.NextFrame(() => ApplyWeaponModels(player));
+            return HookResult.Continue;
+        });
+        AddCommand("lx_wm_off", "Weapon models: switch off or on (0/1)", (player, command) =>
+        {
+            if (player != null) return;
+            weaponModelsOn = command.ArgCount < 2 || command.GetArg(1) != "0";
+            Console.WriteLine($"[{ModuleName}] Weapon models {(weaponModelsOn ? "on" : "off")}.");
+        });
+        AddCommand("lx_wm_status", "Weapon models: who wears what", (player, _) =>
+        {
+            if (player != null) return;
+            Console.WriteLine($"[{ModuleName}] Weapon models {(weaponModelsOn ? "on" : "off")}: {weaponModels.Count} players, {weaponModelPaths.Count} paths precached.");
+            foreach (var (steam, set) in weaponModels) Console.WriteLine($"  {steam}: {string.Join(", ", set.Select(entry => $"{entry.Key}={entry.Value.World}"))}");
+        });
+    }
+
+    private static bool ValidModelPath(string path) =>
+        path.Length is >= 4 and <= 200 && path.EndsWith(".vmdl", StringComparison.Ordinal) && path.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '_' or '/' or '.' or '-');
+
+    private void StoreWeaponModels(ulong steamId, JsonElement? profile)
+    {
+        weaponModels.Remove(steamId);
+        if (profile is not { } found || !found.TryGetProperty("weapon_models", out var all) || all.ValueKind != JsonValueKind.Object) return;
+        var set = new Dictionary<string, WeaponModel>();
+        foreach (var weapon in new[] { "knife", "deagle", "ak47" })
+        {
+            if (!all.TryGetProperty(weapon, out var entry) || entry.ValueKind != JsonValueKind.Object) continue;
+            var world = StringOrNull(entry, "world");
+            var view = StringOrNull(entry, "view") ?? world;
+            if (world is null || view is null || !ValidModelPath(world) || !ValidModelPath(view)) continue;
+            var anim = StringOrNull(entry, "anim_base");
+            set[weapon] = new WeaponModel(world, view, anim is not null && AnimDefs.ContainsKey(anim) ? anim : null);
+            foreach (var path in new[] { world, view })
+                if (weaponModelPaths.Add(path))
+                {
+                    // A model this server has not precached yet: try to load it now; it is also kept for the next map.
+                    try { Server.PrecacheModel(path); } catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not precache {path}: {problem.Message}"); }
+                }
+        }
+        if (set.Count > 0) weaponModels[steamId] = set;
+    }
+
+    private void ApplyWeaponModels(CCSPlayerController player)
+    {
+        if (!weaponModelsOn || !player.IsValid || player.IsBot || !weaponModels.TryGetValue(player.SteamID, out var set)) return;
+        var pawn = player.PlayerPawn.Value;
+        if (pawn is null || !pawn.IsValid || pawn.WeaponServices is null) return;
+        foreach (var handle in pawn.WeaponServices.MyWeapons)
+        {
+            var weapon = handle.Value;
+            if (weapon is null || !weapon.IsValid) continue;
+            var name = weapon.DesignerName;
+            var kind = name.Contains("knife", StringComparison.Ordinal) || name.Contains("bayonet", StringComparison.Ordinal) ? "knife" : name == "weapon_deagle" ? "deagle" : name == "weapon_ak47" ? "ak47" : null;
+            if (kind is null || !set.TryGetValue(kind, out var model)) continue;
+            try
+            {
+                // A knife made for the M9 or Bayonet animations is given that knife's definition so its animations play.
+                if (kind == "knife" && model.AnimBase is { } anim && weapon.AttributeManager.Item.ItemDefinitionIndex != AnimDefs[anim])
+                    weapon.AttributeManager.Item.ItemDefinitionIndex = AnimDefs[anim];
+                weapon.SetModel(model.World);
+                // The first-person model: the owner's view model entity.
+                var view = pawn.ViewModelServices?.ViewModel[0].Value;
+                if (view is { IsValid: true } && weapon.Handle == pawn.WeaponServices.ActiveWeapon.Value?.Handle) view.SetModel(model.View);
+            }
+            catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Weapon model for {player.PlayerName} ({kind}) failed: {problem.Message}"); }
+        }
+    }
+}
