@@ -38,7 +38,11 @@ public partial class MatchZy
     private void BeginLegacyXPostMatchTransition(int restartDelay)
     {
         string nextMap = PickLegacyXNextMap();
-        float delay = Math.Max(0.5f, legacyXMapTransitionDelay.Value);
+        // The whole wait from the end of the match to the map change is legacyx_post_match_seconds (5 by default, owner request 2026-11-06), not mp_match_restart_delay:
+        // the PLEASE WAIT part (legacyx_map_transition_delay) is the end of it, and never longer than the total.
+        float total = Math.Max(1f, legacyXPostMatchSeconds.Value);
+        float delay = Math.Min(Math.Max(0.5f, legacyXMapTransitionDelay.Value), total);
+        restartDelay = (int)Math.Round(total - delay);
 
         PrintToAllChat($"Match saved. Next map: {{white}}{nextMap}{{grey}}.");
         if (legacyXRestartAfterMatch.Value) PrintToAllChat("The server restarts for the next map: reconnect in about a minute.");

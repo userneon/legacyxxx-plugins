@@ -1078,7 +1078,9 @@ public partial class AdminPlus
         string executorName = GetExecutorNameCommand(caller);
         // !rr is never a round restart (owner request 2026-11-06): with LegacyX-MatchZy loaded it ends the match and sends the server straight back
         // to warmup (MatchZy's css_restart); without it there is no match to end, so it just starts the warmup.
-        if (ConVar.Find("matchzy_smoke_color_enabled") != null)
+        // MatchZy is taken to be there on every server but a Fun one (owner report 2026-11-06: !rr left a plain warmup with no "Press R to ready"
+        // when its convar could not be found); a Fun server with MatchZy is still found by the convar.
+        if (ConVar.Find("matchzy_smoke_color_enabled") != null || !IsFunServer())
         {
             // From chat it takes the command twice within 10 seconds, so one slip does not end a match.
             if (caller != null)
