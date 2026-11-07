@@ -129,6 +129,7 @@ public partial class AdminPlus : BasePlugin
 
         RegisterChatCommands();
         RegisterModToolCommands();
+        RegisterCheckCommand();
 
         RegisterVoteCommands();
 

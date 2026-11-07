@@ -86,3 +86,7 @@ While the match is paused, `!up` now works next to `.up` and `.unpause` (owner r
 ## Checker: hidden files (2026-11-07)
 
 The scan now looks harder where a program may be hidden (owner request): the Recycle Bin is read (a thrown-away program is still on the disk), a file with the Hidden or System attribute is noted, and a Windows program carrying another file's name (no extension, .tmp .dat .bin .txt .log .db .cfg .ini .png .jpg, or any name when hidden; only files that start with "MZ" are opened) is analysed like an .exe. The facts carry `hidden`, `disguised` and `deleted`; the server adds 1, 2 and 1 points (Checker rules `points`). Deploy the API first: it refuses unknown fields. Not covered yet: NTFS alternate data streams.
+
+## !check <name> (2026-11-07)
+
+A staff member (Admin, Manager or Owner, signed in on the website) types `!check <name>` in game: the API makes the one-time Checker code (`POST /api/v1/plugin/checks`, scope `bans:write`) and the game server shows the download link and the code to the asked player alone, in chat and console. The staff member only hears that it was shown. A player who already has an open check is refused. On Staff → Roles it is the command `check` (Bans). Deploy the API first.
