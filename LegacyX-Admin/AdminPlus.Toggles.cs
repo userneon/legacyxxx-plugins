@@ -19,10 +19,12 @@ public partial class AdminPlus
     private readonly HashSet<ulong> _toggledSpeed = new();
     private readonly HashSet<ulong> _toggledSize = new();
 
-    /// <summary>The commands that used to have an "un" twin: the twin is checked as the command it undoes.</summary>
+    /// <summary>The commands that used to have an "un" twin (the twin is checked as the command it undoes) and the ones with two names (the second is checked as the first).</summary>
     private static readonly Dictionary<string, string> ToggleTwins = new(StringComparer.OrdinalIgnoreCase)
     {
         ["unfreeze"] = "freeze", ["unbury"] = "bury", ["unshake"] = "shake", ["unblind"] = "blind", ["undrug"] = "drug", ["unspeed"] = "speed", ["unsize"] = "size",
+        // Two names for one command (owner request 2026-11-07, "delete the duplicates"): the second name is checked as the first, which is the one the staff site lists.
+        ["1up"] = "hrespawn", ["revive"] = "respawn", ["adminmenu"] = "admin", ["admin_reload"] = "adminreload", ["wsmap"] = "workshop",
     };
 
     private void ClearToggledFun(ulong steamId)
