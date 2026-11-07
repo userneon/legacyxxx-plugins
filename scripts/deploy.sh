@@ -102,6 +102,8 @@ for dir in "${targets[@]}"; do
     sed -i 's/"FollowCS2ServerGuidelines"[[:space:]]*:[[:space:]]*true/"FollowCS2ServerGuidelines": false/' "$core"
     echo "    FollowCS2ServerGuidelines set to false (needed for website skins and rank icons)"
   fi
+  # What was deployed, for the website's host check (scripts/legacyx-host.sh status).
+  printf '{"commit":"%s","at":"%s"}\n' "$(git -C "$root" rev-parse --short HEAD 2>/dev/null || echo unknown)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$dir/addons/counterstrikesharp/legacyx-deployed.json"
   ls "$dir/addons/counterstrikesharp/plugins" | grep '^LegacyX-' | sed 's/^/    /'
 done
 
