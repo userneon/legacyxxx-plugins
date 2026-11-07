@@ -89,4 +89,4 @@ The scan now looks harder where a program may be hidden (owner request): the Rec
 
 ## !check <name> (2026-11-07)
 
-A staff member (Admin, Manager or Owner, signed in on the website) types `!check <name>` in game: the API makes the one-time Checker code (`POST /api/v1/plugin/checks`, scope `bans:write`) and the game server shows the download link and the code to the asked player alone, in chat and console. The staff member only hears that it was shown. A player who already has an open check is refused. On Staff → Roles it is the command `check` (Bans). Deploy the API first.
+A staff member (Admin, Manager or Owner, signed in on the website) types `!check <name>` in game: the API makes the one-time Checker code (`POST /api/v1/plugin/checks`, scope `bans:write`) and the game server shows the download link and the code to the asked player alone, in chat and as a framed block in the console, again every 8 seconds for about a minute. The staff member only hears that it was shown. A player who already has an open check is refused. On Staff → Roles it is the command `check` (Bans). Deploy the API first.

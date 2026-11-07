@@ -90,13 +90,35 @@ public partial class AdminPlus
                     if (asker != null && asker.IsValid) asker.PrintToChat(LegacyXChat.System($"{label} left before the check could be shown. The code is on the website's Checks page."));
                     return;
                 }
-                asked.PrintToChat(LegacyXChat.System("Staff asked you to run the {white}LEGACY-X Checker{grey}. It only reads this PC and sends a short result; nothing is changed."));
-                if (!string.IsNullOrEmpty(answer.Link)) asked.PrintToChat(LegacyXChat.System($"Download: {{white}}{answer.Link}"));
-                asked.PrintToChat(LegacyXChat.System($"Your code: {{white}}{answer.Code}"));
-                asked.PrintToConsole($"[LEGACY-X Checker] Download: {answer.Link}");
-                asked.PrintToConsole($"[LEGACY-X Checker] Code: {answer.Code}");
+                // Said again every few seconds for about a minute, in chat and as a block in the console, so it is not missed in a busy round.
+                ShowCheckToPlayer(targetSlot, targetId, answer.Link, answer.Code, 0);
                 if (asker != null && asker.IsValid) asker.PrintToChat(LegacyXChat.System($"The check link and code were shown to {label} only."));
             });
         });
+    }
+
+    private const int CheckRepeats = 8;
+    private const float CheckRepeatSeconds = 8f;
+
+    /// <summary>Shows the link and code to one player (chat and console), then again every few seconds, until it was shown <see cref="CheckRepeats"/> times or they leave.</summary>
+    private void ShowCheckToPlayer(int slot, string steamId, string? link, string code, int round)
+    {
+        var player = Utilities.GetPlayerFromSlot(slot);
+        if (player == null || !player.IsValid || player.SteamID.ToString() != steamId) return;
+        if (round == 0)
+            player.PrintToChat(LegacyXChat.System("Staff asked you to run the {white}LEGACY-X Checker{grey}. It only reads this PC and sends a short result; nothing is changed."));
+        if (!string.IsNullOrEmpty(link)) player.PrintToChat(LegacyXChat.System($"Checker download: {{white}}{link}"));
+        player.PrintToChat(LegacyXChat.System($"Checker code: {{white}}{code}{{grey}} (open the console with the ~ key to copy)"));
+        player.PrintToConsole("");
+        player.PrintToConsole("==================================================");
+        player.PrintToConsole("  LEGACY-X CHECKER  -  staff asked you to run it");
+        player.PrintToConsole("==================================================");
+        if (!string.IsNullOrEmpty(link)) player.PrintToConsole($"  DOWNLOAD : {link}");
+        player.PrintToConsole($"  CODE     : {code}");
+        player.PrintToConsole("  It only reads this PC and sends a short result.");
+        player.PrintToConsole("==================================================");
+        player.PrintToConsole("");
+        if (round + 1 < CheckRepeats)
+            AddTimer(CheckRepeatSeconds, () => ShowCheckToPlayer(slot, steamId, link, code, round + 1));
     }
 }
