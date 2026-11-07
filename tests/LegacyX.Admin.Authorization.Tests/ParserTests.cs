@@ -188,4 +188,24 @@ public class ParserTests
         Assert.Equal(StaffRole.Owner, player.Role);
         Assert.Null(player.Grant);
     }
+
+    [Theory]
+    [InlineData("Warden", "WARDEN")]
+    [InlineData("  high rank+ ", "HIGH RANK+")]
+    [InlineData("<b>X</b>", "BXB")]
+    [InlineData("ABCDEFGHIJKLMNOP", "ABCDEFGHIJKL")]
+    public void A_paid_ranks_label_is_kept_clean_and_short(string label, string expected)
+    {
+        var entry = Entry(A, true, "creator").TrimEnd('}') + $",\"label\":\"{label}\"}}";
+        var result = AuthorizationResponseParser.Parse(Body("srv-1", entry), "srv-1", new[] { A }, Now, out _);
+        Assert.Equal(expected, result![A].Label);
+        Assert.Equal(StaffRole.Creator, result[A].Role);
+    }
+
+    [Fact]
+    public void Without_a_label_the_role_keeps_its_own_name()
+    {
+        var result = AuthorizationResponseParser.Parse(Body("srv-1", Entry(A, true, "admin")), "srv-1", new[] { A }, Now, out _);
+        Assert.Equal("", result![A].Label);
+    }
 }

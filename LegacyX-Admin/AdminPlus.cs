@@ -591,7 +591,7 @@ public partial class AdminPlus : BasePlugin
         if (string.IsNullOrEmpty(name)) return name;
         foreach (var player in OnlineHumans())
             if (player.PlayerName == name && adminStaffRoles.TryGetValue(player.SteamID, out var role))
-                return LegacyXChat.Role(role) + name;
+                return LegacyXChat.Role(adminStaffLabels.TryGetValue(player.SteamID, out var label) && label.Length > 0 ? label : role) + name;
         return name;
     }
 

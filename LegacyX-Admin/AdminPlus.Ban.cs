@@ -21,6 +21,8 @@ public partial class AdminPlus
     private Dictionary<ulong, int> adminImmunity = new();
     private Dictionary<ulong, int> adminStamina = new();
     private Dictionary<ulong, string> adminStaffRoles = new();
+    // What Tab and chat show for a staff member: the role's name, or a paid rank's own name (adminStaffRoles stays the role, the menus read it).
+    private Dictionary<ulong, string> adminStaffLabels = new();
     /// <summary>The commands (without "css_") a player may run when their role was edited on the staff site; absent = the built-in role.</summary>
     private Dictionary<ulong, HashSet<string>> adminCommandAllow = new();
     private Dictionary<ulong, IReadOnlyDictionary<string, LegacyX.Admin.Authorization.CommandLimit>> adminCommandLimits = new();
@@ -39,6 +41,7 @@ public partial class AdminPlus
             adminImmunity.Clear();
             adminStamina.Clear();
             adminStaffRoles.Clear();
+            adminStaffLabels.Clear();
             adminCommandAllow.Clear();
             adminStaffClans.Clear();
             recentSeen.Clear();

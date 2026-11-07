@@ -92,6 +92,7 @@ public partial class AdminPlus
         foreach (var player in OnlineHumans())
         {
             if (!adminStaffRoles.TryGetValue(player.SteamID, out var roleName)) continue;
+            if (adminStaffLabels.TryGetValue(player.SteamID, out var label) && label.Length > 0) roleName = label;
             var wanted = roleName;
             if (adminStaffClans.TryGetValue(player.SteamID, out var clan) && clan.Length > 0 && clan.Length + 3 + roleName.Length <= 31) wanted = $"{clan} | {roleName}";
             var current = player.Clan ?? "";
@@ -236,6 +237,7 @@ public partial class AdminPlus
         if (custom?.Limits != null) adminCommandLimits[player.SteamID] = custom.Limits; else adminCommandLimits.Remove(player.SteamID);
         adminStamina[player.SteamID] = role.Stamina;
         adminStaffRoles[player.SteamID] = role.Name;
+        adminStaffLabels[player.SteamID] = grant.Label.Length > 0 ? grant.Label : role.Name;
         adminStaffClans[player.SteamID] = grant.ClanTag;
         ApplyStaffTags();
     }
@@ -246,6 +248,7 @@ public partial class AdminPlus
         adminImmunity.Remove(steamId);
         adminStamina.Remove(steamId);
         adminStaffRoles.Remove(steamId);
+        adminStaffLabels.Remove(steamId);
         adminCommandAllow.Remove(steamId);
         adminCommandLimits.Remove(steamId);
         adminStaffClans.Remove(steamId);

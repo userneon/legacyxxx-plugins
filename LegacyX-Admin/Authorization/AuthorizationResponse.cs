@@ -23,7 +23,7 @@ public sealed record CustomGrant(IReadOnlyList<string> Flags, IReadOnlyList<stri
     private static readonly IReadOnlyDictionary<string, CommandLimit> EmptyLimits = new Dictionary<string, CommandLimit>();
 }
 
-public sealed record PlayerAuthorization(ulong SteamId, StaffRole Role, DateTimeOffset? ExpiresAt, DateTimeOffset CheckedAt, string ClanTag = "", CustomGrant? Grant = null)
+public sealed record PlayerAuthorization(ulong SteamId, StaffRole Role, DateTimeOffset? ExpiresAt, DateTimeOffset CheckedAt, string ClanTag = "", CustomGrant? Grant = null, string Label = "")
 {
     public bool IsStaff => Role != StaffRole.Player;
 
@@ -111,7 +111,7 @@ public static class AuthorizationResponseParser
             if (parsed <= now) return player;
             expiresAt = parsed;
         }
-        return new PlayerAuthorization(steamId, role, expiresAt, now, ParseClanTag(entry), role == StaffRole.Owner ? null : ParseGrant(entry));
+        return new PlayerAuthorization(steamId, role, expiresAt, now, ParseClanTag(entry), role == StaffRole.Owner ? null : ParseGrant(entry), ParseLabel(entry));
     }
 
     /// <summary>The edited role, if the API sent a well-formed one: flags like "@css/slay", command names, immunity 0 to 900. Anything else means no custom grant (the built-in role applies).</summary>
@@ -162,6 +162,14 @@ public static class AuthorizationResponseParser
         if (!entry.TryGetProperty("clanTag", out var value) || value.ValueKind != JsonValueKind.String) return "";
         var clean = new string((value.GetString() ?? "").Trim().ToUpperInvariant().Where(c => char.IsLetterOrDigit(c) || c is '-' or '_' or '.').ToArray());
         return clean.Length > 8 ? clean[..8] : clean;
+    }
+
+    /// <summary>The name shown in Tab instead of the role's own (a paid rank's name from the Shop, owner request 2026-11-07): upper case letters, digits, space, + and -, 12 characters at most. Cosmetic only.</summary>
+    private static string ParseLabel(JsonElement entry)
+    {
+        if (!entry.TryGetProperty("label", out var value) || value.ValueKind != JsonValueKind.String) return "";
+        var clean = new string((value.GetString() ?? "").Trim().ToUpperInvariant().Where(c => char.IsLetterOrDigit(c) || c is ' ' or '+' or '-').ToArray()).Trim();
+        return clean.Length > 12 ? clean[..12].Trim() : clean;
     }
 
     public static bool TryParseSteamId64(string? value, out ulong steamId)
