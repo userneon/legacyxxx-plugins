@@ -199,16 +199,18 @@ namespace MatchZy
             {
                 Log($"[StartKnifeRound] Starting Knife! Executing Knife CFG from {knifeCfgPath}");
                 Server.ExecuteCommand($"exec {knifeCfgPath}");
+                StartKnifeFun();
                 Server.ExecuteCommand("mp_restartgame 1;mp_warmup_end;");
             }
             else
             {
                 Log($"[StartKnifeRound] Starting Knife! Knife CFG not found in {absolutePath}, using default CFG!");
                 Server.ExecuteCommand("mp_ct_default_secondary \"\";mp_free_armor 1;mp_freezetime 10;mp_give_player_c4 0;mp_maxmoney 0;mp_respawn_immunitytime 0;mp_respawn_on_death_ct 0;mp_respawn_on_death_t 0;mp_roundtime 1.92;mp_roundtime_defuse 1.92;mp_roundtime_hostage 1.92;mp_t_default_secondary \"\";mp_round_restart_delay 3;mp_team_intro_time 0;mp_restartgame 1;mp_warmup_end;");
+                StartKnifeFun();
             }
 
             SetAllTalk(false);
-            PrintToAllChat("{white}Knife round.");
+            PrintToAllChat("{white}Opening round.");
         }
 
         private void SendSideSelectionMessage()
@@ -228,6 +230,7 @@ namespace MatchZy
 
         private void StartAfterKnifeWarmup()
         {
+            EndKnifeFun();
             isWarmup = false;
             knifeWinnerName = knifeWinner == 3 ? reverseTeamSides["CT"].teamName : reverseTeamSides["TERRORIST"].teamName;
             ShowDamageInfo();
@@ -267,6 +270,7 @@ namespace MatchZy
             isMatchLive = true;
             readyAvailable = false;
             isKnifeRound = false;
+            EndKnifeFun();
         }
 
         private void SetupLiveFlagsAndCfg()
@@ -365,6 +369,7 @@ namespace MatchZy
 
                 isWarmup = true;
                 isKnifeRound = false;
+            EndKnifeFun();
                 isSideSelectionPhase = false;
                 isMatchLive = false;
                 liveMatchId = -1;
@@ -938,6 +943,7 @@ namespace MatchZy
 
                 isWarmup = true;
                 isKnifeRound = false;
+            EndKnifeFun();
                 isSideSelectionPhase = false;
                 isMatchLive = false;
                 isPractice = false;
