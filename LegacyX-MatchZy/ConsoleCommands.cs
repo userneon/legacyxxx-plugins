@@ -229,6 +229,7 @@ namespace MatchZy
         }
 
         [ConsoleCommand("css_unpause", "Unpause the match")]
+        [ConsoleCommand("css_up", "Unpause the match (short): one player of each team is enough")]
         public void OnUnpauseCommand(CCSPlayerController? player, CommandInfo? command)
         {
             if (isMatchLive && isPaused)

@@ -66,3 +66,7 @@ On 2026-08-20, both modules built successfully with .NET 8 Release configuration
 ## Opening round games (2026-11-07)
 
 The round before a match that decides the sides is no longer always the knife (owner request: "make the knife round not only the knife but a fun game, random"). `LegacyXKnifeFun.cs` picks one at random each time: Knife fight, AWP only, Deagle only, Scout on the moon, Knives on the moon (gravity 300) and Pistol duel. It sets `mp_t/ct_default_primary` and `_secondary` and `sv_gravity` right after the knife config and before the restart, names the game in chat, and puts weapons and gravity back before the side vote (and when a match is cancelled or goes live early). The round is still won by the team left standing, so the winner picks the side as before. `matchzy_knife_fun_rounds 0` brings the plain knife round back. Add a game by adding a line to `KnifeFunGames`.
+
+## !up (2026-11-07)
+
+While the match is paused, `!up` now works next to `.up` and `.unpause` (owner request: "one player from each side writes up, not everyone"). It was only registered as a `.up` chat word, so `!up` did nothing. One player of each team is enough to resume; a team with nobody on the server is not waited for.
