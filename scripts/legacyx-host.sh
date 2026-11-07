@@ -7,6 +7,8 @@
 #   status            what is installed, loaded and running, as JSON (read only)
 #   deploy            git pull, build, package and install the plugins into the CS2 server folder (does not restart anything)
 #   restart <port>    systemctl restart cs2@<port>  (only a port that has a server config here)
+#   add <port> <GSLT> <mode> <map> <maxplayers> <site-mode>   a new server on <port> (scripts/cs2-host.sh add: config, firewall, service, started)
+#   remove <port>     stop and delete that server (scripts/cs2-host.sh remove)
 # Anything else is refused. Every answer is one JSON object on stdout.
 #
 # Settings (for tests; the defaults are this host's): CS2_HOME CS2_DIR CSGO_DIR STATE_DIR CONF_DIR REPO
@@ -21,10 +23,12 @@ CONF_DIR="${CONF_DIR:-/etc/legacyx/cs2}"
 export REPO CS2_HOME CS2_DIR CSGO_DIR STATE_DIR CONF_DIR
 
 line="${SSH_ORIGINAL_COMMAND:-$*}"
-read -r action arg extra <<<"$line"
+read -r action arg a2 a3 a4 a5 a6 extra <<<"$line"
 
 fail() { printf '{"ok":false,"error":"%s"}\n' "$1"; exit "${2:-2}"; }
 [[ -z "${extra:-}" ]] || fail "too many words"
+# Only add takes more than one word after the action.
+if [[ "$action" != "add" && -n "${a2:-}" ]]; then fail "too many words"; fi
 
 status() {
 python3 - <<'PY'
@@ -209,6 +213,24 @@ case "$action" in
     [[ "${arg:-}" =~ ^[0-9]{4,5}$ && -f "$CONF_DIR/$arg.conf" ]] || fail "no server on that port"
     run_locked
     out="$(systemctl restart "cs2@$arg" 2>&1 && echo "cs2@$arg restarted")"; rc=$?
+    printf '%s' "$out" | json_log "$rc" ;;
+  add)
+    # Every word is checked here again (the API checked them first); cs2-host.sh checks them a third time.
+    [[ "${arg:-}" =~ ^[0-9]{4,5}$ && "$arg" -ge 1024 && "$arg" -le 65535 ]] || fail "bad port"
+    [[ ! -f "$CONF_DIR/$arg.conf" ]] || fail "a server already runs on that port"
+    [[ "${a2:-}" =~ ^[A-Fa-f0-9]{32}$ ]] || fail "bad GSLT"
+    [[ "${a3:-}" =~ ^(competitive|wingman|casual|deathmatch)$ ]] || fail "bad mode"
+    [[ "${a4:-}" =~ ^[a-z0-9_]{2,64}$ ]] || fail "bad map"
+    [[ "${a5:-}" =~ ^[0-9]{1,2}$ && "$a5" -ge 2 && "$a5" -le 64 ]] || fail "bad player count"
+    [[ -z "${a6:-}" || "${a6:-}" =~ ^[a-z0-9_]{1,40}$ ]] || fail "bad site mode"
+    run_locked
+    out="$("$REPO/scripts/cs2-host.sh" add "$arg" "$a2" "$a3" "$a4" "$a5" "${a6:-}" 2>&1)"; rc=$?
+    # The token never goes back to the website, not even in an error line.
+    printf '%s' "${out//$a2/<token>}" | json_log "$rc" ;;
+  remove)
+    [[ "${arg:-}" =~ ^[0-9]{4,5}$ && -f "$CONF_DIR/$arg.conf" ]] || fail "no server on that port"
+    run_locked
+    out="$("$REPO/scripts/cs2-host.sh" remove "$arg" 2>&1)"; rc=$?
     printf '%s' "$out" | json_log "$rc" ;;
   *) fail "unknown action" ;;
 esac
