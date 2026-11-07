@@ -179,6 +179,7 @@ chk("env", "Plugin settings (.env)", "fail" if bad else "ok", f"not set: {', '.j
 free_gb = round(shutil.disk_usage(CS2_DIR if os.path.isdir(CS2_DIR) else "/").free / 1e9, 1)
 chk("disk", "Disk space", "fail" if free_gb < 5 else ("warn" if free_gb < 15 else "ok"), f"{free_gb} GB free")
 info["host"] = {"diskFreeGb": free_gb}
+info["actions"] = [{"action": "deploy", "target": None, "label": "Deploy plugins"}] + [{"action": "restart", "target": str(item["port"]), "label": f"Restart {item['port']}"} for item in servers]
 
 print(json.dumps({"ok": True, "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(), "checks": checks, "info": info}))
 PY
