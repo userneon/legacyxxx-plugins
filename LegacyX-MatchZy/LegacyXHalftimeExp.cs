@@ -138,7 +138,8 @@ public partial class MatchZy
         var before = row.TryGetProperty("exp_before", out var b) && b.ValueKind == JsonValueKind.Number ? b.GetInt32() : after - delta;
         var calibration = breakdown.ValueKind == JsonValueKind.Object && breakdown.TryGetProperty("calibration", out var c) && c.ValueKind == JsonValueKind.Number && c.GetInt32() == 2 ? 2 : 1;
         var limited = breakdown.ValueKind == JsonValueKind.Object && breakdown.TryGetProperty("limited", out var l) && l.ValueKind == JsonValueKind.String ? (l.GetString() == "weekly" ? 2 : 1) : 0;
+        int RankOf(string key) => row.TryGetProperty(key, out var rank) && rank.ValueKind == JsonValueKind.Number ? rank.GetInt32() : 0;
         var kind = final ? 2 : title == "Overtime" ? 1 : 0;
-        Server.ExecuteCommand($"lx_exp_card {player.Slot} {kind} {delta} {Tenths(breakdown, "result")} {Tenths(breakdown, "margin")} {Tenths(breakdown, "performance")} {Tenths(breakdown, "bonus")} {before} {after} {calibration} {limited} {(final ? 15 : 12)}");
+        Server.ExecuteCommand($"lx_exp_card {player.Slot} {kind} {delta} {Tenths(breakdown, "result")} {Tenths(breakdown, "margin")} {Tenths(breakdown, "performance")} {Tenths(breakdown, "bonus")} {before} {after} {calibration} {limited} {(final ? 15 : 12)} {RankOf("rank_before")} {RankOf("rank_after")}");
     }
 }

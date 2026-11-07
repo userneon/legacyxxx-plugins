@@ -11,7 +11,7 @@ namespace LegacyXHud;
 // The EXP card (owner request 2026-11-07, "a big card with the calculation"): at half time, when overtime starts and when the match is over, MatchZy tells this
 // plugin what a player's EXP change was made of, and this plugin draws it for that player as a big card in the middle of the screen (layout legacyx_exp.xml).
 // Only numbers travel in the command: a name never goes into a console command. The parts come ten times as large (one decimal, as whole numbers).
-//   lx_exp_card <slot> <kind 0 half time|1 overtime|2 match over> <delta> <result*10> <margin*10> <performance*10> <bonus*10> <before> <after> <calibration 1|2> <limited 0|1 daily|2 weekly> <seconds>
+//   lx_exp_card <slot> <kind 0 half time|1 overtime|2 match over> <delta> <result*10> <margin*10> <performance*10> <bonus*10> <before> <after> <calibration 1|2> <limited 0|1 daily|2 weekly> <seconds> <rank before 1-18> <rank after 1-18>
 public sealed partial class LegacyXHud
 {
     private const float ExpSlideSeconds = 0.5f;
@@ -20,14 +20,14 @@ public sealed partial class LegacyXHud
     private PanelHandle? expHud;
     private readonly Dictionary<int, int> expShowIds = new();
 
-    [ConsoleCommand("lx_exp_card", "The EXP card: lx_exp_card <slot> <kind> <delta> <result*10> <margin*10> <performance*10> <bonus*10> <before> <after> <calibration> <limited> <seconds>")]
+    [ConsoleCommand("lx_exp_card", "The EXP card: lx_exp_card <slot> <kind> <delta> <result*10> <margin*10> <performance*10> <bonus*10> <before> <after> <calibration> <limited> <seconds> <rank before> <rank after>")]
     public void OnExpCardCommand(CCSPlayerController? caller, CommandInfo command)
     {
-        if (caller != null || !enabled || command.ArgCount < 13) return;
-        var n = new int[12];
-        for (var i = 1; i <= 12; i++)
+        if (caller != null || !enabled || command.ArgCount < 15) return;
+        var n = new int[14];
+        for (var i = 1; i <= 14; i++)
             if (!int.TryParse(command.ArgByIndex(i), NumberStyles.Integer, CultureInfo.InvariantCulture, out n[i - 1])) return;
-        var (slot, kind, delta, result, margin, performance, bonus, before, after, calibration, limited, seconds) = (n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8], n[9], n[10], n[11]);
+        var (slot, kind, delta, result, margin, performance, bonus, before, after, calibration, limited, seconds, rankBefore, rankAfter) = (n[0], n[1], n[2], n[3], n[4], n[5], n[6], n[7], n[8], n[9], n[10], n[11], n[12], n[13]);
         if (Utilities.GetPlayerFromSlot(slot) is not { IsValid: true, IsBot: false } target) return;
         var panel = Ensure(ref expHud, expLayout, "lx_exp");
         if (panel is null) return;
@@ -49,6 +49,9 @@ public sealed partial class LegacyXHud
             Sv(panel, target, $"exp_v{i + 1}", Tenth(parts[i]));
             Ss(panel, target, $"exp_v{i + 1}", "tone", Tone(parts[i]));
         }
+        // The rank emblems (the rank-N classes); a rank outside 1 to 18 shows none.
+        Ss(panel, target, "exp_rank_b", "rank", rankBefore is >= 1 and <= 18 ? $"rank-{rankBefore}" : null);
+        Ss(panel, target, "exp_rank_a", "rank", rankAfter is >= 1 and <= 18 ? $"rank-{rankAfter}" : null);
         Ss(panel, target, "exp_bar", "tone", Tone(delta));
         Ss(panel, target, "exp_delta", "tone", Tone(delta));
         Sc(panel, target, "exp_cal", "hidden", calibration != 2);
