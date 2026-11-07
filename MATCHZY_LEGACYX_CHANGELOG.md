@@ -78,3 +78,7 @@ While the match is paused, `!up` now works next to `.up` and `.unpause` (owner r
 ## Deploy no longer verifies the game (2026-11-07)
 
 `cs2-host.sh deploy` and `update` leave the CS2 game files alone (owner request: "why does it verify the install every time"): they used to run `app_update 730 validate`, a check of all 70 GB. `--cs2` fetches a new build only, `--verify` checks every file, and CS2 is still installed when `gameinfo.gi` is missing. The automatic updater passes `--cs2` when Steam has a newer build.
+
+## !kickbots and !chatlock (2026-11-07)
+
+`!kickbots` removes every bot at once (needs `@css/kick`); `!chatlock` lets only staff write in chat until it is run again or the map changes (needs `@css/chat`). Both are on Staff → Roles, Admin and above have them by default.

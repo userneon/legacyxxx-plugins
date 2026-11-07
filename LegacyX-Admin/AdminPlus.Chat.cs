@@ -62,6 +62,13 @@ public partial class AdminPlus
             string text = info.ArgCount >= 2 ? (info.GetArg(1) ?? string.Empty).Trim() : string.Empty;
             if (string.IsNullOrEmpty(text)) return HookResult.Continue;
 
+            // !chatlock: a locked chat lets only staff write (their commands, !x and .x, still pass so staff can unlock it).
+            if (ChatLockedFor(caller) && !text.StartsWith("!") && !text.StartsWith("."))
+            {
+                caller.PrintToChat(LegacyXChat.System("The chat is locked by staff."));
+                return HookResult.Handled;
+            }
+
             if (cmd.Equals("say_team", StringComparison.OrdinalIgnoreCase) && text.StartsWith("@"))
             {
                 var msg = text.Length >= 2 && text[1] == ' ' ? text[2..] : text[1..];

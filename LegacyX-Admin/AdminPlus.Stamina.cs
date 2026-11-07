@@ -14,7 +14,7 @@ public partial class AdminPlus
 {
     private static readonly IReadOnlyDictionary<string, int> CommandStaminaRequirements = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
     {
-        ["ban"] = 500, ["fup"] = 500, ["ipban"] = 750, ["unban"] = 750, ["lastban"] = 500, ["baninfo"] = 250,
+        ["ban"] = 500, ["fup"] = 500, ["kickbots"] = 500, ["chatlock"] = 500, ["ipban"] = 750, ["unban"] = 750, ["lastban"] = 500, ["baninfo"] = 250,
         ["kick"] = 500, ["mute"] = 250, ["gag"] = 250, ["unmute"] = 250, ["ungag"] = 250, ["silence"] = 250, ["unsilence"] = 250, ["mutelist"] = 250, ["gaglist"] = 250,
         ["slap"] = 500, ["slay"] = 750, ["money"] = 1000, ["armor"] = 1000, ["rr"] = 500, ["map"] = 750, ["wsmap"] = 750, ["workshop"] = 750, ["who"] = 250, ["players"] = 0, ["rename"] = 750, ["team"] = 750, ["swap"] = 750,
         ["asay"] = 250, ["csay"] = 500, ["hsay"] = 500, ["psay"] = 250, ["admins"] = 0, ["hideadmin"] = 500, ["report"] = 0, ["calladmin"] = 0,
@@ -27,7 +27,7 @@ public partial class AdminPlus
 
     private static readonly IReadOnlyDictionary<string, string> CommandPermissionRequirements = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
-        ["ban"] = "@css/ban", ["fup"] = "@css/pause", ["ipban"] = "@css/ban", ["unban"] = "@css/unban", ["lastban"] = "@css/ban", ["baninfo"] = "@css/ban", ["banlist"] = "@css/ban",
+        ["ban"] = "@css/ban", ["fup"] = "@css/pause", ["kickbots"] = "@css/kick", ["chatlock"] = "@css/chat", ["ipban"] = "@css/ban", ["unban"] = "@css/unban", ["lastban"] = "@css/ban", ["baninfo"] = "@css/ban", ["banlist"] = "@css/ban",
         ["kick"] = "@css/generic", ["mute"] = "@css/chat", ["gag"] = "@css/chat", ["unmute"] = "@css/chat", ["ungag"] = "@css/chat", ["silence"] = "@css/chat", ["unsilence"] = "@css/chat", ["mutelist"] = "@css/chat", ["gaglist"] = "@css/chat",
         ["slap"] = "@css/slay", ["slay"] = "@css/slay", ["money"] = "@css/slay", ["armor"] = "@css/slay", ["rename"] = "@css/slay", ["rr"] = "@css/generic", ["map"] = "@css/generic", ["wsmap"] = "@css/generic", ["workshop"] = "@css/generic", ["who"] = "@css/generic", ["team"] = "@css/kick", ["swap"] = "@css/kick",
         ["asay"] = "@css/chat", ["csay"] = "@css/chat", ["hsay"] = "@css/chat", ["psay"] = "@css/chat", ["hideadmin"] = "@css/generic", ["vote"] = "@css/generic", ["votemap"] = "@css/generic", ["cancelvote"] = "@css/generic", ["votekick"] = "@css/generic", ["voteban"] = "@css/generic", ["votegag"] = "@css/generic", ["votemute"] = "@css/generic", ["votesilence"] = "@css/generic",
