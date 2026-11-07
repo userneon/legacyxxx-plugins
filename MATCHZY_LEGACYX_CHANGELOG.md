@@ -70,3 +70,7 @@ The round before a match that decides the sides is no longer always the knife (o
 ## !up (2026-11-07)
 
 While the match is paused, `!up` now works next to `.up` and `.unpause` (owner request: "one player from each side writes up, not everyone"). It was only registered as a `.up` chat word, so `!up` did nothing. One player of each team is enough to resume; a team with nobody on the server is not waited for.
+
+## !fup in the Roles list (2026-11-07)
+
+`fup` (force a paused match to resume) is now a command on Staff → Roles with its own permission, `@css/pause`; MatchZy accepts it next to `@css/config` and the Owner. Admin and Manager have it by default, as before for the Manager. Tick it on any other role to let that role use `!fup`.
