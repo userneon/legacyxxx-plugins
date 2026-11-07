@@ -10,7 +10,7 @@ namespace AdminPlus;
 
 /// <summary>
 /// More for the Fun menu (owner request 2026-10-18): css_launch throws a player up in the air, css_size makes a player big or
-/// small (the model only: the hit box stays the same), css_unsize puts it back. Same targets and permission as the other fun
+/// small (the model, and since 2026-11-07 the hit box follows it: owner request "make the hit box follow and grow"), css_unsize puts it back. Same targets and permission as the other fun
 /// commands (@css/slay); the !admin menu has entries for them under Player FX.
 /// </summary>
 public partial class AdminPlus
@@ -80,13 +80,30 @@ public partial class AdminPlus
         });
     }
 
-    /// <summary>The model's size; the game puts it back by itself on the next spawn.</summary>
+    /// <summary>A standing player's collision box (units); the hit box of a size 1 player.</summary>
+    private const float BodyHalfWidth = 16f, BodyHeight = 72f;
+
+    /// <summary>
+    /// The model's size and its hit box (the game puts both back by itself on the next spawn). The model is scaled through its scene node and the
+    /// SetScale input; the box a bullet is first tested against (the pawn's collision bounds, and the bounds around the whole model) is scaled
+    /// with it, so a big player can be hit where they look big and a small one is not hit in empty air.
+    /// </summary>
     private static void SetSize(CCSPlayerController target, float scale)
     {
         var pawn = target.PlayerPawn?.Value;
         var node = pawn?.CBodyComponent?.SceneNode;
-        if (pawn == null || node == null) return;
+        if (pawn == null || !pawn.IsValid || node == null) return;
         node.Scale = scale;
         Utilities.SetStateChanged(pawn, "CBaseEntity", "m_CBodyComponent");
+        pawn.AcceptInput("SetScale", pawn, pawn, scale.ToString("0.###", CultureInfo.InvariantCulture));
+        var box = pawn.Collision;
+        if (box == null) return;
+        var half = BodyHalfWidth * scale;
+        var height = BodyHeight * scale;
+        box.Mins.X = -half; box.Mins.Y = -half; box.Mins.Z = 0f;
+        box.Maxs.X = half; box.Maxs.Y = half; box.Maxs.Z = height;
+        box.SurroundingMins.X = -half; box.SurroundingMins.Y = -half; box.SurroundingMins.Z = 0f;
+        box.SurroundingMaxs.X = half; box.SurroundingMaxs.Y = half; box.SurroundingMaxs.Z = height;
+        Utilities.SetStateChanged(pawn, "CBaseModelEntity", "m_Collision");
     }
 }
