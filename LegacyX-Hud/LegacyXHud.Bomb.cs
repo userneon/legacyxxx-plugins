@@ -5,7 +5,7 @@ using PanoramaManager;
 
 namespace LegacyXHud;
 
-// The bomb banner (owner request 2026-11-01): "BOMB PLANTED" and "BOMB DEFUSED" rise and fade in in the middle of the screen for every player. Nothing says where the bomb
+// The bomb banner (owner request 2026-11-01): "BOMB PLANTED" (with a picture of the bomb) and "BOMB DEFUSED" (with an agent) rise and fade in for every player. Nothing says where the bomb
 // was planted or who planted it; a defused bomb shows who defused it. Layout legacyx_bomb.xml, the slide is a CSS transition started by a class.
 public sealed partial class LegacyXHud
 {
@@ -16,43 +16,20 @@ public sealed partial class LegacyXHud
     private PanelHandle? bombHud;
     private int bombShowId;
 
+    // A planted bomb shows a picture of the bomb, a defused one an agent: the plain Counter-Terrorist one, whoever defused it (owner request 2026-11-07,
+    // "a bomb picture on planted; on defused any agent will do"), so nothing is asked of the API and the banner is never late.
+    private const string BombPicture = "bomb-c4";
+    private const string DefuseAgentPicture = "agn-ct";
+
     private void RegisterBomb()
     {
-        RegisterEventHandler<EventBombPlanted>((_, _) => { ShowBomb("planted", "BOMB PLANTED", "", null); return HookResult.Continue; });
-        RegisterEventHandler<EventBombDefused>((e, info) =>
+        RegisterEventHandler<EventBombPlanted>((_, _) => { ShowBomb("planted", "BOMB PLANTED", "", BombPicture); return HookResult.Continue; });
+        RegisterEventHandler<EventBombDefused>((e, _) =>
         {
             var name = e.Userid is { IsValid: true } defuser ? CleanBombName(defuser.PlayerName) : "";
-            var steamId = e.Userid is { IsValid: true } who ? who.SteamID : 0UL;
-            // The defuser's agent (the one they wear from the skin menu, else the plain Counter-Terrorist picture) rides with the banner; it is asked for first.
-            _ = Task.Run(async () =>
-            {
-                var picture = await DefuserAgentPictureAsync(steamId);
-                Server.NextFrame(() => ShowBomb("defused", "BOMB DEFUSED", name, picture));
-            });
+            ShowBomb("defused", "BOMB DEFUSED", name, DefuseAgentPicture);
             return HookResult.Continue;
         });
-    }
-
-    /// <summary>The picture class of the agent a player wears as a Counter-Terrorist (ag-&lt;defindex&gt;), or the plain team picture when they wear none or it could not be read.</summary>
-    private async Task<string> DefuserAgentPictureAsync(ulong steamId)
-    {
-        const string plain = "agn-ct";
-        if (steamId == 0 || !SkinsReady) return plain;
-        try
-        {
-            var (status, body) = await SkinsApiAsync(HttpMethod.Get, $"/api/v1/plugin/menu/skins/loadout?steam_id={steamId}&team=ct");
-            if (status != 200 || body is not { } root || !root.TryGetProperty("tiles", out var tiles) || tiles.ValueKind != System.Text.Json.JsonValueKind.Array) return plain;
-            foreach (var tile in tiles.EnumerateArray())
-            {
-                if (Text(tile, "slot") != "agent") continue;
-                if (tile.TryGetProperty("equipped", out var worn) && worn.ValueKind == System.Text.Json.JsonValueKind.Object && Number(worn, "defindex") is { } defindex) return SkinPicture("agent", null, null, defindex) ?? plain;
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[{ModuleName}] The defuser's agent could not be read: {ex.Message}");
-        }
-        return plain;
     }
 
     /// <summary>A name for a label: no control characters, at most 24 characters.</summary>
