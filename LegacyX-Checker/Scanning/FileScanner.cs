@@ -16,8 +16,8 @@ public static class FileScanner
     private static bool Skip(string directory)
     {
         var name = Path.GetFileName(directory);
-        if (name.Equals("$Recycle.Bin", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("System Volume Information", StringComparison.OrdinalIgnoreCase)
+        // The Recycle Bin is read on purpose: a program thrown away is still on the disk until the bin is emptied.
+        if (name.Equals("System Volume Information", StringComparison.OrdinalIgnoreCase)
             || name.Equals("WinSxS", StringComparison.OrdinalIgnoreCase)
             || name.Equals("node_modules", StringComparison.OrdinalIgnoreCase)
             || name.Equals(".git", StringComparison.OrdinalIgnoreCase)) return true;
@@ -119,18 +119,18 @@ public static class FileScanner
         context.CurrentPath = directory;
         var options = new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = 0, RecurseSubdirectories = false, ReturnSpecialDirectories = false };
         // The size comes with the listing, so no file is asked for twice.
-        var entries = new FileSystemEnumerable<(string Path, long Length, bool IsDirectory, bool IsLink)>(
+        var entries = new FileSystemEnumerable<(string Path, long Length, bool IsDirectory, bool IsLink, FileAttributes Attributes)>(
             directory,
-            (ref FileSystemEntry entry) => (entry.ToFullPath(), entry.IsDirectory ? 0L : entry.Length, entry.IsDirectory, (entry.Attributes & FileAttributes.ReparsePoint) != 0),
+            (ref FileSystemEntry entry) => (entry.ToFullPath(), entry.IsDirectory ? 0L : entry.Length, entry.IsDirectory, (entry.Attributes & FileAttributes.ReparsePoint) != 0, entry.Attributes),
             options);
-        var files = new List<(string Path, long Length)>();
+        var files = new List<(string Path, long Length, FileAttributes Attributes)>();
         var folders = new List<(string Path, bool IsLink)>();
         foreach (var entry in entries)
         {
             if (entry.IsDirectory) folders.Add((entry.Path, entry.IsLink));
-            else files.Add((entry.Path, entry.Length));
+            else files.Add((entry.Path, entry.Length, entry.Attributes));
         }
-        foreach (var file in files) CheckFile(context, file.Path, file.Length);
+        foreach (var file in files) CheckFile(context, file.Path, file.Length, file.Attributes);
         foreach (var (child, isLink) in folders)
         {
             if (Skip(child)) continue;
@@ -141,7 +141,7 @@ public static class FileScanner
         }
     }
 
-    private static void CheckFile(ScanContext context, string path, long length)
+    private static void CheckFile(ScanContext context, string path, long length, FileAttributes attributes)
     {
         context.CountFile();
         if (SelfInfo.IsOwn(path, length)) return;
@@ -154,7 +154,13 @@ public static class FileScanner
         // What the program is and does, whatever it is called. A name alone is never a finding.
         try
         {
-            if (ContentAnalyzer.IsCandidate(path, length)) ContentAnalyzer.Analyze(context, path, length);
+            var hidden = (attributes & (FileAttributes.Hidden | FileAttributes.System)) != 0;
+            var deleted = path.Contains("\\$Recycle.Bin\\", StringComparison.OrdinalIgnoreCase);
+            if (ContentAnalyzer.IsCandidate(path, length))
+                ContentAnalyzer.Analyze(context, path, length, hiding: new ContentAnalyzer.Hiding(hidden, false, deleted));
+            // A program carrying another file's name (renamed to .txt or .dat, or hidden): looked at the same way.
+            else if (ContentAnalyzer.IsDisguisedCandidate(path, length, hidden))
+                ContentAnalyzer.Analyze(context, path, length, hiding: new ContentAnalyzer.Hiding(hidden, true, deleted));
         }
         catch
         {

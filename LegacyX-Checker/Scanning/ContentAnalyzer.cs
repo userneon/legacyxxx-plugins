@@ -39,16 +39,45 @@ public static class ContentAnalyzer
         public string Reason { get; set; } = "";
     }
 
-    public static void Analyze(ScanContext context, string path, long length, bool running = false)
+    /// <summary>Where a file was hidden or thrown away, which the server weighs next to what the program does.</summary>
+    public readonly record struct Hiding(bool Hidden, bool Disguised, bool Deleted);
+
+    /// <summary>
+    /// A file that is not named like a program but may be one: hidden or system, no extension, or an extension a program is often renamed to
+    /// (.tmp .dat .bin .txt .log .db), under the user's own folders. It is only read when it starts with "MZ" (a Windows program).
+    /// </summary>
+    public static bool IsDisguisedCandidate(string path, long length, bool hiddenAttribute)
     {
-        var inspection = Inspect(context.Rules, path, length, running);
+        if (length < 16 * 1024 || length > MaxDeepBytes) return false;
+        var extension = Path.GetExtension(path);
+        if (Extensions.Contains(extension, StringComparer.OrdinalIgnoreCase)) return false;
+        var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (windows.Length > 0 && path.StartsWith(windows, StringComparison.OrdinalIgnoreCase)) return false;
+        var usual = extension.Length == 0 || DisguiseExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase);
+        if (!hiddenAttribute && !usual) return false;
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            return stream.ReadByte() == 'M' && stream.ReadByte() == 'Z';
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static readonly string[] DisguiseExtensions = { ".tmp", ".dat", ".bin", ".txt", ".log", ".db", ".cfg", ".ini", ".png", ".jpg", ".jpeg" };
+
+    public static void Analyze(ScanContext context, string path, long length, bool running = false, Hiding hiding = default)
+    {
+        var inspection = Inspect(context.Rules, path, length, running, hiding);
         if (inspection.Fact is not null) context.AddFact(inspection.Fact);
     }
 
     /// <summary>Looks at one file the way the scan does. Also used by --explain on a test file.</summary>
-    public static Inspection Inspect(Rules rules, string path, long length, bool running = false)
+    public static Inspection Inspect(Rules rules, string path, long length, bool running = false, Hiding hiding = default)
     {
-        var result = new Inspection { Path = path, Length = length, Candidate = IsCandidate(path, length) };
+        var result = new Inspection { Path = path, Length = length, Candidate = IsCandidate(path, length) || hiding.Disguised };
         if (!result.Candidate)
         {
             result.Reason = length < 16 * 1024 ? "Skipped: the file is smaller than 16 KB." : length > MaxDeepBytes ? "Skipped: the file is larger than 64 MB." : !Extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase) ? $"Skipped: only .exe, .dll and .sys files are read for content (this is \"{Path.GetExtension(path)}\")." : "Skipped: it is inside the Windows folder.";
@@ -74,6 +103,9 @@ public static class ContentAnalyzer
             Signed = pe.IsSigned,
             Managed = pe.IsManaged,
             Running = running ? true : null,
+            Hidden = hiding.Hidden ? true : null,
+            Disguised = hiding.Disguised ? true : null,
+            Deleted = hiding.Deleted ? true : null,
             Protector = pe.SectionNames.FirstOrDefault(section => rules.ProtectorSections.Contains(section, StringComparer.OrdinalIgnoreCase)),
         };
 

@@ -82,3 +82,7 @@ While the match is paused, `!up` now works next to `.up` and `.unpause` (owner r
 ## !kickbots and !chatlock (2026-11-07)
 
 `!kickbots` removes every bot at once (needs `@css/kick`); `!chatlock` lets only staff write in chat until it is run again or the map changes (needs `@css/chat`). Both are on Staff → Roles, Admin and above have them by default.
+
+## Checker: hidden files (2026-11-07)
+
+The scan now looks harder where a program may be hidden (owner request): the Recycle Bin is read (a thrown-away program is still on the disk), a file with the Hidden or System attribute is noted, and a Windows program carrying another file's name (no extension, .tmp .dat .bin .txt .log .db .cfg .ini .png .jpg, or any name when hidden; only files that start with "MZ" are opened) is analysed like an .exe. The facts carry `hidden`, `disguised` and `deleted`; the server adds 1, 2 and 1 points (Checker rules `points`). Deploy the API first: it refuses unknown fields. Not covered yet: NTFS alternate data streams.

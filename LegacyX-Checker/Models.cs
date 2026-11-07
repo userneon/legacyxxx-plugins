@@ -44,6 +44,12 @@ public sealed class ProgramFact
     [JsonPropertyName("managed")] public bool Managed { get; set; }
     [JsonPropertyName("running"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public bool? Running { get; set; }
     [JsonPropertyName("protector"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? Protector { get; set; }
+    /// <summary>The file has the Hidden or System attribute (a place a person does not look); only sent when true.</summary>
+    [JsonPropertyName("hidden"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public bool? Hidden { get; set; }
+    /// <summary>A Windows program carrying another kind of file's name (.txt, .dat, .png, no extension); only sent when true.</summary>
+    [JsonPropertyName("disguised"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public bool? Disguised { get; set; }
+    /// <summary>Found in the Recycle Bin: thrown away, not yet emptied; only sent when true.</summary>
+    [JsonPropertyName("deleted"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public bool? Deleted { get; set; }
     [JsonPropertyName("apis")] public List<string> Apis { get; set; } = new();
     [JsonPropertyName("game")] public List<string> Game { get; set; } = new();
     [JsonPropertyName("offsets")] public List<string> Offsets { get; set; } = new();
