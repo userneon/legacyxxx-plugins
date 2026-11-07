@@ -74,3 +74,7 @@ While the match is paused, `!up` now works next to `.up` and `.unpause` (owner r
 ## !fup in the Roles list (2026-11-07)
 
 `fup` (force a paused match to resume) is now a command on Staff → Roles with its own permission, `@css/pause`; MatchZy accepts it next to `@css/config` and the Owner. Admin and Manager have it by default, as before for the Manager. Tick it on any other role to let that role use `!fup`.
+
+## Deploy no longer verifies the game (2026-11-07)
+
+`cs2-host.sh deploy` and `update` leave the CS2 game files alone (owner request: "why does it verify the install every time"): they used to run `app_update 730 validate`, a check of all 70 GB. `--cs2` fetches a new build only, `--verify` checks every file, and CS2 is still installed when `gameinfo.gi` is missing. The automatic updater passes `--cs2` when Steam has a newer build.

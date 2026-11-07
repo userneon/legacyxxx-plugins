@@ -103,8 +103,9 @@ install_steamcmd() {
 }
  
 update_cs2() {
+  # $1 = "verify" checks every game file against Steam (slow, 70 GB read); the default only fetches what a new build changed.
   say "CS2 dedicated server (first time about 35 GB, takes a while)"
-  as_cs2 "$STEAMCMD_DIR/steamcmd.sh" +force_install_dir "$CS2_DIR" +login anonymous +app_update 730 validate +quit
+  as_cs2 "$STEAMCMD_DIR/steamcmd.sh" +force_install_dir "$CS2_DIR" +login anonymous +app_update 730 $([[ "${1:-}" == verify ]] && echo validate) +quit
   # CS2 looks for the Steam client library here.
   as_cs2 mkdir -p "$CS2_HOME/.steam/sdk64"
   as_cs2 ln -sf "$STEAMCMD_DIR/linux64/steamclient.so" "$CS2_HOME/.steam/sdk64/steamclient.so"
@@ -460,8 +461,18 @@ cmd_name_sync() {
 
 cmd_update() {
   need_root
-  local package=""
-  [[ "${1:-}" == "--package" ]] && package="${2:-}"
+  # The game itself is left alone unless asked (--cs2: fetch a new build, --verify: check every file) or missing: a plugin
+  # deploy used to verify all 70 GB every time. The automatic updater passes --cs2 when Steam has a new build.
+  local package="" cs2_mode=skip
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --package) package="${2:-}"; shift 2 ;;
+      --cs2) cs2_mode=update; shift ;;
+      --verify) cs2_mode=verify; shift ;;
+      *) die "Unknown option: $1" ;;
+    esac
+  done
+  [[ -f "$CSGO_DIR/gameinfo.gi" ]] || cs2_mode=update
   local running=() build_before css_before
   build_before="$(installed_cs2_build)"
   css_before="$(cat "$STATE_DIR/css-version" 2>/dev/null || true)"
@@ -472,7 +483,8 @@ cmd_update() {
   # If a step below fails, the servers that were stopped for the update start again instead of staying down.
   restart_stopped() { local port; for port in "${running[@]}"; do systemctl start "cs2@$port" || true; done; }
   trap restart_stopped EXIT
-  update_cs2
+  if [[ "$cs2_mode" == skip ]]; then say "CS2 game files: not touched (add --cs2 to fetch a new build, --verify to check every file)"
+  else update_cs2 "$([[ "$cs2_mode" == verify ]] && echo verify)"; fi
   install_metamod
   install_counterstrikesharp
   install_multiaddonmanager
@@ -610,7 +622,8 @@ cmd_autoupdate_check() {
   fi
   ANNOUNCE_FROM="$(git_repo rev-parse HEAD)"
   if [[ "$pull" == yes ]]; then git_repo pull -q --ff-only || say "git pull failed; plugins stay at $(git_repo rev-parse --short HEAD)."; fi
-  cmd_update
+  # CS2 itself is fetched only when Steam has a newer build than the installed one.
+  if [[ -n "$want" && "$have" != "$want" ]]; then cmd_update --cs2; else cmd_update; fi
   # A CounterStrikeSharp release newer than the one current at the CS2 update is now installed.
   if [[ -f "$STATE_DIR/awaiting-css" && "$(cat "$STATE_DIR/css-version" 2>/dev/null)" != "$(cat "$STATE_DIR/awaiting-css")" ]]; then
     rm -f "$STATE_DIR/awaiting-css"

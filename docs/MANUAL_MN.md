@@ -397,7 +397,7 @@ journalctl -u legacyx-cs2-autoupdate -n 50         # сүүлийн шалгал
 systemctl list-timers legacyx-cs2-autoupdate       # дараагийн шалгалт хэзээ
 sudo ./scripts/cs2-host.sh autoupdate check        # одоо шууд шалгах
 sudo ./scripts/cs2-host.sh deploy                  # GitHub-аас татаад одоо шууд шинэчлэх
-sudo ./scripts/cs2-host.sh update                  # татахгүйгээр шинэчлэх
+sudo ./scripts/cs2-host.sh update                  # татахгүйгээр шинэчлэх (CS2-ын файлыг шалгахгүй; шинэ build бол --cs2, бүх файл шалгах бол --verify)
 sudo ./scripts/cs2-host.sh autoupdate off          # унтраах (on: асаах)
 ```
 
