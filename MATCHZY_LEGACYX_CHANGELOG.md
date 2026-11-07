@@ -94,3 +94,7 @@ A staff member (Admin, Manager or Owner, signed in on the website) types `!check
 ## Match controls from the staff site (2026-11-07)
 
 The server console on the staff site has Match control: **Set score** (`css_setscore <T> <CT>`, new in MatchZy: writes the two team entities' score that MatchZy reads for the result; the sides as they are now), **Force start** (`css_forcestart`), **End match, no result** (`css_endmatch`: no map result is sent, so no EXP and no stats), **Swap sides** (`mp_swapteams`) and **Move a player** to T, CT or spectators (`css_team`). Owner and Manager; every action is queued and audited like the others. Deploy the API first (it needs the new action types and `supabase/legacy_x_staff_match_actions.sql`, already applied to the project). Set score is untested in a real match: check that the match still ends at the right round after a change.
+
+## GOTV address for the Watch button (2026-11-07)
+
+The Status plugin reports the server's GOTV address with its heartbeat: `LEGACYX_SERVER_GOTV_ADDRESS` from the .env when set, else the server's own address with the port of `tv_port` while `tv_enable 1`. The website then shows a Watch button on a live server (Play) and on the staff console. GOTV itself is set in the server's config (`tv_enable 1`, `tv_port`, `tv_delay`, `tv_maxclients`); LEGACY-X does not turn it on.

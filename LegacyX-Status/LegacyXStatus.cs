@@ -88,6 +88,19 @@ public sealed class LegacyXStatus : BasePlugin
         });
     }
 
+
+    /// <summary>
+    /// The address a spectator joins to watch the match (GOTV): the one set in the server's .env (LEGACYX_SERVER_GOTV_ADDRESS), else the server's own address
+    /// with the port of its GOTV (tv_port) while GOTV is on (tv_enable 1). Null when there is none, and then the website shows no Watch button.
+    /// </summary>
+    private static string? GotvAddressOf(StatusSettings settings)
+    {
+        if (settings.GotvAddress.Length > 0) return settings.GotvAddress;
+        var enabled = ConVar.Find("tv_enable")?.GetPrimitiveValue<bool>() ?? false;
+        var port = ConVar.Find("tv_port")?.GetPrimitiveValue<int>() ?? 0;
+        var host = settings.ServerAddress.Split(':')[0].Trim();
+        return enabled && port is > 0 and < 65536 && host.Length > 0 ? $"{host}:{port}" : null;
+    }
     private (object Heartbeat, object Snapshot) Capture()
     {
         var humans = Utilities.GetPlayers()
@@ -101,7 +114,7 @@ public sealed class LegacyXStatus : BasePlugin
             serverId = settings.ServerId,
             name = Clip(name, 100),
             address = settings.ServerAddress,
-            gotvAddress = settings.GotvAddress.Length > 0 ? settings.GotvAddress : null,
+            gotvAddress = GotvAddressOf(settings),
             map = Clip(map, 64),
             mode = settings.ServerMode,
             maxPlayers = Math.Clamp(Server.MaxPlayers, 1, 128),
