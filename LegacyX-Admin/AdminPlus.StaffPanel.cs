@@ -235,6 +235,32 @@ public partial class AdminPlus
                 // Exiting with an error code makes systemd (Restart=on-failure) start the server again after 10 s.
                 AddTimer(10f, () => Environment.Exit(75));
                 return (true, "Restarting in 10 seconds; back in about a minute.");
+            case "match_set_score":
+            {
+                var terrorists = Math.Clamp(StaffNumber(payload, "scoreT"), 0, 60);
+                var counterTerrorists = Math.Clamp(StaffNumber(payload, "scoreCt"), 0, 60);
+                Server.ExecuteCommand($"css_setscore {terrorists} {counterTerrorists}");
+                return (true, $"Score set to T {terrorists} - {counterTerrorists} CT (the sides as they are now).");
+            }
+            case "match_end":
+                // MatchZy's end-and-reset sends no map result, so the match counts for nothing: no EXP, no stats.
+                Server.ExecuteCommand("css_endmatch");
+                return (true, "Match ended without a result: nothing is counted, no EXP changes.");
+            case "match_force_start":
+                Server.ExecuteCommand("css_forcestart");
+                return (true, "Match force-started.");
+            case "match_swap_sides":
+                Server.PrintToChatAll(LegacyXChat.System("Staff swapped the sides."));
+                Server.ExecuteCommand("mp_swapteams");
+                return (true, "Sides swapped.");
+            case "match_move_player":
+            {
+                var team = StaffText(payload, "team");
+                if (team is not ("t" or "ct" or "spec")) return (false, "Pick T, CT or Spectators.");
+                if (target == null) return (false, "The player is not on this server.");
+                Server.ExecuteCommand($"css_team {who} {team}");
+                return (true, $"Moved {target.PlayerName} to {(team == "spec" ? "Spectators" : team.ToUpperInvariant())}.");
+            }
             case "round_restore":
                 return (false, "Restoring a round is done in game with MatchZy (.stop, or css_restore as staff).");
             case "start_server":
