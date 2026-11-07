@@ -123,6 +123,22 @@ public partial class MatchZy
                         parts.Add($"{{grey}}{name} {Signed((int)Math.Round(part.GetDouble()))}");
             }
             PrintToPlayerChat(player, $"{{white}}{(final ? "Your EXP" : "Your EXP so far")}{{grey}}: {Signed(delta)}{{grey}} ({string.Join("{grey} · ", parts)}{{grey}}) → {{white}}{after}");
+            ShowLegacyXExpHudCard(player, row, title, final, delta, after);
         }
+    }
+
+    /// <summary>
+    /// The big EXP card on the player's screen (owner request 2026-11-07), drawn by the LegacyX-Hud plugin from numbers only (a name never goes into a command);
+    /// the chat lines above stay, for a server without that plugin or a client without the new addon.
+    /// </summary>
+    private void ShowLegacyXExpHudCard(CCSPlayerController player, JsonElement row, string title, bool final, int delta, int after)
+    {
+        int Tenths(JsonElement breakdown, string key) => breakdown.ValueKind == JsonValueKind.Object && breakdown.TryGetProperty(key, out var part) && part.ValueKind == JsonValueKind.Number ? (int)Math.Round(part.GetDouble() * 10) : 0;
+        var breakdown = row.TryGetProperty("breakdown", out var found) ? found : default;
+        var before = row.TryGetProperty("exp_before", out var b) && b.ValueKind == JsonValueKind.Number ? b.GetInt32() : after - delta;
+        var calibration = breakdown.ValueKind == JsonValueKind.Object && breakdown.TryGetProperty("calibration", out var c) && c.ValueKind == JsonValueKind.Number && c.GetInt32() == 2 ? 2 : 1;
+        var limited = breakdown.ValueKind == JsonValueKind.Object && breakdown.TryGetProperty("limited", out var l) && l.ValueKind == JsonValueKind.String ? (l.GetString() == "weekly" ? 2 : 1) : 0;
+        var kind = final ? 2 : title == "Overtime" ? 1 : 0;
+        Server.ExecuteCommand($"lx_exp_card {player.Slot} {kind} {delta} {Tenths(breakdown, "result")} {Tenths(breakdown, "margin")} {Tenths(breakdown, "performance")} {Tenths(breakdown, "bonus")} {before} {after} {calibration} {limited} {(final ? 15 : 12)}");
     }
 }

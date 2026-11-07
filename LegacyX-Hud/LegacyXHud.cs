@@ -45,6 +45,7 @@ public sealed partial class LegacyXHud : BasePlugin
         }
         menuLayout = env.Get("LEGACYX_HUD_MENU_LAYOUT", menuLayout);
         knifeLayout = env.Get("LEGACYX_HUD_KNIFE_LAYOUT", knifeLayout);
+        expLayout = env.Get("LEGACYX_HUD_EXP_LAYOUT", expLayout);
         welcomeLayout = env.Get("LEGACYX_HUD_WELCOME_LAYOUT", welcomeLayout);
         trollLayout = env.Get("LEGACYX_HUD_TROLL_LAYOUT", trollLayout);
         hintLayout = env.Get("LEGACYX_HUD_HINT_LAYOUT", hintLayout);
@@ -89,6 +90,8 @@ public sealed partial class LegacyXHud : BasePlugin
         introHud = null;
         bombHud?.Dispose();
         bombHud = null;
+        expHud?.Dispose();
+        expHud = null;
         welcomeHud?.Dispose();
         welcomeHud = null;
         knifeHudWin?.Dispose();
@@ -203,7 +206,7 @@ public sealed partial class LegacyXHud : BasePlugin
         Server.NextFrame(() =>
         {
             if (Utilities.GetPlayerFromSlot(slot) is not { IsValid: true } player) return;
-            foreach (var card in new[] { introHud, bombHud, welcomeHud, trollHud })
+            foreach (var card in new[] { introHud, bombHud, expHud, welcomeHud, trollHud })
                 if (card is not null && card.IsOpenFor(player)) card.Close(player);
             CloseKnifeCards(player);
             HintHide(player);
