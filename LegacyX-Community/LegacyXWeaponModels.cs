@@ -26,6 +26,10 @@ public sealed partial class LegacyXCommunity
     private static readonly Dictionary<string, string> AnimKnives = new() { ["m9"] = "weapon_knife_m9_bayonet", ["bayonet"] = "weapon_bayonet" };
     // When each player's knife was last swapped for the animation knife: at most once every few seconds, so another plugin giving the knife back cannot start a loop.
     private readonly Dictionary<ulong, DateTime> knifeSwappedAt = new();
+    // Agent models (owner request 2026-11-08): the player model the player wears for the CT side and for the T side (Shop → Weapons → CT agents / T agents).
+    private readonly Dictionary<ulong, (string? Ct, string? T)> agentModels = new();
+    // The pawn and model an agent was last put on, so a weapon pickup does not set the same model again.
+    private readonly Dictionary<ulong, (uint PawnIndex, string Path)> agentApplied = new();
 
     private void RegisterWeaponModels()
     {
@@ -48,6 +52,8 @@ public sealed partial class LegacyXCommunity
         AddCommand("css_wm", "Weapon models: what is worn", (player, _) =>
         {
             if (player is null || !player.IsValid) return;
+            if (agentModels.TryGetValue(player.SteamID, out var agents))
+                player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System($"{{white}}agent{{grey}}: CT {agents.Ct ?? "default"}, T {agents.T ?? "default"}"));
             if (!weaponModels.TryGetValue(player.SteamID, out var worn)) { player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System($"{{grey}}No weapon model is worn (or the server has not read your profile yet). {weaponModelPaths.Count} model path(s) known.")); return; }
             foreach (var (weapon, model) in worn) player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System($"{{white}}{weapon}{{grey}}: {model.World}{(model.AnimBase is null ? "" : $" ({model.AnimBase} animations)")}"));
         });
@@ -81,6 +87,8 @@ public sealed partial class LegacyXCommunity
     private void StoreWeaponModels(ulong steamId, JsonElement? profile)
     {
         weaponModels.Remove(steamId);
+        agentModels.Remove(steamId);
+        agentApplied.Remove(steamId);
         if (profile is not { } found || !found.TryGetProperty("weapon_models", out var all) || all.ValueKind != JsonValueKind.Object) return;
         var set = new Dictionary<string, WeaponModel>();
         foreach (var weapon in new[] { "knife", "deagle", "ak47" })
@@ -99,12 +107,47 @@ public sealed partial class LegacyXCommunity
                 }
         }
         if (set.Count > 0) weaponModels[steamId] = set;
+        // The agents: one model for each side, from the same profile answer (weapon_models.agent_ct / agent_t).
+        string? ct = AgentPath(all, "agent_ct"), t = AgentPath(all, "agent_t");
+        if (ct is not null || t is not null)
+        {
+            agentModels[steamId] = (ct, t);
+            foreach (var path in new[] { ct, t })
+                if (path is not null && weaponModelPaths.Add(path))
+                    try { Server.PrecacheModel(path); } catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not precache {path}: {problem.Message}"); }
+        }
+    }
+
+    private static string? AgentPath(JsonElement all, string key)
+    {
+        if (!all.TryGetProperty(key, out var entry) || entry.ValueKind != JsonValueKind.Object) return null;
+        var world = StringOrNull(entry, "world");
+        return world is not null && ValidModelPath(world) ? world : null;
+    }
+
+    /// <summary>Puts the agent model the player wears for their team on their pawn (once per pawn: a weapon pickup calls this again).</summary>
+    private void ApplyAgentModel(CCSPlayerController player)
+    {
+        if (!agentModels.TryGetValue(player.SteamID, out var agents)) return;
+        var path = player.TeamNum == 3 ? agents.Ct : player.TeamNum == 2 ? agents.T : null;
+        var pawn = player.PlayerPawn.Value;
+        if (path is null || pawn is null || !pawn.IsValid) return;
+        if (agentApplied.TryGetValue(player.SteamID, out var done) && done.PawnIndex == pawn.Index && done.Path == path) return;
+        try
+        {
+            pawn.SetModel(path);
+            agentApplied[player.SteamID] = (pawn.Index, path);
+            Console.WriteLine($"[{ModuleName}] Agent model {path} put on {player.PlayerName} ({(player.TeamNum == 3 ? "CT" : "T")}).");
+        }
+        catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Agent model for {player.PlayerName} failed: {problem.Message}"); }
     }
 
     private void ApplyWeaponModels(CCSPlayerController player)
     {
         // Nothing for a player who is choosing a team, spectating or dead: there is no gun in their hands to change.
-        if (!weaponModelsOn || !player.IsValid || player.IsBot || !player.PawnIsAlive || player.TeamNum < 2 || !weaponModels.TryGetValue(player.SteamID, out var set)) return;
+        if (!weaponModelsOn || !player.IsValid || player.IsBot || !player.PawnIsAlive || player.TeamNum < 2) return;
+        ApplyAgentModel(player);
+        if (!weaponModels.TryGetValue(player.SteamID, out var set)) return;
         var pawn = player.PlayerPawn.Value;
         if (pawn is null || !pawn.IsValid || pawn.WeaponServices is null) return;
         // A knife model made for the M9 or Bayonet animations needs that knife under it: swap the player's knife for it (once, then the model goes on).
