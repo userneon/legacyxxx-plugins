@@ -31,6 +31,9 @@
 #   sudo ./scripts/cs2-host.sh client-addons [id,id,...]
 #       Workshop addon IDs every player downloads on connect (MultiAddonManager mm_client_extra_addons): LEGACY-X's particle
 #       effects are 3830785234. No IDs prints the current value; "none" clears it. Restart the servers after.
+#   sudo ./scripts/cs2-host.sh server-addons [id,id,...]
+#       Workshop addon IDs the SERVER mounts itself (MultiAddonManager mm_extra_addons), so it can precache their models (custom knives and agents,
+#       3830785234). The server also sends them to the players. No IDs prints the current value; "none" clears it. Restart the servers after.
 #   sudo ./scripts/cs2-host.sh remove <port>        stops and deletes that server's service and config
 #   sudo ./scripts/cs2-host.sh name-sync
 #       takes the old per-server in-game name (GAME_NAME) out of every server's config; names now come from the website.
@@ -277,6 +280,28 @@ cmd_client_addons() {
   say "Takes effect after a restart: sudo systemctl restart cs2@<port> (clients that join later download it)."
 }
  
+# Workshop addon IDs the SERVER itself mounts (MultiAddonManager mm_extra_addons): the server downloads them, precaches their models and sends them to
+# the players too. Needed for anything the server has to draw or precache itself (custom knife and agent models, lx_wm_agent). Written to MultiAddonManager's own cfg.
+cmd_server_addons() {
+  need_root
+  local cfg="$CSGO_DIR/cfg/multiaddonmanager/multiaddonmanager.cfg" ids="${1:-}"
+  if [[ -z "$ids" ]]; then
+    grep -E '^[[:space:]]*mm_extra_addons' "$cfg" 2>/dev/null || echo "mm_extra_addons is not set."
+    return 0
+  fi
+  [[ "$ids" == none ]] && ids=""
+  [[ -z "$ids" || "$ids" =~ ^[0-9]+(,[0-9]+)*$ ]] || die "Usage: $0 server-addons 3830785234[,id,...] | none"
+  [[ -d "$CSGO_DIR/addons" ]] || die "Run install first."
+  mkdir -p "$(dirname "$cfg")"
+  touch "$cfg"
+  sed -i '/^[[:space:]]*mm_extra_addons/d' "$cfg"
+  printf 'mm_extra_addons "%s"\n' "$ids" >> "$cfg"
+  chown -R "$CS2_USER:$CS2_USER" "$(dirname "$cfg")"
+  ensure_mam_client_cache
+  say "mm_extra_addons \"$ids\" written to $cfg"
+  say "Takes effect after a restart: sudo systemctl restart cs2@<port>. The server then downloads the item, and sends it to players as well (an ID also in client-addons is harmless to keep; if a player downloads it twice, clear it there with: client-addons none)."
+}
+
 install_legacyx() {
   local package="$1" env_file="$2" args=()
   [[ -n "$package" ]] && args+=(--package "$package")
@@ -699,6 +724,7 @@ case "${1:-}" in
   autoupdate) shift; cmd_autoupdate "$@" ;;
   css-hotfix) cmd_css_hotfix ;;
   client-addons) shift; cmd_client_addons "$@" ;;
+  server-addons) shift; cmd_server_addons "$@" ;;
   remove) shift; cmd_remove "$@" ;;
   status) cmd_status ;;
   logs) [[ -n "${2:-}" ]] || die "Usage: $0 logs <port>"; journalctl -u "cs2@$2" -f ;;
