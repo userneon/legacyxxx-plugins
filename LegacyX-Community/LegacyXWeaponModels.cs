@@ -23,6 +23,15 @@ public sealed partial class LegacyXCommunity
     // Swapping a knife for the animation knife removes a weapon entity, which crashed a server once (WriteEnterPVS, 2026-11-06). Off unless LEGACYX_COMMUNITY_KNIFE_SWAP=true.
     private bool knifeSwapOn;
     // The real knife whose animations a custom knife is made for: a knife model plays the animations of the knife entity it sits on, so the player is given that knife.
+    /// <summary>The item number of each knife in <see cref="AnimKnives"/> (the same numbers as the API's ANIMATION_KNIVES): what tells a given knife from the plain one.</summary>
+    private static readonly Dictionary<string, int> KnifeDefIndex = new()
+    {
+        ["weapon_bayonet"] = 500, ["weapon_knife_css"] = 503, ["weapon_knife_flip"] = 505, ["weapon_knife_gut"] = 506, ["weapon_knife_karambit"] = 507, ["weapon_knife_m9_bayonet"] = 508,
+        ["weapon_knife_tactical"] = 509, ["weapon_knife_falchion"] = 512, ["weapon_knife_survival_bowie"] = 514, ["weapon_knife_butterfly"] = 515, ["weapon_knife_push"] = 516,
+        ["weapon_knife_cord"] = 517, ["weapon_knife_canis"] = 518, ["weapon_knife_ursus"] = 519, ["weapon_knife_gypsy_jackknife"] = 520, ["weapon_knife_outdoor"] = 521,
+        ["weapon_knife_stiletto"] = 522, ["weapon_knife_widowmaker"] = 523, ["weapon_knife_skeleton"] = 525,
+    };
+
     /// <summary>The knives a model can be made for the animations of (`anim_base`): the knife that must sit under it. Same list as ANIMATION_KNIVES in the API and the SQL check.</summary>
     private static readonly Dictionary<string, string> AnimKnives = new()
     {
@@ -137,7 +146,8 @@ public sealed partial class LegacyXCommunity
             && (!knifeSwappedAt.TryGetValue(player.SteamID, out var swapped) || (DateTime.UtcNow - swapped).TotalSeconds > 5))
         {
             var current = pawn.WeaponServices.MyWeapons.Select(h => h.Value).FirstOrDefault(w => w is { IsValid: true } && (w.DesignerName.Contains("knife", StringComparison.Ordinal) || w.DesignerName.Contains("bayonet", StringComparison.Ordinal)));
-            if (current is not null && current.DesignerName != wanted)
+            // Compared by item number as well as by name: most knives (the Karambit, the Paracord ...) are called weapon_knife as entities, so a name check alone is never equal and the knife would be removed and given again forever, which froze the server at team select.
+            if (current is not null && current.DesignerName != wanted && !(KnifeDefIndex.TryGetValue(wanted, out var wantedIndex) && current.AttributeManager.Item.ItemDefinitionIndex == wantedIndex))
             {
                 knifeSwappedAt[player.SteamID] = DateTime.UtcNow;
                 try
