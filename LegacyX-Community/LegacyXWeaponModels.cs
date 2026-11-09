@@ -43,6 +43,21 @@ public sealed partial class LegacyXCommunity
     };
     // When each player's knife was last swapped for the animation knife: at most once every few seconds, so another plugin giving the knife back cannot start a loop.
     private readonly Dictionary<ulong, DateTime> knifeSwappedAt = new();
+    // When each player's knife last got its weapon subclass: at most once every 1.5 s, so a subclass change that makes the game announce the knife again cannot start a loop.
+    private readonly Dictionary<ulong, DateTime> knifeSubclassAt = new();
+
+    /// <summary>
+    /// The seller's Apex knives are weapon prefabs in the addon's scripts/weapons.vdata (apex_karambit, apex_balisong ...), each with its own model, animation class and skeleton.
+    /// The engine reads those from the prefab named by the weapon's SUBCLASS, so the knife in hand is told its subclass: <c>ChangeSubclass "apex_karambit"</c>
+    /// (README-APEX.txt of the seller's v2 archive). The prefab name is the model's folder: weapons/bluesen/apex/&lt;name&gt;/&lt;name&gt;.vmdl.
+    /// </summary>
+    private static string? KnifeSubclass(string world)
+    {
+        const string prefix = "weapons/bluesen/apex/";
+        if (!world.StartsWith(prefix, StringComparison.Ordinal) || !world.EndsWith(".vmdl", StringComparison.Ordinal)) return null;
+        var parts = world[prefix.Length..^5].Split('/');
+        return parts.Length == 2 && parts[0] == parts[1] && parts[0].StartsWith("apex_", StringComparison.Ordinal) ? parts[0] : null;
+    }
 
     private void RegisterWeaponModels()
     {
@@ -69,6 +84,12 @@ public sealed partial class LegacyXCommunity
             foreach (var (weapon, model) in worn) player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System($"{{white}}{weapon}{{grey}}: {model.World}{(model.AnimBase is null ? "" : $" ({model.AnimBase} animations)")}"));
         });
         RegisterEventHandler<EventPlayerSpawn>((@event, _) =>
+        {
+            if (@event.Userid is { IsValid: true } player) Server.NextFrame(() => ApplyWeaponModels(player));
+            return HookResult.Continue;
+        });
+        // The subclass can only be changed on the knife that is IN HAND (on a holstered weapon it crashed the seller's server), so it is applied when the knife is equipped.
+        RegisterEventHandler<EventItemEquip>((@event, _) =>
         {
             if (@event.Userid is { IsValid: true } player) Server.NextFrame(() => ApplyWeaponModels(player));
             return HookResult.Continue;
@@ -196,6 +217,20 @@ public sealed partial class LegacyXCommunity
             var name = weapon.DesignerName;
             var kind = name.Contains("knife", StringComparison.Ordinal) || name.Contains("bayonet", StringComparison.Ordinal) ? "knife" : name == "weapon_deagle" ? "deagle" : name == "weapon_ak47" ? "ak47" : null;
             if (kind is null || !set.TryGetValue(kind, out var model)) continue;
+            if (kind == "knife" && KnifeSubclass(model.World) is { } subclass)
+            {
+                // A prefab knife: only the knife in hand can be changed; its model, animation class and skeleton then come from the vdata, so no SetModel on top (that would keep the vanilla animations).
+                if (weapon.Handle != pawn.WeaponServices.ActiveWeapon.Value?.Handle) continue;
+                if (knifeSubclassAt.TryGetValue(player.SteamID, out var changed) && (DateTime.UtcNow - changed).TotalSeconds < 1.5) continue;
+                knifeSubclassAt[player.SteamID] = DateTime.UtcNow;
+                try
+                {
+                    weapon.AcceptInput("ChangeSubclass", value: subclass);
+                    Console.WriteLine($"[{ModuleName}] Knife subclass {subclass} put on {player.PlayerName}'s knife in hand.");
+                }
+                catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Knife subclass {subclass} for {player.PlayerName} failed: {problem.Message}"); }
+                continue;
+            }
             try
             {
                 weapon.SetModel(model.World);
