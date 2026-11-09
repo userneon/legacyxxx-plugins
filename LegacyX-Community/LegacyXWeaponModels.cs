@@ -23,7 +23,7 @@ public sealed partial class LegacyXCommunity
     // Swapping a knife for the animation knife removes a weapon entity, which crashed a server once (WriteEnterPVS, 2026-11-06). Off unless LEGACYX_COMMUNITY_KNIFE_SWAP=true.
     private bool knifeSwapOn;
     // The real knife whose animations a custom knife is made for: a knife model plays the animations of the knife entity it sits on, so the player is given that knife.
-    private static readonly Dictionary<string, string> AnimKnives = new() { ["m9"] = "weapon_knife_m9_bayonet", ["bayonet"] = "weapon_bayonet" };
+    private static readonly Dictionary<string, string> AnimKnives = new() { ["m9"] = "weapon_knife_m9_bayonet", ["bayonet"] = "weapon_bayonet", ["stiletto"] = "weapon_knife_stiletto", ["karambit"] = "weapon_knife_karambit", ["butterfly"] = "weapon_knife_butterfly" };
     // When each player's knife was last swapped for the animation knife: at most once every few seconds, so another plugin giving the knife back cannot start a loop.
     private readonly Dictionary<ulong, DateTime> knifeSwappedAt = new();
 
