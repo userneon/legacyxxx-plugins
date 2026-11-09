@@ -45,6 +45,9 @@ public sealed partial class LegacyXCommunity
     private readonly Dictionary<ulong, DateTime> knifeSwappedAt = new();
     // When each player's knife last got its weapon subclass: at most once every 1.5 s, so a subclass change that makes the game announce the knife again cannot start a loop.
     private readonly Dictionary<ulong, DateTime> knifeSubclassAt = new();
+    // The Apex prefab knives (ChangeSubclass) need scripts/weapons.vdata_c in the published addon; until it is there the knife keeps its model through SetModel as before.
+    // Off unless LEGACYX_COMMUNITY_APEX_SUBCLASS=true.
+    private bool apexSubclassOn;
     // anim_base -> the weapon prefab (weapons.vdata) whose animation class that knife has, from LEGACYX_COMMUNITY_KNIFE_SUBCLASS="paracord=<prefab>,karambit=<prefab>". Nothing is guessed: a base without an entry is left alone.
     private readonly Dictionary<string, string> animBaseSubclass = new(StringComparer.OrdinalIgnoreCase);
 
@@ -65,6 +68,8 @@ public sealed partial class LegacyXCommunity
     {
         knifeSwapOn = string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SWAP"), "true", StringComparison.OrdinalIgnoreCase);
         Console.WriteLine($"[{ModuleName}] Weapon models: knife swap for the M9/Bayonet animations is {(knifeSwapOn ? "ON" : "off")}.");
+        apexSubclassOn = string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_APEX_SUBCLASS"), "true", StringComparison.OrdinalIgnoreCase);
+        Console.WriteLine($"[{ModuleName}] Weapon models: Apex knife subclass (weapons.vdata prefabs) is {(apexSubclassOn ? "ON" : "off, the model is put on with SetModel")}.");
         foreach (var pair in LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SUBCLASS").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             var parts = pair.Split('=', 2, StringSplitOptions.TrimEntries);
@@ -226,7 +231,7 @@ public sealed partial class LegacyXCommunity
             var name = weapon.DesignerName;
             var kind = name.Contains("knife", StringComparison.Ordinal) || name.Contains("bayonet", StringComparison.Ordinal) ? "knife" : name == "weapon_deagle" ? "deagle" : name == "weapon_ak47" ? "ak47" : null;
             if (kind is null || !set.TryGetValue(kind, out var model)) continue;
-            if (kind == "knife" && KnifeSubclass(model.World) is { } subclass)
+            if (kind == "knife" && apexSubclassOn && KnifeSubclass(model.World) is { } subclass)
             {
                 // A prefab knife: only the knife in hand can be changed; its model, animation class and skeleton then come from the vdata, so no SetModel on top (that would keep the vanilla animations).
                 if (weapon.Handle != pawn.WeaponServices.ActiveWeapon.Value?.Handle) continue;
