@@ -23,7 +23,15 @@ public sealed partial class LegacyXCommunity
     // Swapping a knife for the animation knife removes a weapon entity, which crashed a server once (WriteEnterPVS, 2026-11-06). Off unless LEGACYX_COMMUNITY_KNIFE_SWAP=true.
     private bool knifeSwapOn;
     // The real knife whose animations a custom knife is made for: a knife model plays the animations of the knife entity it sits on, so the player is given that knife.
-    private static readonly Dictionary<string, string> AnimKnives = new() { ["m9"] = "weapon_knife_m9_bayonet", ["bayonet"] = "weapon_bayonet", ["stiletto"] = "weapon_knife_stiletto", ["karambit"] = "weapon_knife_karambit", ["butterfly"] = "weapon_knife_butterfly" };
+    /// <summary>The knives a model can be made for the animations of (`anim_base`): the knife that must sit under it. Same list as ANIMATION_KNIVES in the API and the SQL check.</summary>
+    private static readonly Dictionary<string, string> AnimKnives = new()
+    {
+        ["bayonet"] = "weapon_bayonet", ["classic"] = "weapon_knife_css", ["flip"] = "weapon_knife_flip", ["gut"] = "weapon_knife_gut", ["karambit"] = "weapon_knife_karambit",
+        ["m9"] = "weapon_knife_m9_bayonet", ["huntsman"] = "weapon_knife_tactical", ["falchion"] = "weapon_knife_falchion", ["bowie"] = "weapon_knife_survival_bowie",
+        ["butterfly"] = "weapon_knife_butterfly", ["daggers"] = "weapon_knife_push", ["paracord"] = "weapon_knife_cord", ["survival"] = "weapon_knife_canis",
+        ["ursus"] = "weapon_knife_ursus", ["navaja"] = "weapon_knife_gypsy_jackknife", ["nomad"] = "weapon_knife_outdoor", ["stiletto"] = "weapon_knife_stiletto",
+        ["talon"] = "weapon_knife_widowmaker", ["skeleton"] = "weapon_knife_skeleton",
+    };
     // When each player's knife was last swapped for the animation knife: at most once every few seconds, so another plugin giving the knife back cannot start a loop.
     private readonly Dictionary<ulong, DateTime> knifeSwappedAt = new();
 
@@ -66,6 +74,23 @@ public sealed partial class LegacyXCommunity
             if (player != null) return;
             weaponModelsOn = command.ArgCount < 2 || command.GetArg(1) != "0";
             Console.WriteLine($"[{ModuleName}] Weapon models {(weaponModelsOn ? "on" : "off")}.");
+        });
+        // Try a knife base without touching the database: `lx_wm_try <steamid64> <base>` puts that knife under the player's worn knife model right now (base `none` clears it).
+        // For finding which knife an own-graph model plays right on; the choice lasts until the player's profile is read again (a new join), the database is not changed.
+        AddCommand("lx_wm_try", "Weapon models: try an animation base on a player (lx_wm_try <steamid64> <base|none>)", (player, command) =>
+        {
+            if (player != null) return;
+            if (command.ArgCount < 3 || !ulong.TryParse(command.GetArg(1), out var steam)) { Console.WriteLine($"[{ModuleName}] Usage: lx_wm_try <steamid64> <base|none>. Bases: {string.Join(", ", AnimKnives.Keys)}"); return; }
+            var baseName = command.GetArg(2).ToLowerInvariant();
+            if (baseName != "none" && !AnimKnives.ContainsKey(baseName)) { Console.WriteLine($"[{ModuleName}] Unknown base '{baseName}'. Bases: {string.Join(", ", AnimKnives.Keys)}"); return; }
+            if (!weaponModels.TryGetValue(steam, out var worn) || !worn.TryGetValue("knife", out var knife)) { Console.WriteLine($"[{ModuleName}] {steam} wears no knife model (or the profile has not been read yet)."); return; }
+            var target = Utilities.GetPlayers().FirstOrDefault(candidate => candidate.IsValid && candidate.SteamID == steam);
+            if (target is null) { Console.WriteLine($"[{ModuleName}] {steam} is not on this server."); return; }
+            worn["knife"] = knife with { AnimBase = baseName == "none" ? null : baseName };
+            knifeSwapOn = true;
+            knifeSwappedAt.Remove(steam);
+            Console.WriteLine($"[{ModuleName}] Trying base '{baseName}' on {target.PlayerName} (knife swap is now ON until the plugin reloads).");
+            ApplyWeaponModels(target);
         });
         AddCommand("lx_wm_status", "Weapon models: who wears what", (player, _) =>
         {
