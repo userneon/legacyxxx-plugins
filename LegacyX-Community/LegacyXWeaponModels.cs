@@ -114,6 +114,8 @@ public sealed partial class LegacyXCommunity
             if (target is null || pawn is null || !pawn.IsValid || !target.PawnIsAlive) { Say(command, $"[{ModuleName}] {steam} is not on this server and alive."); return; }
             try
             {
+                // Kept for every later map too (the precache list is rebuilt from this set at each map start), so nothing has to be added to the .env for a test.
+                if (weaponModelPaths.Add(path)) Say(command, $"[{ModuleName}] {path} added to the precache list (it is in the manifest from the next map on).");
                 Server.PrecacheModel(path);
                 pawn.SetModel(path);
                 Say(command, $"[{ModuleName}] Character model {path} put on {target.PlayerName} (until the next spawn).");
