@@ -89,16 +89,16 @@ public sealed partial class LegacyXCommunity
         AddCommand("lx_wm_try", "Weapon models: try an animation base on a player (lx_wm_try <steamid64> <base|none>)", (player, command) =>
         {
             if (player != null) return;
-            if (command.ArgCount < 3 || !ulong.TryParse(command.GetArg(1), out var steam)) { Console.WriteLine($"[{ModuleName}] Usage: lx_wm_try <steamid64> <base|none>. Bases: {string.Join(", ", AnimKnives.Keys)}"); return; }
+            if (command.ArgCount < 3 || !ulong.TryParse(command.GetArg(1), out var steam)) { Say(command, $"[{ModuleName}] Usage: lx_wm_try <steamid64> <base|none>. Bases: {string.Join(", ", AnimKnives.Keys)}"); return; }
             var baseName = command.GetArg(2).ToLowerInvariant();
-            if (baseName != "none" && !AnimKnives.ContainsKey(baseName)) { Console.WriteLine($"[{ModuleName}] Unknown base '{baseName}'. Bases: {string.Join(", ", AnimKnives.Keys)}"); return; }
-            if (!weaponModels.TryGetValue(steam, out var worn) || !worn.TryGetValue("knife", out var knife)) { Console.WriteLine($"[{ModuleName}] {steam} wears no knife model (or the profile has not been read yet)."); return; }
+            if (baseName != "none" && !AnimKnives.ContainsKey(baseName)) { Say(command, $"[{ModuleName}] Unknown base '{baseName}'. Bases: {string.Join(", ", AnimKnives.Keys)}"); return; }
+            if (!weaponModels.TryGetValue(steam, out var worn) || !worn.TryGetValue("knife", out var knife)) { Say(command, $"[{ModuleName}] {steam} wears no knife model (or the profile has not been read yet)."); return; }
             var target = Utilities.GetPlayers().FirstOrDefault(candidate => candidate.IsValid && candidate.SteamID == steam);
-            if (target is null) { Console.WriteLine($"[{ModuleName}] {steam} is not on this server."); return; }
+            if (target is null) { Say(command, $"[{ModuleName}] {steam} is not on this server."); return; }
             worn["knife"] = knife with { AnimBase = baseName == "none" ? null : baseName };
             knifeSwapOn = true;
             knifeSwappedAt.Remove(steam);
-            Console.WriteLine($"[{ModuleName}] Trying base '{baseName}' on {target.PlayerName} (knife swap is now ON until the plugin reloads).");
+            Say(command, $"[{ModuleName}] Trying base '{baseName}' on {target.PlayerName} (knife swap is now ON until the plugin reloads).");
             ApplyWeaponModels(target);
         });
         // The seller of the Apex knives says their own animations play only on the character models of his replace pack (re-rigged agents). This puts one of them on a player
@@ -106,26 +106,33 @@ public sealed partial class LegacyXCommunity
         AddCommand("lx_wm_agent", "Weapon models: put a character model on a player (lx_wm_agent <steamid64> <path.vmdl>)", (player, command) =>
         {
             if (player != null) return;
-            if (command.ArgCount < 3 || !ulong.TryParse(command.GetArg(1), out var steam)) { Console.WriteLine($"[{ModuleName}] Usage: lx_wm_agent <steamid64> <agents/models/bluesen/default_agents/ctm_fbi/ctm_fbi.vmdl>"); return; }
+            if (command.ArgCount < 3 || !ulong.TryParse(command.GetArg(1), out var steam)) { Say(command, $"[{ModuleName}] Usage: lx_wm_agent <steamid64> <agents/models/bluesen/default_agents/ctm_fbi/ctm_fbi.vmdl>"); return; }
             var path = command.GetArg(2).ToLowerInvariant();
-            if (!ValidModelPath(path)) { Console.WriteLine($"[{ModuleName}] '{path}' is not a model path (lower case letters, digits, _ - . / and it ends in .vmdl)."); return; }
+            if (!ValidModelPath(path)) { Say(command, $"[{ModuleName}] '{path}' is not a model path (lower case letters, digits, _ - . / and it ends in .vmdl)."); return; }
             var target = Utilities.GetPlayers().FirstOrDefault(candidate => candidate.IsValid && candidate.SteamID == steam);
             var pawn = target?.PlayerPawn.Value;
-            if (target is null || pawn is null || !pawn.IsValid || !target.PawnIsAlive) { Console.WriteLine($"[{ModuleName}] {steam} is not on this server and alive."); return; }
+            if (target is null || pawn is null || !pawn.IsValid || !target.PawnIsAlive) { Say(command, $"[{ModuleName}] {steam} is not on this server and alive."); return; }
             try
             {
                 Server.PrecacheModel(path);
                 pawn.SetModel(path);
-                Console.WriteLine($"[{ModuleName}] Character model {path} put on {target.PlayerName} (until the next spawn).");
+                Say(command, $"[{ModuleName}] Character model {path} put on {target.PlayerName} (until the next spawn).");
             }
-            catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not put {path} on {target.PlayerName}: {problem.Message}"); }
+            catch (Exception problem) { Say(command, $"[{ModuleName}] Could not put {path} on {target.PlayerName}: {problem.Message}"); }
         });
-        AddCommand("lx_wm_status", "Weapon models: who wears what", (player, _) =>
+        AddCommand("lx_wm_status", "Weapon models: who wears what", (player, command) =>
         {
             if (player != null) return;
-            Console.WriteLine($"[{ModuleName}] Weapon models {(weaponModelsOn ? "on" : "off")}: {weaponModels.Count} players, {weaponModelPaths.Count} paths precached.");
-            foreach (var (steam, set) in weaponModels) Console.WriteLine($"  {steam}: {string.Join(", ", set.Select(entry => $"{entry.Key}={entry.Value.World}"))}");
+            Say(command, $"[{ModuleName}] Weapon models {(weaponModelsOn ? "on" : "off")}: {weaponModels.Count} players, {weaponModelPaths.Count} paths precached.");
+            foreach (var (steam, set) in weaponModels) Say(command, $"  {steam}: {string.Join(", ", set.Select(entry => $"{entry.Key}={entry.Value.World}"))}");
         });
+    }
+
+    // Answers on the server's console and, when the command came from RCON or a console that can hear it, back to whoever sent it.
+    private void Say(CommandInfo command, string text)
+    {
+        Console.WriteLine(text);
+        try { command.ReplyToCommand(text); } catch { }
     }
 
     private static bool ValidModelPath(string path) =>
