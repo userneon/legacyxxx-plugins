@@ -101,6 +101,25 @@ public sealed partial class LegacyXCommunity
             Console.WriteLine($"[{ModuleName}] Trying base '{baseName}' on {target.PlayerName} (knife swap is now ON until the plugin reloads).");
             ApplyWeaponModels(target);
         });
+        // The seller of the Apex knives says their own animations play only on the character models of his replace pack (re-rigged agents). This puts one of them on a player
+        // right now to find out: `lx_wm_agent <steamid64> <path.vmdl>` (a path under agents/models/bluesen/...; `none` is not needed, the next spawn gives the player's own model back).
+        AddCommand("lx_wm_agent", "Weapon models: put a character model on a player (lx_wm_agent <steamid64> <path.vmdl>)", (player, command) =>
+        {
+            if (player != null) return;
+            if (command.ArgCount < 3 || !ulong.TryParse(command.GetArg(1), out var steam)) { Console.WriteLine($"[{ModuleName}] Usage: lx_wm_agent <steamid64> <agents/models/bluesen/default_agents/ctm_fbi/ctm_fbi.vmdl>"); return; }
+            var path = command.GetArg(2).ToLowerInvariant();
+            if (!ValidModelPath(path)) { Console.WriteLine($"[{ModuleName}] '{path}' is not a model path (lower case letters, digits, _ - . / and it ends in .vmdl)."); return; }
+            var target = Utilities.GetPlayers().FirstOrDefault(candidate => candidate.IsValid && candidate.SteamID == steam);
+            var pawn = target?.PlayerPawn.Value;
+            if (target is null || pawn is null || !pawn.IsValid || !target.PawnIsAlive) { Console.WriteLine($"[{ModuleName}] {steam} is not on this server and alive."); return; }
+            try
+            {
+                Server.PrecacheModel(path);
+                pawn.SetModel(path);
+                Console.WriteLine($"[{ModuleName}] Character model {path} put on {target.PlayerName} (until the next spawn).");
+            }
+            catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not put {path} on {target.PlayerName}: {problem.Message}"); }
+        });
         AddCommand("lx_wm_status", "Weapon models: who wears what", (player, _) =>
         {
             if (player != null) return;
