@@ -45,6 +45,8 @@ public sealed partial class LegacyXCommunity
     private readonly Dictionary<ulong, DateTime> knifeSwappedAt = new();
     // When each player's knife last got its weapon subclass: at most once every 1.5 s, so a subclass change that makes the game announce the knife again cannot start a loop.
     private readonly Dictionary<ulong, DateTime> knifeSubclassAt = new();
+    // anim_base -> the weapon prefab (weapons.vdata) whose animation class that knife has, from LEGACYX_COMMUNITY_KNIFE_SUBCLASS="paracord=<prefab>,karambit=<prefab>". Nothing is guessed: a base without an entry is left alone.
+    private readonly Dictionary<string, string> animBaseSubclass = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// The seller's Apex knives are weapon prefabs in the addon's scripts/weapons.vdata (apex_karambit, apex_balisong ...), each with its own model, animation class and skeleton.
@@ -63,6 +65,13 @@ public sealed partial class LegacyXCommunity
     {
         knifeSwapOn = string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SWAP"), "true", StringComparison.OrdinalIgnoreCase);
         Console.WriteLine($"[{ModuleName}] Weapon models: knife swap for the M9/Bayonet animations is {(knifeSwapOn ? "ON" : "off")}.");
+        foreach (var pair in LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SUBCLASS").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var parts = pair.Split('=', 2, StringSplitOptions.TrimEntries);
+            if (parts.Length == 2 && AnimKnives.ContainsKey(parts[0]) && parts[1].Length is > 0 and <= 80 && parts[1].All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '_'))
+                animBaseSubclass[parts[0]] = parts[1];
+        }
+        Console.WriteLine($"[{ModuleName}] Weapon models: knife subclasses for animation bases: {(animBaseSubclass.Count == 0 ? "none" : string.Join(", ", animBaseSubclass.Select(pair => $"{pair.Key}={pair.Value}")))}.");
         foreach (var path in LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_MODEL_PRECACHE").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             if (ValidModelPath(path)) weaponModelPaths.Add(path);
         RegisterListener<Listeners.OnServerPrecacheResources>(manifest =>
@@ -229,6 +238,36 @@ public sealed partial class LegacyXCommunity
                     Console.WriteLine($"[{ModuleName}] Knife subclass {subclass} put on {player.PlayerName}'s knife in hand.");
                 }
                 catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Knife subclass {subclass} for {player.PlayerName} failed: {problem.Message}"); }
+                continue;
+            }
+            if (kind == "knife" && model.AnimBase is { } baseName && animBaseSubclass.TryGetValue(baseName, out var baseSubclass))
+            {
+                // A custom knife made for another knife's animations (a katana for the paracord) and NOT removed or swapped: the knife in hand gets that knife's weapon subclass
+                // (its animation class), which also resets the model to the prefab's, so the knife's own model goes back on a moment later.
+                if (weapon.Handle != pawn.WeaponServices.ActiveWeapon.Value?.Handle) continue;
+                if (knifeSubclassAt.TryGetValue(player.SteamID, out var changedAt) && (DateTime.UtcNow - changedAt).TotalSeconds < 1.5) continue;
+                knifeSubclassAt[player.SteamID] = DateTime.UtcNow;
+                try
+                {
+                    weapon.AcceptInput("ChangeSubclass", value: baseSubclass);
+                    Console.WriteLine($"[{ModuleName}] Knife subclass {baseSubclass} ({baseName} animations) put on {player.PlayerName}'s knife in hand.");
+                }
+                catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Knife subclass {baseSubclass} for {player.PlayerName} failed: {problem.Message}"); continue; }
+                var steam = player.SteamID;
+                AddTimer(0.3f, () =>
+                {
+                    var again = Utilities.GetPlayers().FirstOrDefault(candidate => candidate.IsValid && candidate.SteamID == steam);
+                    var hand = again?.PlayerPawn.Value?.WeaponServices?.ActiveWeapon.Value;
+                    if (again is null || hand is not { IsValid: true } || hand.Handle != weapon.Handle) return;
+                    try
+                    {
+                        hand.SetModel(model.World);
+                        foreach (var view in Utilities.FindAllEntitiesByDesignerName<CBaseModelEntity>("predicted_viewmodel"))
+                            if (view.IsValid && Schema.GetSchemaValue<CHandle<CBasePlayerWeapon>>(view.Handle, "CBaseViewModel", "m_hWeapon").Value?.Handle == hand.Handle) view.SetModel(model.View);
+                        Console.WriteLine($"[{ModuleName}] Weapon model {model.World} put back on {again.PlayerName}'s knife after the subclass.");
+                    }
+                    catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Putting {model.World} back failed: {problem.Message}"); }
+                });
                 continue;
             }
             try
