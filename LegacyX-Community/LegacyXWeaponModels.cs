@@ -50,6 +50,14 @@ public sealed partial class LegacyXCommunity
         Console.WriteLine($"[{ModuleName}] Weapon models: knife swap for the M9/Bayonet animations is {(knifeSwapOn ? "ON" : "off")}.");
         foreach (var path in LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_MODEL_PRECACHE").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             if (ValidModelPath(path)) weaponModelPaths.Add(path);
+        // Paths added with lx_wm_precache survive a restart: they are kept in a small file next to the plugin (model paths only, no secrets).
+        try
+        {
+            if (File.Exists(PrecacheFile))
+                foreach (var line in File.ReadAllLines(PrecacheFile).Select(entry => entry.Trim().ToLowerInvariant()))
+                    if (ValidModelPath(line)) weaponModelPaths.Add(line);
+        }
+        catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not read {PrecacheFile}: {problem.Message}"); }
         RegisterListener<Listeners.OnServerPrecacheResources>(manifest =>
         {
             foreach (var path in weaponModelPaths) manifest.AddResource(path);
@@ -101,6 +109,29 @@ public sealed partial class LegacyXCommunity
             Say(command, $"[{ModuleName}] Trying base '{baseName}' on {target.PlayerName} (knife swap is now ON until the plugin reloads).");
             ApplyWeaponModels(target);
         });
+        // Put a model on the precache list without touching the .env: `lx_wm_precache <path.vmdl>` (kept in a file, in the manifest from the next map on and precached now),
+        // `lx_wm_precache list` shows the list, `lx_wm_precache remove <path.vmdl>` takes one out of the file (a path from the .env stays).
+        AddCommand("lx_wm_precache", "Weapon models: add a model path to the precache list (lx_wm_precache <path.vmdl> | list | remove <path.vmdl>)", (player, command) =>
+        {
+            if (player != null) return;
+            var first = command.ArgCount > 1 ? command.GetArg(1).ToLowerInvariant() : "";
+            if (first is "" or "list") { Say(command, $"[{ModuleName}] {weaponModelPaths.Count} path(s): {string.Join(", ", weaponModelPaths)}"); return; }
+            var remove = first == "remove";
+            var path = remove ? (command.ArgCount > 2 ? command.GetArg(2).ToLowerInvariant() : "") : first;
+            if (!ValidModelPath(path)) { Say(command, $"[{ModuleName}] Usage: lx_wm_precache <path.vmdl> | list | remove <path.vmdl> (lower case letters, digits, _ - . / and it ends in .vmdl)."); return; }
+            try
+            {
+                var saved = File.Exists(PrecacheFile) ? File.ReadAllLines(PrecacheFile).Select(entry => entry.Trim().ToLowerInvariant()).Where(entry => entry.Length > 0).ToList() : new List<string>();
+                if (remove) { saved.Remove(path); weaponModelPaths.Remove(path); }
+                else if (!saved.Contains(path)) saved.Add(path);
+                File.WriteAllLines(PrecacheFile, saved);
+            }
+            catch (Exception problem) { Say(command, $"[{ModuleName}] Could not write {PrecacheFile}: {problem.Message}"); return; }
+            if (remove) { Say(command, $"[{ModuleName}] {path} removed from the file (gone from the list after the next restart)."); return; }
+            weaponModelPaths.Add(path);
+            try { Server.PrecacheModel(path); } catch (Exception problem) { Say(command, $"[{ModuleName}] Could not precache {path} now: {problem.Message}"); }
+            Say(command, $"[{ModuleName}] {path} is on the precache list ({weaponModelPaths.Count} paths). It is in the manifest from the next map on: change the map for it to show for everyone.");
+        });
         // The seller of the Apex knives says their own animations play only on the character models of his replace pack (re-rigged agents). This puts one of them on a player
         // right now to find out: `lx_wm_agent <steamid64> <path.vmdl>` (a path under agents/models/bluesen/...; `none` is not needed, the next spawn gives the player's own model back).
         AddCommand("lx_wm_agent", "Weapon models: put a character model on a player (lx_wm_agent <steamid64> <path.vmdl>)", (player, command) =>
@@ -129,6 +160,8 @@ public sealed partial class LegacyXCommunity
             foreach (var (steam, set) in weaponModels) Say(command, $"  {steam}: {string.Join(", ", set.Select(entry => $"{entry.Key}={entry.Value.World}"))}");
         });
     }
+
+    private string PrecacheFile => Path.Combine(ModuleDirectory, "model_precache.txt");
 
     // Answers on the server's console and, when the command came from RCON or a console that can hear it, back to whoever sent it.
     private void Say(CommandInfo command, string text)
