@@ -19,13 +19,13 @@ public partial class MatchZy
     private const int LegacyXReadyRedrawTicks = 6;
     private string legacyXReadyHint = "html";
 
-    [ConsoleCommand("lx_ready_hint", "Press R to ready line: lx_ready_hint html|alert|off")]
+    [ConsoleCommand("lx_ready_hint", "Press R to ready line: lx_ready_hint html|alert|panorama|off")]
     public void OnReadyHintCommand(CCSPlayerController? player, CommandInfo command)
     {
         if (player != null) return; // server console / RCON only
         var wanted = command.ArgCount > 1 ? command.ArgByIndex(1).Trim().ToLowerInvariant() : "";
-        if (wanted is "html" or "alert" or "off") legacyXReadyHint = wanted;
-        command.ReplyToCommand($"[MatchZy] lx_ready_hint is {legacyXReadyHint}. Use html, alert or off.");
+        if (wanted is "html" or "alert" or "panorama" or "off") { legacyXReadyHint = wanted; if (wanted != "panorama") LegacyXReadyCardsOff(); }
+        command.ReplyToCommand($"[MatchZy] lx_ready_hint is {legacyXReadyHint}. Use html, alert, panorama (the card of the LegacyX-Hud plugin, lx_ready_hud) or off.");
     }
 
     private sealed class ReadyKeyState
@@ -37,6 +37,14 @@ public partial class MatchZy
     }
 
     private readonly Dictionary<int, ReadyKeyState> legacyXReadyKeys = new();
+    // Slots that have the LegacyX-Hud ready card now (lx_ready_hint panorama), so it can be taken away when the match starts or a player leaves their team.
+    private readonly HashSet<int> legacyXReadyCards = new();
+
+    private void LegacyXReadyCardsOff()
+    {
+        foreach (var slot in legacyXReadyCards) Server.ExecuteCommand($"lx_ready_hud {slot} off");
+        legacyXReadyCards.Clear();
+    }
 
     // Private chat nudge (owner request 2026-10-22): each player who has not readied hears it alone, every so often.
     private const float LegacyXReadyNudgeSeconds = 45f;
@@ -48,6 +56,7 @@ public partial class MatchZy
         {
             if (legacyXReadyKeys.Count > 0) legacyXReadyKeys.Clear();
             if (legacyXReadyNudged.Count > 0) legacyXReadyNudged.Clear();
+            if (legacyXReadyCards.Count > 0) LegacyXReadyCardsOff();
             return;
         }
 
@@ -88,7 +97,12 @@ public partial class MatchZy
             if (html == state.LastDraw && Server.TickCount - state.LastDrawTick < LegacyXReadyRedrawTicks) continue;
             state.LastDraw = html;
             state.LastDrawTick = Server.TickCount;
-            if (legacyXReadyHint == "html") player.PrintToCenterHtml(html);
+            if (legacyXReadyHint == "panorama")
+            {
+                legacyXReadyCards.Add(player.Slot);
+                Server.ExecuteCommand($"lx_ready_hud {player.Slot} {(mine ? "yes" : "no")} {readyCount} {needed}");
+            }
+            else if (legacyXReadyHint == "html") player.PrintToCenterHtml(html);
             else if (legacyXReadyHint == "alert") player.PrintToCenterAlert(mine ? $"You are ready · R to unready · {readyCount}/{needed}" : $"Press R to ready · {readyCount}/{needed} ready");
         }
 
@@ -108,5 +122,11 @@ public partial class MatchZy
 
         foreach (var stale in legacyXReadyNudged.Keys.Where(id => humans.All(player => player.UserId != id)).ToList()) legacyXReadyNudged.Remove(stale);
         foreach (var stale in legacyXReadyKeys.Keys.Where(id => seated.All(player => player.UserId != id)).ToList()) legacyXReadyKeys.Remove(stale);
+        // Someone who left their team (or the server) no longer has the card.
+        foreach (var slot in legacyXReadyCards.Where(slot => seated.All(player => player.Slot != slot)).ToList())
+        {
+            Server.ExecuteCommand($"lx_ready_hud {slot} off");
+            legacyXReadyCards.Remove(slot);
+        }
     }
 }

@@ -49,6 +49,7 @@ public sealed partial class LegacyXHud : BasePlugin
         welcomeLayout = env.Get("LEGACYX_HUD_WELCOME_LAYOUT", welcomeLayout);
         trollLayout = env.Get("LEGACYX_HUD_TROLL_LAYOUT", trollLayout);
         hintLayout = env.Get("LEGACYX_HUD_HINT_LAYOUT", hintLayout);
+        readyLayout = env.Get("LEGACYX_HUD_READY_LAYOUT", readyLayout);
         apiBase = env.Get("LEGACYX_API_BASE_URL", "").TrimEnd('/');
         // The menu reads and saves the loadout with SkinBridge's own token (skinchanger:read and :write).
         skinPluginId = env.GetModule("SKINBRIDGE", "PLUGIN_ID", skinPluginId);
@@ -86,6 +87,8 @@ public sealed partial class LegacyXHud : BasePlugin
         menu = null;
         hintHud?.Dispose();
         hintHud = null;
+        readyHud?.Dispose();
+        readyHud = null;
         introHud?.Dispose();
         introHud = null;
         bombHud?.Dispose();

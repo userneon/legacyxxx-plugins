@@ -98,3 +98,8 @@ The server console on the staff site has Match control: **Set score** (`css_sets
 ## GOTV address for the Watch button (2026-11-07)
 
 The Status plugin reports the server's GOTV address with its heartbeat: `LEGACYX_SERVER_GOTV_ADDRESS` from the .env when set, else the server's own address with the port of `tv_port` while `tv_enable 1`. The website then shows a Watch button on a live server (Play) and on the staff console. GOTV itself is set in the server's config (`tv_enable 1`, `tv_port`, `tv_delay`, `tv_maxclients`); LEGACY-X does not turn it on.
+
+
+## Ready card (2026-11-13)
+
+`lx_ready_hint panorama` draws "Press R to ready" as a Panorama card (legacyx_ready in the Workshop addon) through the LegacyX-Hud plugin (`lx_ready_hud <slot> yes|no <ready> <needed>` / `off`) instead of the centre HTML text. The default stays `html` until the Workshop addon with the new layout is published; then set `lx_ready_hint panorama`. Not compiled or tested in game yet.
