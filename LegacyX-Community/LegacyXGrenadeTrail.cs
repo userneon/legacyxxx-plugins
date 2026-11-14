@@ -66,6 +66,8 @@ public sealed partial class LegacyXCommunity
         {
             foreach (var effect in TrailParticles.Values) manifest.AddResource(effect);
             manifest.AddResource(BounceBurstParticle);
+            manifest.AddResource(SmokeBloomParticle);
+            manifest.AddResource(SmokeMotesParticle);
         });
         RegisterEventHandler<EventGrenadeBounce>((@event, _) =>
         {

@@ -19,6 +19,10 @@ public sealed partial class LegacyXCommunity
     // The colour each smoke in flight was given (by the projectile's entity index), so its glow matches it where it bursts.
     private readonly Dictionary<uint, (float R, float G, float B)> smokeShades = new();
     private const float SmokeGlowSeconds = 17f;
+    /// <summary>The Workshop addon's smoke effects (legacyxxx-workshop CONTRACT.md), removed after the cloud is gone.</summary>
+    private const string SmokeBloomParticle = "particles/legacyx/smoke_bloom.vpcf";
+    private const string SmokeMotesParticle = "particles/legacyx/smoke_motes.vpcf";
+    private const float SmokeBloomSeconds = 18f;
     // The colour is held for this many quarter seconds after the throw: longer than any smoke lasts.
     private const int SmokeHoldTicks = 100;
     // A two-colour smoke reaches its second colour after this many quarter seconds (about 20 s: the whole life of the cloud).
@@ -67,7 +71,19 @@ public sealed partial class LegacyXCommunity
         // A coloured light where the smoke bursts, in the same colour, for as long as the cloud lasts (experiment, 2026-10-24).
         RegisterEventHandler<EventSmokegrenadeDetonate>((@event, _) =>
         {
-            if (smokeShades.Remove((uint)@event.Entityid, out var shade) && Config.SmokeGlow) SpawnSmokeGlow(@event.X, @event.Y, @event.Z, shade);
+            if (!smokeShades.Remove((uint)@event.Entityid, out var shade)) return HookResult.Continue;
+            if (Config.SmokeGlow) SpawnSmokeGlow(@event.X, @event.Y, @event.Z, shade);
+            // The Workshop addon's mist and motes fill the cloud in the thrower's colour(s); a two-colour smoke gets one of each colour.
+            if (trailEnabled && @event.Userid is { IsValid: true } thrower && smokeColors.TryGetValue(thrower.SteamID, out var worn))
+            {
+                var at = new Vector(@event.X, @event.Y, @event.Z);
+                foreach (var tint in worn.Second is { } second ? new[] { worn.First, second } : new[] { worn.First })
+                {
+                    var color = System.Drawing.Color.FromArgb(255, (int)tint.R, (int)tint.G, (int)tint.B);
+                    SpawnParticle(SmokeBloomParticle, at, color, SmokeBloomSeconds);
+                    SpawnParticle(SmokeMotesParticle, at, color, SmokeBloomSeconds);
+                }
+            }
             return HookResult.Continue;
         });
         RegisterListener<Listeners.OnMapStart>(_ => { smokeShades.Clear(); });
