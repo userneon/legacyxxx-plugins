@@ -14,7 +14,7 @@ namespace LegacyXCommunity;
 /// <list type="bullet">
 /// <item><b>Grenade trail</b> (owner request 2026-10-25, redone 2026-11-14): a particle effect in the worn colour follows every grenade the player throws
 /// (HE, flash, smoke, molotov, incendiary, decoy). <c>grenade_trail</c> is the #rrggbb, <c>grenade_trail_fx</c> the design: classic, crack, electric, laser,
-/// water or prism. They are the Workshop addon's particles (legacyxxx-workshop, built from Letaryat/CS2-CustomTrailAndTracers), sent to players on connect
+/// water or split. They are the Workshop addon's particles (legacyxxx-workshop, built from Letaryat/CS2-CustomTrailAndTracers), sent to players on connect
 /// through MultiAddonManager and tinted through the particle system's tint on control point 1, with a spark burst where the grenade bounces; a thin
 /// beam line goes under them so a player without the addon still sees a trail. The older line, dash, helix, comet and the other beam designs are gone.</item>
 /// <item><b>Per grenade</b> (owner request 2026-10-26): a trail and a light can be worn on one kind of grenade only: HE, flash, smoke, fire
@@ -28,7 +28,7 @@ namespace LegacyXCommunity;
 public sealed partial class LegacyXCommunity
 {
     private static readonly HashSet<string> GrenadeProjectiles = new() { "hegrenade_projectile", "flashbang_projectile", "smokegrenade_projectile", "molotov_projectile", "incgrenade_projectile", "decoy_projectile" };
-    private static readonly HashSet<string> TrailShapes = new() { "classic", "crack", "electric", "laser", "water", "prism" };
+    private static readonly HashSet<string> TrailShapes = new() { "classic", "crack", "electric", "laser", "water", "split" };
     /// <summary>The Workshop addon's particle effect for each design (legacyxxx-workshop CONTRACT.md).</summary>
     private static readonly Dictionary<string, string> TrailParticles = new()
     {
@@ -37,7 +37,7 @@ public sealed partial class LegacyXCommunity
         ["electric"] = "particles/legacyx/trail_electric.vpcf",
         ["laser"] = "particles/legacyx/trail_laser.vpcf",
         ["water"] = "particles/legacyx/trail_water.vpcf",
-        ["prism"] = "particles/legacyx/trail_prism.vpcf",
+        ["split"] = "particles/legacyx/trail_split.vpcf",
     };
     private const string BounceBurstParticle = "particles/legacyx/bounce_burst.vpcf";
     /// <summary>The control point the bounce burst reads its colour from; the six trails are tinted through control point 1 instead.</summary>

@@ -766,7 +766,7 @@
   "css_aura<multiple>": "{white}{0}{grey} gave {white}{1}{grey} players an aura for {2} s.",
   "css_aura_off<player>": "{white}{0}{grey} took the aura from {white}{1}{grey}.",
   "css_aura_off<multiple>": "{white}{0}{grey} took the aura from {white}{1}{grey} players.",
-  "Fun.Aura.Usage": "Use {white}!aura <target> [classic|crack|electric|laser|water|prism] [seconds]{grey}.",
+  "Fun.Aura.Usage": "Use {white}!aura <target> [classic|crack|electric|laser|water|split] [seconds]{grey}.",
   "css_chaos<player>": "{white}{0}{grey} started the chaos for {2} s.",
   "css_chaos<multiple>": "{white}{0}{grey} started the chaos for {2} s.",
   "css_chaos_off<player>": "{white}{0}{grey} stopped the chaos.",

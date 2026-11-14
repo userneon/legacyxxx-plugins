@@ -43,7 +43,7 @@ public partial class AdminPlus
         ["electric"] = "particles/legacyx/trail_electric.vpcf",
         ["laser"] = "particles/legacyx/trail_laser.vpcf",
         ["water"] = "particles/legacyx/trail_water.vpcf",
-        ["prism"] = "particles/legacyx/trail_prism.vpcf",
+        ["split"] = "particles/legacyx/trail_split.vpcf",
     };
     private const string ChickenModel = "models/chicken/chicken.vmdl";
     private static readonly string[] GiftWeapons =
@@ -70,7 +70,7 @@ public partial class AdminPlus
         AddPermCmd("@css/slay", "css_ghost", "<#userid|name|all @ commands>", CmdGhost);
         AddPermCmd("@css/slay", "css_chicken", "<#userid|name|all @ commands>", CmdChicken);
         AddPermCmd("@css/slay", "css_pop", "<#userid|name|all @ commands>", CmdPop);
-        AddPermCmd("@css/slay", "css_aura", "<#userid|name|all @ commands> [classic|crack|electric|laser|water|prism] [seconds]", CmdAura);
+        AddPermCmd("@css/slay", "css_aura", "<#userid|name|all @ commands> [classic|crack|electric|laser|water|split] [seconds]", CmdAura);
         AddPermCmd("@css/slay", "css_roulette", "", CmdRoulette);
         AddPermCmd("@css/slay", "css_chaos", "[seconds]", CmdChaos);
         RegisterFunTrollCommands();
@@ -406,7 +406,7 @@ public partial class AdminPlus
 
     private void CmdAura(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!ResolveFunTargets(caller, info, "Usage: css_aura <target> [classic|crack|electric|laser|water|prism] [seconds]", "Fun.Aura.Usage", out var players, out var admin, out var label)) return;
+        if (!ResolveFunTargets(caller, info, "Usage: css_aura <target> [classic|crack|electric|laser|water|split] [seconds]", "Fun.Aura.Usage", out var players, out var admin, out var label)) return;
         var shape = info.ArgCount > 2 && FxTrails.ContainsKey(info.GetArg(2).ToLowerInvariant()) ? info.GetArg(2).ToLowerInvariant() : "classic";
         var seconds = SecondsArg(info, info.ArgCount > 2 && FxTrails.ContainsKey(info.GetArg(2).ToLowerInvariant()) ? 3 : 2, 30f, 3f, 180f) ?? 30f;
         var off = players.All(p => _auraTimers.ContainsKey(p.SteamID));
