@@ -69,13 +69,13 @@ public partial class AdminPlus
 
     public void RegisterAdminManageCommands()
     {
-        AddCommand("addadmin", "Staff are managed on legacyx.cc", CmdAddAdmin);
-        AddCommand("removeadmin", "Staff are managed on legacyx.cc", CmdRemoveAdmin);
+        AddCommand("addadmin", "Staff are managed on lxc.mn", CmdAddAdmin);
+        AddCommand("removeadmin", "Staff are managed on lxc.mn", CmdRemoveAdmin);
         AddCommand("adminlist", Localizer["Admin.List.Header"], CmdAdminList);
         AddCommand("adminreload", "Re-check online staff with the LXC API", CmdAdminReload);
 
-        AddCommand("css_addadmin", "Staff are managed on legacyx.cc", CmdAddAdmin);
-        AddCommand("css_removeadmin", "Staff are managed on legacyx.cc", CmdRemoveAdmin);
+        AddCommand("css_addadmin", "Staff are managed on lxc.mn", CmdAddAdmin);
+        AddCommand("css_removeadmin", "Staff are managed on lxc.mn", CmdRemoveAdmin);
         AddCommand("css_adminlist", "List authorized staff online", CmdAdminList);
         AddCommand("css_adminreload", "Re-check online staff with the LXC API", CmdAdminReload);
         AddCommand("css_admin_reload", "Re-check online staff with the LXC API", CmdAdminReload);

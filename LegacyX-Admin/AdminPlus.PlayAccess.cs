@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace AdminPlus;
 
 /// <summary>
-/// Who may stay on the server (owner request 2026-10-18). A player who connects without being signed in on legacyx.cc, or while
+/// Who may stay on the server (owner request 2026-10-18). A player who connects without being signed in on lxc.mn, or while
 /// blocked for leaving ranked matches too often (3rd leave in 24 hours: 30 minutes, then 30 more each time), is told why in
 /// the chat and removed a few seconds later. Never a bare "disconnected": the message says what to do. Staff are never touched, and
 /// if the API cannot be reached nobody is removed (fail open). Switch each part off with LEGACYX_ADMIN_REQUIRE_LOGIN=false and
@@ -76,7 +76,7 @@ public partial class AdminPlus
                 reason = "not signed in on the website";
                 lines =
                 [
-                    "You are not signed in. Sign in with Steam at {white}legacyx.cc{grey}, then press {white}Connect{grey} on the website.",
+                    "You are not signed in. Sign in with Steam at {white}lxc.mn{grey}, then press {white}Connect{grey} on the website.",
                     "Your LXC account is your Steam account: it keeps your rank, skins and stats.",
                 ];
             }

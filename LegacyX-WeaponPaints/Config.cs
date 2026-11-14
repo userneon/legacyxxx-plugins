@@ -95,7 +95,7 @@ namespace WeaponPaints
 		public bool EnableInGameMenus { get; set; } = false;
 
 		[JsonPropertyName("Website")]
-		public string Website { get; set; } = "legacyx.cc/skinchanger";
+		public string Website { get; set; } = "lxc.mn/skinchanger";
 
 		[JsonPropertyName("CmdRefreshCooldownSeconds")]
 		public int CmdRefreshCooldownSeconds { get; set; } = 3;
