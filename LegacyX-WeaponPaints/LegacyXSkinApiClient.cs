@@ -13,7 +13,7 @@ internal sealed class LegacyXSkinApiClient
     internal LegacyXSkinApiClient(WeaponPaintsConfig config) => _config = config;
 
     /// <summary>
-    /// The player's saved website loadout, or null when the SteamID has no LEGACY-X account.
+    /// The player's saved website loadout, or null when the SteamID has no LXC account.
     /// </summary>
     internal async Task<SkinchangerPayload?> GetLoadoutAsync(string steamId)
     {
@@ -37,7 +37,7 @@ internal sealed class LegacyXSkinApiClient
         if (response.IsSuccessStatusCode) return;
         var statusCode = (int)response.StatusCode;
         var detail = await response.Content.ReadAsStringAsync();
-        throw new InvalidOperationException($"LEGACY-X API returned {statusCode}: {detail[..Math.Min(detail.Length, 240)]}");
+        throw new InvalidOperationException($"LXC API returned {statusCode}: {detail[..Math.Min(detail.Length, 240)]}");
     }
 }
 

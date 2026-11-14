@@ -37,13 +37,13 @@ namespace MatchZy
         {
             if (player == null)
             {
-                Server.PrintToConsole($"LEGACY-X • {message}");
+                Server.PrintToConsole($"LXC • {message}");
             }
             else
             {
                 if (console)
                 {
-                    player.PrintToConsole($"LEGACY-X • {message}");
+                    player.PrintToConsole($"LXC • {message}");
                 }
                 else
                 {
@@ -60,7 +60,7 @@ namespace MatchZy
             {
                 Command = command
             };
-            // Staff permissions come only from CounterStrikeSharp, which LegacyX-Admin fills from the LEGACY-X API.
+            // Staff permissions come only from CounterStrikeSharp, which LegacyX-Admin fills from the LXC API.
             if (attr.CanExecuteCommand(player)) return true;
             if (player == null) return true; // Sent via server, hence should be treated as an admin.
             return false;

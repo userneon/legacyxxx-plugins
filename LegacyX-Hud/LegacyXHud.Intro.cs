@@ -6,7 +6,7 @@ using PanoramaManager;
 
 namespace LegacyXHud;
 
-// The match intro (owner request 2026-11-01): when a match goes live (legacyx_match_live turns on) every player sees the LEGACY-X logo, the name and "MATCH START"
+// The match intro (owner request 2026-11-01): when a match goes live (legacyx_match_live turns on) every player sees the LXC logo, the name and "MATCH START"
 // in the middle of the screen for a few seconds. Layout legacyx_intro.xml; the fade and the line are CSS transitions started by classes.
 public sealed partial class LegacyXHud
 {

@@ -42,12 +42,12 @@ public partial class AdminPlus
         _staffPanelServerId = LegacyXServerRuntime.Load(environment).ServerId;
         if (string.IsNullOrWhiteSpace(_staffPanelApi) || string.IsNullOrWhiteSpace(_staffPanelToken) || !Regex.IsMatch(_staffPanelServerId, "^[A-Za-z0-9_-]{1,80}$"))
         {
-            Console.WriteLine("[LEGACY-X Admin] Website staff console is off: the API address, token or server id is missing.");
+            Console.WriteLine("[LXC Admin] Website staff console is off: the API address, token or server id is missing.");
             return;
         }
         var seconds = environment.GetModuleInt("ADMIN", "STAFF_PANEL_POLL_SECONDS", 3, 2, 30);
         AddTimer(seconds, PollStaffPanel, TimerFlags.REPEAT);
-        Console.WriteLine($"[LEGACY-X Admin] Website staff console: taking actions for '{_staffPanelServerId}' every {seconds}s.");
+        Console.WriteLine($"[LXC Admin] Website staff console: taking actions for '{_staffPanelServerId}' every {seconds}s.");
     }
 
     private void PollStaffPanel()
@@ -87,7 +87,7 @@ public partial class AdminPlus
                     (bool Ok, string Message) outcome = await Task.WhenAny(done.Task, Task.Delay(StaffActionRunLimit)) == done.Task ? done.Task.Result : (false, "The game server did not run it in time.");
                     var (ok, message) = outcome;
                     handled = true;
-                    Console.WriteLine($"[LEGACY-X Admin] Website staff console: {type} {(ok ? "done" : "failed")}: {message}");
+                    Console.WriteLine($"[LXC Admin] Website staff console: {type} {(ok ? "done" : "failed")}: {message}");
                     await ReportStaffPanelAction(id, ok, message);
                 }
             }
@@ -127,7 +127,7 @@ public partial class AdminPlus
     {
         if (DateTime.UtcNow - _staffPanelLastErrorUtc < TimeSpan.FromMinutes(5)) return;
         _staffPanelLastErrorUtc = DateTime.UtcNow;
-        Console.WriteLine($"[LEGACY-X Admin] Website staff console: {message}");
+        Console.WriteLine($"[LXC Admin] Website staff console: {message}");
     }
 
     private static string StaffText(JsonElement payload, string name)

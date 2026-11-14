@@ -18,7 +18,7 @@ public partial class MatchZy
 
         if (configuredMaps.Count == 0)
         {
-            Log("[LEGACY-X] legacyx_map_pool has no valid installed maps; keeping the current map.");
+            Log("[LXC] legacyx_map_pool has no valid installed maps; keeping the current map.");
             return Server.MapName;
         }
 
@@ -46,7 +46,7 @@ public partial class MatchZy
 
         PrintToAllChat($"Match saved. Next map: {{white}}{nextMap}{{grey}}.");
         if (legacyXRestartAfterMatch.Value) PrintToAllChat("The server restarts for the next map: reconnect in about a minute.");
-        Log($"[LEGACY-X] Post-match soft transition scheduled: {Server.MapName} -> {nextMap} in {delay:0.0}s");
+        Log($"[LXC] Post-match soft transition scheduled: {Server.MapName} -> {nextMap} in {delay:0.0}s");
 
         AddTimer(Math.Max(0, restartDelay), () =>
         {
@@ -60,7 +60,7 @@ public partial class MatchZy
                 {
                     // A whole restart, not a map change: the HUD layout and the plugins are loaded again. The service starts the server again
                     // (Restart=always) and OpenLegacyXNextMap changes to the saved map once it is up.
-                    Log($"[LEGACY-X] Restarting the server for the next map {nextMap}.");
+                    Log($"[LXC] Restarting the server for the next map {nextMap}.");
                     // Everyone is sent out with a clear reason first, so the players read "restarting" and not a lost connection.
                     foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV && p.UserId.HasValue))
                         Server.ExecuteCommand($"kickid {(ushort)player.UserId!.Value} \"Match finished. The server restarts, reconnect in a minute.\"");
@@ -77,7 +77,7 @@ public partial class MatchZy
     private bool TryWriteLegacyXNextMap(string map)
     {
         try { File.WriteAllText(LegacyXNextMapFile, map); return true; }
-        catch (Exception ex) { Log($"[LEGACY-X] Could not save the next map, changing the map without a restart: {ex.Message}"); return false; }
+        catch (Exception ex) { Log($"[LXC] Could not save the next map, changing the map without a restart: {ex.Message}"); return false; }
     }
 
     /// <summary>After a restart for the next map: change to the map saved before the restart (once; the file is removed first, so a failure cannot loop).</summary>
@@ -95,10 +95,10 @@ public partial class MatchZy
                 AddTimer(5f, () =>
                 {
                     if (Server.IsMapValid(map)) ChangeMap(map, 0.0f);
-                    else Log($"[LEGACY-X] The saved next map {map} is not valid here; staying on {Server.MapName}.");
+                    else Log($"[LXC] The saved next map {map} is not valid here; staying on {Server.MapName}.");
                 });
             }
-            catch (Exception ex) { Log($"[LEGACY-X] Could not open the saved next map: {ex.Message}"); }
+            catch (Exception ex) { Log($"[LXC] Could not open the saved next map: {ex.Message}"); }
         });
     }
 }

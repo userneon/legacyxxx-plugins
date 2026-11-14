@@ -18,7 +18,7 @@ internal sealed class WeaponSynchronization
 
     /// <summary>
     /// Reads the player's saved loadout and applies it on the next game frame. A player without a
-    /// LEGACY-X account gets an empty loadout (default items).
+    /// LXC account gets an empty loadout (default items).
     /// </summary>
     internal async Task<bool> GetPlayerData(PlayerInfo? player)
     {
@@ -36,7 +36,7 @@ internal sealed class WeaponSynchronization
                 }
                 catch (Exception exception)
                 {
-                    Utility.Log($"LEGACY-X SkinBridge apply failed: {exception.Message}");
+                    Utility.Log($"LXC SkinBridge apply failed: {exception.Message}");
                 }
                 finally
                 {
@@ -49,7 +49,7 @@ internal sealed class WeaponSynchronization
         catch (Exception exception)
         {
             // The API answers one loadout read per second for a player (429 above that): the caller tries once more a moment later.
-            Utility.Log($"LEGACY-X SkinBridge loadout read failed: {exception.Message}");
+            Utility.Log($"LXC SkinBridge loadout read failed: {exception.Message}");
             return false;
         }
     }

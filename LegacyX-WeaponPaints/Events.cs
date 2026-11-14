@@ -236,7 +236,7 @@ namespace WeaponPaints
 				if (!_skinErrorLogged)
 				{
 					_skinErrorLogged = true;
-					Utility.Log($"LEGACY-X SkinBridge could not apply a skin: {exception.GetType().Name}: {exception.Message}");
+					Utility.Log($"LXC SkinBridge could not apply a skin: {exception.GetType().Name}: {exception.Message}");
 				}
 			}
 

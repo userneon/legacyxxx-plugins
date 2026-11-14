@@ -47,7 +47,7 @@ public partial class AdminPlus
             if (text.Length > 0) line += $" \"{text}\"";
             CounterStrikeSharp.API.Server.ExecuteCommand(line);
         }
-        caller?.PrintToChat($" \x04[LEGACY-X]\x01 Sent {kind} to {label}.");
+        caller?.PrintToChat($" \x04[LXC]\x01 Sent {kind} to {label}.");
         AdminPlus.LogAction($"{admin} played the {kind} joke on {label}");
     }
 }

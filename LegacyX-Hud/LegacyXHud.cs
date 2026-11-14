@@ -8,7 +8,7 @@ using PanoramaManager;
 namespace LegacyXHud;
 
 /// <summary>
-/// The in-game skin menu (owner request 2026-10-30, the Skinchanger HUD back, skins only). The menu is a Panorama layout from the LEGACY-X
+/// The in-game skin menu (owner request 2026-10-30, the Skinchanger HUD back, skins only). The menu is a Panorama layout from the LXC
 /// Workshop addon (legacyxxx-workshop, sent to players with MultiAddonManager); this plugin creates its custom_hud_layout entity and fills it per
 /// player: texts by variable name (= the Label id), states by toggling classes (CONTRACT.md of the addon).
 /// !ws opens it in warmup and before the round; it picks skins from the website's own catalog, saves the pick to the website loadout and applies

@@ -92,8 +92,8 @@ public partial class MatchZy
 
             var mine = playerReadyStatus.TryGetValue(userId, out var mineReady) && mineReady;
             var html = mine
-                ? $"<font class='fontSize-m' color='#22c55e'>You are ready</font><br><font class='fontSize-s' color='#a3a3a3'>Press <font color='#a78bfa'>R</font> to unready · {readyCount}/{needed} ready</font>"
-                : $"<font class='fontSize-m' color='#fafafa'>Press <font color='#a78bfa'>R</font> to ready</font><br><font class='fontSize-s' color='#a3a3a3'>{readyCount}/{needed} ready</font>";
+                ? $"<font class='fontSize-m' color='#22c55e'>You are ready</font><br><font class='fontSize-s' color='#a3a3a3'>Press <font color='#e4e4e7'>R</font> to unready · {readyCount}/{needed} ready</font>"
+                : $"<font class='fontSize-m' color='#fafafa'>Press <font color='#e4e4e7'>R</font> to ready</font><br><font class='fontSize-s' color='#a3a3a3'>{readyCount}/{needed} ready</font>";
             if (html == state.LastDraw && Server.TickCount - state.LastDrawTick < LegacyXReadyRedrawTicks) continue;
             state.LastDraw = html;
             state.LastDrawTick = Server.TickCount;

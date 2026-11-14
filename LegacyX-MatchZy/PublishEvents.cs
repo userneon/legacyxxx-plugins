@@ -10,7 +10,7 @@ namespace MatchZy
         {
             try
             {
-                // A match config's own remote log wins; otherwise the LEGACY-X rank endpoint from .env.
+                // A match config's own remote log wins; otherwise the LXC rank endpoint from .env.
                 var fromMatch = !string.IsNullOrEmpty(matchConfig.RemoteLogURL);
                 var url = fromMatch ? matchConfig.RemoteLogURL : legacyXRankEventsUrl;
                 var headerKey = fromMatch ? matchConfig.RemoteLogHeaderKey : "x-plugin-secret";

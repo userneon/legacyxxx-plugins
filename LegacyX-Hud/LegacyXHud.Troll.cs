@@ -23,10 +23,10 @@ public sealed partial class LegacyXHud
 
     private static readonly Dictionary<string, TrollLook> TrollLooks = new()
     {
-        ["ban"] = new("t-red", "YOU HAVE BEEN BANNED", "Reason: Cheating. Your account will be reviewed.", "LEGACY-X"),
+        ["ban"] = new("t-red", "YOU HAVE BEEN BANNED", "Reason: Cheating. Your account will be reviewed.", "LXC"),
         ["vac"] = new("t-red", "VAC AUTHENTICATION ERROR", "Valve Anti-Cheat was unable to verify your game session.", "STEAM"),
         ["crash"] = new("t-grey", "Counter-Strike 2 has stopped working", "A problem caused the program to stop working correctly. Windows is closing it.", "CS2.EXE"),
-        ["hack"] = new("t-amber", "SUSPICIOUS ACTIVITY DETECTED", "Aim assistance patterns were found. Hold still while the server checks you.", "LEGACY-X CHECK"),
+        ["hack"] = new("t-amber", "SUSPICIOUS ACTIVITY DETECTED", "Aim assistance patterns were found. Hold still while the server checks you.", "LXC CHECK"),
     };
 
     [ConsoleCommand("lx_troll_hud", "A joke card for one player: lx_troll_hud <slot> <ban|vac|crash|hack|scare|banner|banned> <seconds> [\"<text>\"]")]
@@ -81,7 +81,7 @@ public sealed partial class LegacyXHud
         if (kind == "banner")
         {
             if (text.Length == 0) return;
-            look = new TrollLook("t-green", text, "A message from an admin.", "LEGACY-X");
+            look = new TrollLook("t-green", text, "A message from an admin.", "LXC");
         }
         else if (!TrollLooks.TryGetValue(kind, out look!)) return;
 
@@ -101,7 +101,7 @@ public sealed partial class LegacyXHud
                 Ss(trollHud!, p, "troll", "tone", "t-green");
                 Sv(trollHud!, p, "tr_title", "JUST KIDDING");
                 Sv(trollHud!, p, "tr_sub", "This was a joke from an admin. Nothing happened to you.");
-                Sv(trollHud!, p, "tr_foot", "LEGACY-X");
+                Sv(trollHud!, p, "tr_foot", "LXC");
             }, TimerFlags.STOP_ON_MAPCHANGE);
         }
         AddTimer(seconds, () => { if (Still(out var p)) Sc(trollHud!, p, "troll", "shown", false); }, TimerFlags.STOP_ON_MAPCHANGE);

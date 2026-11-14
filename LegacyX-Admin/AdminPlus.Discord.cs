@@ -4,9 +4,9 @@ using LegacyX.Shared.Configuration;
 
 namespace AdminPlus;
 
-// LEGACY-X policy: nothing is sent to Discord from the game server. Every moderation, connection, chat, match
+// LXC policy: nothing is sent to Discord from the game server. Every moderation, connection, chat, match
 // and status event stays inside the game/API/database. Player !report / !calladmin / !callmanager requests go to
-// the API (see AdminPlus.CentralPenalties.cs) and the LEGACY-X Discord bot posts them in its admin calls channel.
+// the API (see AdminPlus.CentralPenalties.cs) and the LXC Discord bot posts them in its admin calls channel.
 // The old call-channel webhook (LEGACYX_ADMIN_CALL_CHANNEL_*) is gone; those settings are ignored.
 public static class Discord
 {

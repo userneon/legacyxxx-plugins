@@ -855,7 +855,7 @@ public partial class AdminPlus
     /// The game's own chat line ("[ALL] Name: text", "[T] Name: text") only reaches here when our formatter let the message through to the game:
     /// a typed command (.r, !r, !admin: still runs, but its line is not shown, owner request 2026-10-23), a report reason being typed
     /// (the whole server's chat went native while someone was), "!!!" or "..." that are not commands, or anything else the formatter stepped
-    /// aside for. Commands are dropped; every other line is shown in the LEGACY-X look instead ("ALL | Name: text", "TEAM | Name: text"),
+    /// aside for. Commands are dropped; every other line is shown in the LXC look instead ("ALL | Name: text", "TEAM | Name: text"),
     /// to the players the game picked for it (so the dead and team rules stay the game's). Commands are left to the game's say command
     /// (MatchZy reads it), so only the game's chat line is dropped here.
     /// </summary>
@@ -971,7 +971,7 @@ public partial class AdminPlus
         // Mutes and gags are kept in the database only; lift them one by one with !unmute / !ungag, or on the website.
         const string message = "Mutes and gags are kept on the website. Lift them with !unmute / !ungag, or on the penalties page.";
         if (caller != null && caller.IsValid) caller.PrintToChat(LegacyXChat.System(message));
-        else Console.WriteLine($"[LEGACY-X Admin] {message}");
+        else Console.WriteLine($"[LXC Admin] {message}");
     }
 
     private void CmdCleanMute(CCSPlayerController? caller, CommandInfo info)
@@ -985,7 +985,7 @@ public partial class AdminPlus
         // Mutes and gags are kept in the database only; lift them one by one with !unmute / !ungag, or on the website.
         const string message = "Mutes and gags are kept on the website. Lift them with !unmute / !ungag, or on the penalties page.";
         if (caller != null && caller.IsValid) caller.PrintToChat(LegacyXChat.System(message));
-        else Console.WriteLine($"[LEGACY-X Admin] {message}");
+        else Console.WriteLine($"[LXC Admin] {message}");
     }
 
     private void CmdCleanGag(CCSPlayerController? caller, CommandInfo info)
@@ -999,7 +999,7 @@ public partial class AdminPlus
         // Mutes and gags are kept in the database only; lift them one by one with !unmute / !ungag, or on the website.
         const string message = "Mutes and gags are kept on the website. Lift them with !unmute / !ungag, or on the penalties page.";
         if (caller != null && caller.IsValid) caller.PrintToChat(LegacyXChat.System(message));
-        else Console.WriteLine($"[LEGACY-X Admin] {message}");
+        else Console.WriteLine($"[LXC Admin] {message}");
     }
 
     public void CleanupCommunication()

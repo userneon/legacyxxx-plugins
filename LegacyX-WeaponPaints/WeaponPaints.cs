@@ -102,7 +102,7 @@ namespace WeaponPaints;
 			config.ApiPollSeconds = Math.Clamp(config.ApiPollSeconds, 1, 30);
 			if (config.ApiBaseUrl.Length < 1 || config.PluginSecret.Length < 24)
 			{
-				Logger.LogError("ApiBaseUrl and PluginSecret are required. Database credentials are intentionally unsupported in LEGACY-X SkinBridge.");
+				Logger.LogError("ApiBaseUrl and PluginSecret are required. Database credentials are intentionally unsupported in LXC SkinBridge.");
 				// Not Unload(): unloading mid-load leaves callbacks behind that crash the server on map load.
 				_centralEnabled = false;
 				return;

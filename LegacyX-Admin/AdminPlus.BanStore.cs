@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace AdminPlus;
 
 /// <summary>
-/// Bans live only in the LEGACY-X database. This server keeps no ban files: SteamBans and IpBans are an in-memory copy
+/// Bans live only in the LXC database. This server keeps no ban files: SteamBans and IpBans are an in-memory copy
 /// of the database's active bans (refreshed every few seconds and after each change), used for the ban menus,
 /// !baninfo and as a head start when somebody is banned a moment before the API answers. A ban is enforced from the
 /// database itself (see CentralBans), so a restart loses nothing.
@@ -124,7 +124,7 @@ public partial class AdminPlus
             using var response = await PenaltyHttp.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"[LEGACY-X Admin] Recording {what} on the website failed: HTTP {(int)response.StatusCode}{((int)response.StatusCode is 401 or 403 ? " (token needs bans:write)" : "")}.");
+                Console.WriteLine($"[LXC Admin] Recording {what} on the website failed: HTTP {(int)response.StatusCode}{((int)response.StatusCode is 401 or 403 ? " (token needs bans:write)" : "")}.");
                 return null;
             }
             var result = await response.Content.ReadFromJsonAsync<LiftResult>();
@@ -132,7 +132,7 @@ public partial class AdminPlus
         }
         catch (Exception exception)
         {
-            Console.WriteLine($"[LEGACY-X Admin] Recording {what} on the website failed: {exception.GetType().Name}.");
+            Console.WriteLine($"[LXC Admin] Recording {what} on the website failed: {exception.GetType().Name}.");
             return null;
         }
     }
@@ -149,7 +149,7 @@ public partial class AdminPlus
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _penaltyPluginSecret);
         request.Headers.Add("x-plugin-id", _penaltyPluginId);
         using var response = await PenaltyHttp.SendAsync(request);
-        if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"LEGACY-X API returned {(int)response.StatusCode}");
+        if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"LXC API returned {(int)response.StatusCode}");
         var body = await response.Content.ReadFromJsonAsync<CentralCommResponse>();
         return body?.Penalties ?? [];
     }

@@ -96,7 +96,7 @@ public partial class MatchZy
         {
             // Said out loud: a server that is not connected plays whole matches with no EXP, rank or recent match, and nothing showed why.
             Log($"[LegacyXMatchCore] Match Core is OFF for this match: enabled={legacyXMatchCoreEnabled.Value}, api url set={!string.IsNullOrWhiteSpace(legacyXMatchCoreApiUrl.Value)}, plugin token set={!string.IsNullOrWhiteSpace(legacyXMatchCorePluginSecret.Value)}. Set LEGACYX_API_BASE_URL and LEGACYX_PLUGIN_TOKEN (or LEGACYX_MATCHZY_MATCH_CORE_*) for this server.");
-            PrintToAllChat("This match is {white}not ranked{grey}: this server is not connected to LEGACY-X. No EXP or rank will change.");
+            PrintToAllChat("This match is {white}not ranked{grey}: this server is not connected to LXC. No EXP or rank will change.");
             return;
         }
 
@@ -570,6 +570,6 @@ public partial class MatchZy
     private void FailLegacyXMatchCoreCreate()
     {
         matchCoreCreateFailed = true;
-        Server.NextFrame(() => PrintToAllChat("This match is {white}not ranked{grey}: LEGACY-X could not register it. No EXP or rank will change."));
+        Server.NextFrame(() => PrintToAllChat("This match is {white}not ranked{grey}: LXC could not register it. No EXP or rank will change."));
     }
 }

@@ -6,7 +6,7 @@ using LegacyX.Shared.Configuration;
 namespace LegacyXCommunity;
 
 /// <summary>
-/// The game's own lines about people coming and going are shown in the LEGACY-X look (owner request 2026-10-30, "put everything in our
+/// The game's own lines about people coming and going are shown in the LXC look (owner request 2026-10-30, "put everything in our
 /// format"): "Name connected.", "Name joined the Terrorists.", "Name is now spectating.", "Name is now called New." They come from game
 /// events, so the game's line is switched off in a Pre hook (DontBroadcast) and ours is printed to the humans in its place.
 /// The leave line already did this. GameLines: "prefix" (default) or "game" (the game's own lines).

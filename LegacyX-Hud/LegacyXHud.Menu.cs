@@ -87,7 +87,7 @@ public sealed partial class LegacyXHud
     }
 
     /// <summary>!ws: the skin menu (knives, gloves, guns, agents), opened on its Skins page.</summary>
-    [ConsoleCommand("css_ws", "Open the LEGACY-X skin menu")]
+    [ConsoleCommand("css_ws", "Open the LXC skin menu")]
     public void OnSkinMenuCommand(CCSPlayerController? player, CommandInfo command)
     {
         if (!enabled || player is not { IsValid: true, IsBot: false }) return;
@@ -124,7 +124,7 @@ public sealed partial class LegacyXHud
         menuOpen.Add(player.Slot);
         MenuSound(player, soundOpen, LevelOpen);
         Ss(panel, player, "menu_hold_fill", "p", "p0");
-        Sv(panel, player, "sk_version", $"LEGACY-X v{ModuleVersion}");
+        Sv(panel, player, "sk_version", $"LXC v{ModuleVersion}");
 
         Sc(panel, player, "menu_dim", "shown", true);
         // The menu rises in by a transition (legacyx_menu.css). A transition only runs when the class is added after the client has drawn the closed panel; set in the

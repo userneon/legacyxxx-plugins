@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 namespace AdminPlus;
 
 /// <summary>
-/// Central SteamID bans kept in the LEGACY-X database (issued from the Discord bot or the website).
+/// Central SteamID bans kept in the LXC database (issued from the Discord bot or the website).
 /// Players are checked against the Root API when they connect and every few seconds while online,
 /// so a ban issued elsewhere removes them from every server. Bans exist only in the database; this server
 /// keeps no ban files. If the API can't be reached nobody is kicked (fail open).
@@ -30,7 +30,7 @@ public partial class AdminPlus
         var environment = LegacyXEnvironmentLoader.Load();
         if (!environment.GetModuleBoolean("ADMIN", "CENTRAL_BANS_ENABLED", true))
         {
-            Console.WriteLine("[LEGACY-X Admin] Central bans are disabled: bans are neither enforced nor listed on this server.");
+            Console.WriteLine("[LXC Admin] Central bans are disabled: bans are neither enforced nor listed on this server.");
             return;
         }
 
@@ -48,7 +48,7 @@ public partial class AdminPlus
         var sweepSeconds = environment.GetModuleInt("ADMIN", "CENTRAL_BANS_SWEEP_SECONDS", 30, 10, 300);
         AddTimer(sweepSeconds, SweepCentralBans, TimerFlags.REPEAT);
         _ = RefreshBanCacheAsync();
-        Console.WriteLine($"[LEGACY-X Admin] Central bans enabled: checking on connect and every {sweepSeconds}s.");
+        Console.WriteLine($"[LXC Admin] Central bans enabled: checking on connect and every {sweepSeconds}s.");
     }
 
     /// <summary>Called on the main thread when a player is authorized.</summary>
@@ -120,7 +120,7 @@ public partial class AdminPlus
                 var term = ban.IsPermanent ? "permanent" : $"until {ban.ExpiresAt:yyyy-MM-dd HH:mm} UTC";
                 DisconnectBanned(target, ban.IsPermanent ? "Permanent" : "Until " + (ban.ExpiresAt?.ToString("yyyy-MM-dd") ?? "later"), ban.Reason);
                 LogAction($"Central ban: removed {name} ({ban.SteamId}), {term}. Reason: {ban.Reason}");
-                Console.WriteLine($"[LEGACY-X Admin] Central ban: removed {name} ({ban.SteamId}), {term}.");
+                Console.WriteLine($"[LXC Admin] Central ban: removed {name} ({ban.SteamId}), {term}.");
             }
             foreach (var ipBan in ipBans)
             {
@@ -128,7 +128,7 @@ public partial class AdminPlus
                 {
                     DisconnectBanned(target, "IP ban", ipBan.Reason);
                     LogAction($"Central IP ban: removed {SanitizeName(target.PlayerName)} ({target.SteamID}), {ipBan.Ip}. Reason: {ipBan.Reason}");
-                    Console.WriteLine($"[LEGACY-X Admin] Central IP ban: removed {SanitizeName(target.PlayerName)} ({target.SteamID}).");
+                    Console.WriteLine($"[LXC Admin] Central IP ban: removed {SanitizeName(target.PlayerName)} ({target.SteamID}).");
                 }
             }
         });
@@ -161,7 +161,7 @@ internal sealed class CentralBanClient
         if (!response.IsSuccessStatusCode)
         {
             var detail = await response.Content.ReadAsStringAsync();
-            throw new InvalidOperationException($"LEGACY-X API returned {(int)response.StatusCode}: {detail[..Math.Min(200, detail.Length)]}");
+            throw new InvalidOperationException($"LXC API returned {(int)response.StatusCode}: {detail[..Math.Min(200, detail.Length)]}");
         }
         return await response.Content.ReadFromJsonAsync<CentralBanResponse>() ?? new CentralBanResponse();
     }
@@ -176,7 +176,7 @@ internal sealed class CentralBanClient
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _pluginSecret);
         request.Headers.Add("x-plugin-id", _pluginId);
         using var response = await Http.SendAsync(request);
-        if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"LEGACY-X API returned {(int)response.StatusCode}");
+        if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"LXC API returned {(int)response.StatusCode}");
         var body = await response.Content.ReadFromJsonAsync<PlayAccessResponse>();
         return body?.Players.FirstOrDefault(p => p.SteamId == steamId);
     }
@@ -188,7 +188,7 @@ internal sealed class CentralBanClient
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _pluginSecret);
         request.Headers.Add("x-plugin-id", _pluginId);
         using var response = await Http.SendAsync(request);
-        if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"LEGACY-X API returned {(int)response.StatusCode}");
+        if (!response.IsSuccessStatusCode) throw new InvalidOperationException($"LXC API returned {(int)response.StatusCode}");
         var body = await response.Content.ReadFromJsonAsync<CentralListResponse>();
         return body?.Bans ?? [];
     }

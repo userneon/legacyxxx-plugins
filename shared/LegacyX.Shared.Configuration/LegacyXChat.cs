@@ -5,14 +5,14 @@ using System.Text;
 namespace LegacyX.Shared.Configuration;
 
 /// <summary>
-/// Canonical presentation for system-generated LEGACY-X chat messages, the same look as legacyx.cc:
-/// "LEGACY-" white and "X" crimson, then dim grey sentences with names and numbers in white. Green
+/// Canonical presentation for system-generated LXC chat messages, the same look as legacyx.cc:
+/// "LXC" in white, then dim grey sentences with names and numbers in white. Green
 /// only for something that worked or is on. (The one exception is <see cref="Alert"/>, a red line for ban announcements.) Every other chat color becomes white here, so no module
 /// can bring its own palette back. Player-authored chat must not be sent through this formatter.
 /// </summary>
 public static class LegacyXChat
 {
-    public const string Prefix = "{white}LEGACY-{brand}X {grey}| ";
+    public const string Prefix = "{white}LXC {grey}| ";
 
     // CS2 chat color codes (the same values as CounterStrikeSharp's ChatColors), so this library
     // needs no CounterStrikeSharp reference.
@@ -20,7 +20,7 @@ public static class LegacyXChat
     private const char Green = '\x04';
     private const char Grey = '\x08';
     private const char Silver = '\x0A';
-    // Chat has no exact #8b5cf6; Purple (\x0E) is the nearest violet.
+    // The brand tag keeps the old purple code; it is shown as white now that the brand is white.
     private const char Brand = '\x0E';
 
     // The tags a message may use ({white}, {grey}, {green}), and what every other color tag becomes.

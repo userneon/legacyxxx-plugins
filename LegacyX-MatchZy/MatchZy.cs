@@ -21,8 +21,8 @@ namespace MatchZy
 
         public override string ModuleDescription => "LEGACY-X 5v5 competitive matches, ready gate, stats and random map lifecycle";
 
-        public string chatPrefix = $" {ChatColors.White}LEGACY-X •{ChatColors.Grey}";
-        public string adminChatPrefix = $" {ChatColors.White}LEGACY-X • {ChatColors.Red}ADMIN{ChatColors.Grey}";
+        public string chatPrefix = $" {ChatColors.White}LXC •{ChatColors.Grey}";
+        public string adminChatPrefix = $" {ChatColors.White}LXC • {ChatColors.Red}ADMIN{ChatColors.Grey}";
 
         // Plugin start phase data
         public bool isPractice = false;
@@ -75,7 +75,7 @@ namespace MatchZy
 
         // Game Config
         public bool isKnifeRequired = true;
-        public int minimumReadyRequired = 10; // LEGACY-X ranked is exactly 5v5: the match starts when all ten have typed .ready.
+        public int minimumReadyRequired = 10; // LXC ranked is exactly 5v5: the match starts when all ten have typed .ready.
         public bool isWhitelistRequired = false;
         public bool isSaveNadesAsGlobalEnabled = false;
 

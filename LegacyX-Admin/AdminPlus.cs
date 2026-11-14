@@ -83,7 +83,7 @@ public partial class AdminPlus : BasePlugin
             Directory.CreateDirectory(logDirectory);
         }
         
-        var fileName = $"log-LEGACY-X-Admin-{date:dd-MM-yyyy}.log";
+        var fileName = $"log-LXC-Admin-{date:dd-MM-yyyy}.log";
         return Path.Combine(logDirectory, fileName);
     }
 
@@ -101,7 +101,7 @@ public partial class AdminPlus : BasePlugin
 
         if (!LegacyXEnvironmentLoader.Load().GetModuleBoolean("ADMIN", "ENABLED", true))
         {
-            Console.WriteLine("[LEGACY-X Admin] Disabled by central environment.");
+            Console.WriteLine("[LXC Admin] Disabled by central environment.");
             return;
         }
 
@@ -166,8 +166,8 @@ public partial class AdminPlus : BasePlugin
         RegisterHideAdminCommands();
         // On a cold start nobody is connected yet (and the player list isn't readable); only a hot reload has players to authorize.
         if (hotReload) AuthorizeOnlinePlayers();
-        AddCommand("version", "Print LEGACY-X Admin name and version to console", CmdPluginVersion);
-        AddCommand("css_version", "Print LEGACY-X Admin name and version to console", CmdPluginVersion);
+        AddCommand("version", "Print LXC Admin name and version to console", CmdPluginVersion);
+        AddCommand("css_version", "Print LXC Admin name and version to console", CmdPluginVersion);
         
         RegisterListener<Listeners.OnClientAuthorized>((slot, id) =>
         {
@@ -411,9 +411,9 @@ public partial class AdminPlus : BasePlugin
     {
         var line = $"{ModuleName} plugin version {ModuleVersion}";
         if (caller != null && caller.IsValid && !caller.IsBot)
-            caller.PrintToConsole($"[LEGACY-X Admin] {line}");
+            caller.PrintToConsole($"[LXC Admin] {line}");
         else
-            Console.WriteLine($"[LEGACY-X Admin] {line}");
+            Console.WriteLine($"[LXC Admin] {line}");
     }
 
     private bool TryHandlePublicVersionChatCommand(CCSPlayerController? player, string rawMessage)
@@ -493,13 +493,13 @@ public partial class AdminPlus : BasePlugin
             {
                 if (onlineAdmins.Count == 0)
                 {
-                    Console.WriteLine("[LEGACY-X Admin] No online admins currently.");
+                    Console.WriteLine("[LXC Admin] No online admins currently.");
                     return;
                 }
                 
                 foreach (var a in onlineAdmins.OrderByDescending(x => x.imm))
-                    Console.WriteLine($"[LEGACY-X Admin] Online Admin: {a.name} [{a.imm}]");
-                Console.WriteLine($"[LEGACY-X Admin] Total {onlineAdmins.Count} admins online!");
+                    Console.WriteLine($"[LXC Admin] Online Admin: {a.name} [{a.imm}]");
+                Console.WriteLine($"[LXC Admin] Total {onlineAdmins.Count} admins online!");
             }
         }
         catch (Exception ex)
@@ -516,7 +516,7 @@ public partial class AdminPlus : BasePlugin
         if (player == null || !player.IsValid)
             return false;
 
-        // Staff permissions exist only as CounterStrikeSharp admin data granted from the LEGACY-X API.
+        // Staff permissions exist only as CounterStrikeSharp admin data granted from the LXC API.
         return AdminManager.PlayerHasPermissions(player, permission) || AdminManager.PlayerHasPermissions(player, "@css/root");
     }
 
@@ -944,7 +944,7 @@ public static class PlayerExtensions
             {
                 var fullMessage = LegacyXChat.Alert(message);
                 foreach (var player in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot)) player.PrintToChat(fullMessage);
-                Console.WriteLine($"[LEGACY-X Admin] {message}");
+                Console.WriteLine($"[LXC Admin] {message}");
             }
             catch (Exception ex)
             {
@@ -960,7 +960,7 @@ public static class PlayerExtensions
                 
                 if (Server.MaxPlayers <= 0)
                 {
-                    Console.WriteLine($"[LEGACY-X Admin] {fullMessage}");
+                    Console.WriteLine($"[LXC Admin] {fullMessage}");
                     return;
                 }
                 
@@ -972,7 +972,7 @@ public static class PlayerExtensions
             catch (Exception ex)
             {
                 AdminPlus.LogError($"PrintToAll error: {ex.Message}");
-                Console.WriteLine($"[LEGACY-X Admin] {message}");
+                Console.WriteLine($"[LXC Admin] {message}");
             }
         }
     

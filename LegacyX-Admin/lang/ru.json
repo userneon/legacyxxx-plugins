@@ -1,5 +1,5 @@
 {
-  "Prefix": "{green}LEGACY-X • {default}",
+  "Prefix": "{green}LXC • {default}",
   "Console": "Консоль",
   "UnknownPlayer": "Неизвестный",
   "NoMatchingClient": "{red}Подходящий игрок не найден.{default}",
@@ -65,7 +65,7 @@
   "AltAccount.Warning1": "{red}[ПРЕДУПРЕЖДЕНИЕ]{default} {red}{0}{default} вошел с альтернативного аккаунта с того же IP ({yellow}{1}{default})!",
   "AltAccount.Warning2": "{red}[ПРЕДУПРЕЖДЕНИЕ]{default} Забаненный аккаунт: {yellow}{0}{default} | Ник: {red}{1}{default} | Причина: {red}{2}{default}",
   "Ban.Blocked.Connect": "{red}[BAN ЩИТ]{default} {yellow}{0}{default} ({blue}{1}{default}) попытался подключиться, но был заблокирован из-за активного бана типа {red}{2}{default}.",
-  "Ban.Blocked.Console": "[LEGACY-X Admin] Бан заблокирован | Игрок: {0} | SteamID: {1} | IP: {2} | Тип: {3} | Ключ: {4}",
+  "Ban.Blocked.Console": "[LXC Admin] Бан заблокирован | Игрок: {0} | SteamID: {1} | IP: {2} | Тип: {3} | Ключ: {4}",
   "Menu.Back": "◄ Назад",
   "Menu.Title": "Админ-панель",
   "Menu.AdminDesc": "Открывает админ-панель",

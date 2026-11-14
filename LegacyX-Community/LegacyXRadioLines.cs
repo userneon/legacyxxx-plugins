@@ -8,7 +8,7 @@ using LegacyX.Shared.Configuration;
 namespace LegacyXCommunity;
 
 /// <summary>
-/// The game's grenade radio calls ("Name @ Place (RADIO): Smoke!", "Fire in the hole!", "Flashbang!") are shown in the LEGACY-X chat look
+/// The game's grenade radio calls ("Name @ Place (RADIO): Smoke!", "Fire in the hole!", "Flashbang!") are shown in the LXC chat look
 /// instead (owner request 2026-10-30): "RADIO | Name: Smoke!", to the same players who would have got the game's line. RadioLines:
 /// "prefix" (default), "hide" (no line) or "game" (the game's own line). Only the grenade calls are changed; other radio calls stay as they are.
 /// The first time an unknown radio line is seen its text is written to the server log, so the list below can grow.

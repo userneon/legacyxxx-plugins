@@ -5,7 +5,7 @@ using System.Linq;
 namespace LegacyX.Shared.Configuration;
 
 /// <summary>
-/// The central CounterStrikeSharp/.env, read by every LEGACY-X module.
+/// The central CounterStrikeSharp/.env, read by every LXC module.
 ///
 /// Several CS2 servers can share one install (one set of files, one .env). Each server process is
 /// told apart by its port (<c>-port 27016</c> on its command line, or LEGACYX_SERVER_PORT):

@@ -29,7 +29,7 @@ public partial class AdminPlus
     {
         _requireLogin = environment.GetModuleBoolean("ADMIN", "REQUIRE_LOGIN", true);
         _enforceLeaveCooldown = environment.GetModuleBoolean("ADMIN", "ENFORCE_LEAVE_COOLDOWN", true);
-        Console.WriteLine($"[LEGACY-X Admin] Players must be signed in on the website: {(_requireLogin ? "yes" : "no")}; leave cooldown enforced: {(_enforceLeaveCooldown ? "yes" : "no")}.");
+        Console.WriteLine($"[LXC Admin] Players must be signed in on the website: {(_requireLogin ? "yes" : "no")}; leave cooldown enforced: {(_enforceLeaveCooldown ? "yes" : "no")}.");
     }
 
     /// <summary>Called on the main thread when a player is authorized.</summary>
@@ -77,7 +77,7 @@ public partial class AdminPlus
                 lines =
                 [
                     "You are not signed in. Sign in with Steam at {white}legacyx.cc{grey}, then press {white}Connect{grey} on the website.",
-                    "Your LEGACY-X account is your Steam account: it keeps your rank, skins and stats.",
+                    "Your LXC account is your Steam account: it keeps your rank, skins and stats.",
                 ];
             }
             if (lines == null) return;
@@ -108,7 +108,7 @@ public partial class AdminPlus
             if (AdminManager.PlayerHasPermissions(new SteamID(current.SteamID), "@css/generic")) return;
             current.Disconnect(NetworkDisconnectionReason.NETWORK_DISCONNECT_KICKED);
             LogAction($"Play access: removed {SanitizeName(current.PlayerName)} ({steamId}): {reason}.");
-            Console.WriteLine($"[LEGACY-X Admin] Play access: removed {SanitizeName(current.PlayerName)} ({steamId}): {reason}.");
+            Console.WriteLine($"[LXC Admin] Play access: removed {SanitizeName(current.PlayerName)} ({steamId}): {reason}.");
         }, TimerFlags.STOP_ON_MAPCHANGE);
     }
 }

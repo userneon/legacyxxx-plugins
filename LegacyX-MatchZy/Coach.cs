@@ -22,8 +22,8 @@ public partial class MatchZy
     public void HandleCoachCommand(CCSPlayerController? player, string side)
     {
         if (!IsPlayerValid(player)) return;
-        // LEGACY-X: coaching is turned off, so nobody can join a coach slot.
-        ReplyToUserCommand(player, "Coaching is turned off on LEGACY-X.");
+        // LXC: coaching is turned off, so nobody can join a coach slot.
+        ReplyToUserCommand(player, "Coaching is turned off on LXC.");
         return;
 #pragma warning disable CS0162
         if (isPractice)

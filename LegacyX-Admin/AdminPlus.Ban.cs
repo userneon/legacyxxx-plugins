@@ -129,7 +129,7 @@ public partial class AdminPlus
             return;
         }
 
-        // From the console or RCON (e.g. the LEGACY-X Discord bot) an offline player can be banned by
+        // From the console or RCON (e.g. the LXC Discord bot) an offline player can be banned by
         // SteamID (SteamID64, STEAM_X:Y:Z or [U:1:N]); the ban applies when they next connect.
         if (target == null && caller == null && !TryNormalizeSteamId(targetInput, out _))
         {
@@ -866,7 +866,7 @@ public partial class AdminPlus
             ReportAllBansCleared(caller);
         }
         else
-            Console.WriteLine("[LEGACY-X Admin] Bans are kept on the website: run !cleanbans in-game as an owner to clear them everywhere.");
+            Console.WriteLine("[LXC Admin] Bans are kept on the website: run !cleanbans in-game as an owner to clear them everywhere.");
     }
 
     private void CmdCleanIpBans(CCSPlayerController? caller, CommandInfo info) => TellBansLiveOnWebsite(caller);
@@ -875,7 +875,7 @@ public partial class AdminPlus
     {
         const string message = "Bans are kept on the website. Lift one with !unban, or clear them all with !cleanbans as an owner.";
         if (caller != null && caller.IsValid) caller.PrintToChat(LegacyXChat.System(message));
-        else Console.WriteLine($"[LEGACY-X Admin] {message}");
+        else Console.WriteLine($"[LXC Admin] {message}");
     }
 
     private string FindSteamIdByName(string playerName)

@@ -5,7 +5,7 @@ using CounterStrikeSharp.API.Modules.Utils;
 namespace MatchZy;
 
 /// <summary>
-/// Raw per-player telemetry for the Legacy-X rank system (competitive_result schema v2,
+/// Raw per-player telemetry for the LXC rank system (competitive_result schema v2,
 /// docs/PLUGIN_RANKED_TELEMETRY_V2.md in the API repository). The plugin only reports what happened; the API
 /// calculates every EXP change. Counters CS2 already tracks (kills, assists, multi-kill rounds, entry kills,
 /// headshots) come from MatchStats; plants, defuses, clutches, rounds played and leavers are tracked here.

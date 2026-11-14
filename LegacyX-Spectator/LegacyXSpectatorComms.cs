@@ -46,7 +46,7 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
         return HookResult.Continue;
     }
 
-    [ConsoleCommand("css_specrules", "Shows LEGACY-X spectator communication rules")]
+    [ConsoleCommand("css_specrules", "Shows LXC spectator communication rules")]
     public void OnRules(CCSPlayerController? player, CommandInfo? command)
     {
         if (player == null || !player.IsValid) return;

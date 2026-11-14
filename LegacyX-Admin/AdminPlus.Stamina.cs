@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace AdminPlus;
 
-/// <summary>LEGACY-X numeric command policy. Explicit CounterStrikeSharp permission remains mandatory.</summary>
+/// <summary>LXC numeric command policy. Explicit CounterStrikeSharp permission remains mandatory.</summary>
 public partial class AdminPlus
 {
     private static readonly IReadOnlyDictionary<string, int> CommandStaminaRequirements = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)

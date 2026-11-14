@@ -13,7 +13,7 @@ namespace AdminPlus;
 
 /// <summary>
 /// Game → API → database: every ban, unban, mute and gag issued on this server is also recorded in
-/// the LEGACY-X database, so it shows on legacyx.cc/penalties, the player's profile and the Discord
+/// the LXC database, so it shows on legacyx.cc/penalties, the player's profile and the Discord
 /// penalties feed, and (bans) is enforced on every server. Bans are kept in the database only (no
 /// banned_user.cfg); if the API is unreachable a new ban is not recorded. Uses LEGACYX_ADMIN_API_BASE_URL and LEGACYX_ADMIN_PLUGIN_SECRET, which then needs bans:write.
 /// </summary>
@@ -35,16 +35,16 @@ public partial class AdminPlus
         _penaltyPluginSecret = environment.GetModule("ADMIN", "PLUGIN_SECRET", environment.Get("LEGACYX_PLUGIN_TOKEN")).Trim();
         if (!_centralPenaltiesEnabled)
         {
-            Console.WriteLine("[LEGACY-X Admin] Penalty records are off: in-game bans, mutes and gags stay on this server only.");
+            Console.WriteLine("[LXC Admin] Penalty records are off: in-game bans, mutes and gags stay on this server only.");
             return;
         }
         if (_penaltyApiBaseUrl.Length == 0 || _penaltyPluginSecret.Length == 0 || _penaltyPluginSecret.StartsWith("REPLACE", StringComparison.Ordinal))
         {
             _centralPenaltiesEnabled = false;
-            Console.WriteLine("[LEGACY-X Admin] Penalty records are off: LEGACYX_ADMIN_API_BASE_URL or LEGACYX_ADMIN_PLUGIN_SECRET is missing.");
+            Console.WriteLine("[LXC Admin] Penalty records are off: LEGACYX_ADMIN_API_BASE_URL or LEGACYX_ADMIN_PLUGIN_SECRET is missing.");
             return;
         }
-        Console.WriteLine("[LEGACY-X Admin] In-game bans, mutes and gags are recorded on the website.");
+        Console.WriteLine("[LXC Admin] In-game bans, mutes and gags are recorded on the website.");
     }
 
     /// <summary>"Name (in-game)" as shown on the penalties page; the console is "Console".</summary>
@@ -187,7 +187,7 @@ public partial class AdminPlus
             {
                 message = "Bans were not cleared. Try again.";
             }
-            Console.WriteLine($"[LEGACY-X Admin] !cleanbans: {message}");
+            Console.WriteLine($"[LXC Admin] !cleanbans: {message}");
             CounterStrikeSharp.API.Server.NextFrame(() =>
             {
                 var player = CounterStrikeSharp.API.Utilities.GetPlayerFromSlot(slot);
@@ -220,11 +220,11 @@ public partial class AdminPlus
                 request.Headers.Add("x-plugin-id", pluginId);
                 using var response = await PenaltyHttp.SendAsync(request);
                 if (!response.IsSuccessStatusCode)
-                    Console.WriteLine($"[LEGACY-X Admin] Recording {what} on the website failed: HTTP {(int)response.StatusCode}{((int)response.StatusCode is 401 or 403 ? " (token needs bans:write)" : "")}.");
+                    Console.WriteLine($"[LXC Admin] Recording {what} on the website failed: HTTP {(int)response.StatusCode}{((int)response.StatusCode is 401 or 403 ? " (token needs bans:write)" : "")}.");
             }
             catch (Exception exception)
             {
-                Console.WriteLine($"[LEGACY-X Admin] Recording {what} on the website failed: {exception.GetType().Name}.");
+                Console.WriteLine($"[LXC Admin] Recording {what} on the website failed: {exception.GetType().Name}.");
             }
         });
     }

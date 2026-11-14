@@ -30,22 +30,22 @@ namespace MatchZy
 
         public FakeConVar<string> matchStartMessage = new("matchzy_match_start_message", "Message to show when the match starts. Use $$$ to break message into multiple lines. Set to \"\" to disable.", "");
 
-        public FakeConVar<int> legacyXMinPlayersPerTeam = new("legacyx_min_players_per_team", "LEGACY-X ready start: a lobby starts once each team has at least this many players (2 to 5) and everyone seated is ready, so 3v5 or 2v4 can play and count for rank (RANK-SYSTEM.md section 3). Set 5 to require a full 5v5. Default: 2", 2);
-        public FakeConVar<bool> legacyXExactFiveVFive = new("legacyx_exact_5v5", "LEGACY-X MatchZy starts only with exactly 5 CT vs 5 T and every active player ready. Default: true", true);
-        public FakeConVar<bool> legacyXRandomMapAfterMatch = new("legacyx_random_map_after_match", "LEGACY-X changes to a random different map after a series ends. Default: true", true);
+        public FakeConVar<int> legacyXMinPlayersPerTeam = new("legacyx_min_players_per_team", "LXC ready start: a lobby starts once each team has at least this many players (2 to 5) and everyone seated is ready, so 3v5 or 2v4 can play and count for rank (RANK-SYSTEM.md section 3). Set 5 to require a full 5v5. Default: 2", 2);
+        public FakeConVar<bool> legacyXExactFiveVFive = new("legacyx_exact_5v5", "LXC MatchZy starts only with exactly 5 CT vs 5 T and every active player ready. Default: true", true);
+        public FakeConVar<bool> legacyXRandomMapAfterMatch = new("legacyx_random_map_after_match", "LXC changes to a random different map after a series ends. Default: true", true);
         public FakeConVar<string> legacyXMapPool = new("legacyx_map_pool", "Comma-separated installed maps used for random non-repeat rotation", "de_ancient,de_anubis,de_dust2,de_inferno,de_mirage,de_nuke,de_overpass,de_vertigo");
         public FakeConVar<bool> legacyXRestartAfterMatch = new("legacyx_restart_after_match", "The game server restarts itself after a match and then opens the next map, so the HUD and every plugin start fresh (needs the cs2@ service to restart on exit). Default: false", false);
         public FakeConVar<float> legacyXPostMatchSeconds = new("legacyx_post_match_seconds", "Seconds from the end of a match to the change to the next map (owner request 2026-11-06). Default: 5", 5.0f);
         public FakeConVar<float> legacyXMapTransitionDelay = new("legacyx_map_transition_delay", "Seconds to show PLEASE WAIT before the soft map change", 3.0f);
-        public FakeConVar<string> legacyXRankSeason = new("legacyx_rank_season", "LEGACY-X rank season slug sent with final MatchZy map results", "season-1");
+        public FakeConVar<string> legacyXRankSeason = new("legacyx_rank_season", "LXC rank season slug sent with final MatchZy map results", "season-1");
         public FakeConVar<bool> legacyXMatchLiveFlag = new("legacyx_match_live", "Read-only: 1 while a match is live. LegacyX-Community hides Tab ranks during it.", false);
-        public FakeConVar<bool> legacyXMatchCoreEnabled = new("legacyx_match_core_enabled", "Enable backend-authoritative LEGACY-X Match Core lifecycle guard. Default: false", false);
-        public FakeConVar<string> legacyXMatchCoreApiUrl = new("legacyx_match_core_api_url", "Root LEGACY-X Match Core event endpoint. Keep the secret in the private server config.", "https://api.legacyx.cc/api/v1/plugin/match-core/events");
+        public FakeConVar<bool> legacyXMatchCoreEnabled = new("legacyx_match_core_enabled", "Enable backend-authoritative LXC Match Core lifecycle guard. Default: false", false);
+        public FakeConVar<string> legacyXMatchCoreApiUrl = new("legacyx_match_core_api_url", "Root LXC Match Core event endpoint. Keep the secret in the private server config.", "https://api.legacyx.cc/api/v1/plugin/match-core/events");
         public FakeConVar<string> legacyXMatchCorePluginSecret = new("legacyx_match_core_plugin_secret", "Private Match Core plugin secret. Never commit a real value.", "");
-        public FakeConVar<string> legacyXMatchCoreServerId = new("legacyx_match_core_server_id", "Registered LEGACY-X server identifier sent to Match Core.", "legacyx-match-1");
+        public FakeConVar<string> legacyXMatchCoreServerId = new("legacyx_match_core_server_id", "Registered LXC server identifier sent to Match Core.", "legacyx-match-1");
         public FakeConVar<int> legacyXMatchCoreReconnectWindow = new("legacyx_match_core_reconnect_window", "Original participant reconnect grace window in seconds. Default: 300", 300);
         public FakeConVar<float> legacyXMatchCoreFillTimeout = new("legacyx_match_core_fill_timeout", "Seconds until staff receives a temporary fill reminder. Default: 120", 120.0f);
-        public FakeConVar<bool> legacyXQuietOverlayEnabled = new("legacyx_quiet_overlay_enabled", "Show quiet LEGACY-X center overlays for welcome and match identity. Default: false", false);
+        public FakeConVar<bool> legacyXQuietOverlayEnabled = new("legacyx_quiet_overlay_enabled", "Show quiet LXC center overlays for welcome and match identity. Default: false", false);
         public FakeConVar<float> legacyXMatchOverlayDuration = new("legacyx_match_overlay_duration", "Seconds to keep the LIVE Match ID center overlay active. Default: 300", 300.0f);
 
         [ConsoleCommand("matchzy_whitelist_enabled_default", "Whether Whitelist is enabled by default or not. Default value: false")]
@@ -203,7 +203,7 @@ namespace MatchZy
 
             if (string.IsNullOrEmpty(args))
             {
-                chatPrefix = $" {ChatColors.White}LEGACY-X •{ChatColors.Grey}";
+                chatPrefix = $" {ChatColors.White}LXC •{ChatColors.Grey}";
                 return;
             }
 
@@ -223,7 +223,7 @@ namespace MatchZy
 
             if (string.IsNullOrEmpty(args))
             {
-                adminChatPrefix = $" {ChatColors.White}LEGACY-X • {ChatColors.Red}ADMIN{ChatColors.Grey}";
+                adminChatPrefix = $" {ChatColors.White}LXC • {ChatColors.Red}ADMIN{ChatColors.Grey}";
                 return;
             }
 

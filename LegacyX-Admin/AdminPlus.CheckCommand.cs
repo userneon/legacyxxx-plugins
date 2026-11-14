@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace AdminPlus;
 
 /// <summary>
-/// <c>!check &lt;name&gt;</c> in game (owner request 2026-11-07): a staff member asks a player to run the LEGACY-X Checker without leaving the match.
+/// <c>!check &lt;name&gt;</c> in game (owner request 2026-11-07): a staff member asks a player to run the LXC Checker without leaving the match.
 /// The website makes the one-time code (the staff member must be Admin, Manager or Owner there; the server cannot make one by itself), and the link
 /// and code are shown to the asked player alone, in their chat and console. The staff member only hears that it was sent, never the code.
 /// </summary>
@@ -69,11 +69,11 @@ public partial class AdminPlus
                 if (response.IsSuccessStatusCode) answer = await response.Content.ReadFromJsonAsync<CheckAnswer>(new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 else if (status == 403) failure = "Only an Admin, Manager or Owner signed in on the website can ask for a check.";
                 else if (status == 409) failure = $"{label} already has an open check.";
-                else Console.WriteLine($"[LEGACY-X Admin] !check failed: HTTP {status}{(status is 401 ? " (token needs bans:write)" : "")}.");
+                else Console.WriteLine($"[LXC Admin] !check failed: HTTP {status}{(status is 401 ? " (token needs bans:write)" : "")}.");
             }
             catch (Exception exception)
             {
-                Console.WriteLine($"[LEGACY-X Admin] !check failed: {exception.GetType().Name}.");
+                Console.WriteLine($"[LXC Admin] !check failed: {exception.GetType().Name}.");
             }
             Server.NextFrame(() =>
             {
@@ -106,12 +106,12 @@ public partial class AdminPlus
         var player = Utilities.GetPlayerFromSlot(slot);
         if (player == null || !player.IsValid || player.SteamID.ToString() != steamId) return;
         if (round == 0)
-            player.PrintToChat(LegacyXChat.System("Staff asked you to run the {white}LEGACY-X Checker{grey}. It only reads this PC and sends a short result; nothing is changed."));
+            player.PrintToChat(LegacyXChat.System("Staff asked you to run the {white}LXC Checker{grey}. It only reads this PC and sends a short result; nothing is changed."));
         if (!string.IsNullOrEmpty(link)) player.PrintToChat(LegacyXChat.System($"Checker download: {{white}}{link}"));
         player.PrintToChat(LegacyXChat.System($"Checker code: {{white}}{code}{{grey}} (open the console with the ~ key to copy)"));
         player.PrintToConsole("");
         player.PrintToConsole("==================================================");
-        player.PrintToConsole("  LEGACY-X CHECKER  -  staff asked you to run it");
+        player.PrintToConsole("  LXC CHECKER  -  staff asked you to run it");
         player.PrintToConsole("==================================================");
         if (!string.IsNullOrEmpty(link)) player.PrintToConsole($"  DOWNLOAD : {link}");
         player.PrintToConsole($"  CODE     : {code}");

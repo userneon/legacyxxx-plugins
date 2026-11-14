@@ -17,7 +17,7 @@ public partial class MatchZy
 
     public bool IsTeamsReady()
     {
-        // LEGACY-X competitive servers never start with more than 5 a side. Ranked counts 2 to 5 humans a side (RANK-SYSTEM.md section 3),
+        // LXC competitive servers never start with more than 5 a side. Ranked counts 2 to 5 humans a side (RANK-SYSTEM.md section 3),
         // so a lobby needs only legacyx_min_players_per_team (default 2) on each side, not a full 5v5.
         if (legacyXExactFiveVFive.Value)
         {

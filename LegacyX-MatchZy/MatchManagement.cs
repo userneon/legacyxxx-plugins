@@ -293,10 +293,10 @@ namespace MatchZy
 
             if (legacyXExactFiveVFive.Value)
             {
-                // Match configs cannot weaken LEGACY-X competitive-server guarantees.
+                // Match configs cannot weaken LXC competitive-server guarantees.
                 matchConfig.PlayersPerTeam = 5;
                 matchConfig.MinPlayersToReady = 5;
-                Log("[LEGACY-X] Forced players_per_team=5 and min_players_to_ready=5.");
+                Log("[LXC] Forced players_per_team=5 and min_players_to_ready=5.");
             }
 
             if (matchConfig.MapsPool.Count == matchConfig.NumMaps)

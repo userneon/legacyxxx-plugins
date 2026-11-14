@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 namespace AdminPlus;
 
 /// <summary>
-/// In-game staff permissions come only from the LEGACY-X API (website/database). Every connecting
+/// In-game staff permissions come only from the LXC API (website/database). Every connecting
 /// player starts with no admin data; the plugin asks the API about them and grants the
 /// CounterStrikeSharp flags of their role for this server (Authorization/StaffPermissions.cs).
 /// Online players are re-checked every AUTH_REFRESH_SECONDS, so a revoke or role change on the
@@ -66,7 +66,7 @@ public partial class AdminPlus
         else
         {
             _authorizationClient = new AdminAuthorizationClient(AuthorizationHttp, apiBaseUrl, pluginId, pluginToken, serverId, TimeSpan.FromSeconds(5));
-            AuthLog($"Staff authorization from the LEGACY-X API for server '{serverId}': refresh every {refreshSeconds}s, grants kept at most {cacheSeconds}s without confirmation.");
+            AuthLog($"Staff authorization from the LXC API for server '{serverId}': refresh every {refreshSeconds}s, grants kept at most {cacheSeconds}s without confirmation.");
         }
 
         WarnAboutLocalAdminFile();
@@ -290,7 +290,7 @@ public partial class AdminPlus
             if (!File.Exists(path)) return;
             using var document = JsonDocument.Parse(File.ReadAllText(path));
             if (document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.EnumerateObject().Any())
-                AuthLog($"{path} still lists admins. They are ignored: every connecting player's admin data is replaced by the LEGACY-X API answer. Empty the file to avoid confusion.");
+                AuthLog($"{path} still lists admins. They are ignored: every connecting player's admin data is replaced by the LXC API answer. Empty the file to avoid confusion.");
         }
         catch (Exception ex)
         {

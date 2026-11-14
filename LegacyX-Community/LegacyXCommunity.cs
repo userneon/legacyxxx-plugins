@@ -23,7 +23,7 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public bool Welcome { get; set; } = true;
     /// <summary>What .discord tells a player; set LEGACYX_COMMUNITY_DISCORD_URL to change it.</summary>
     public string DiscordUrl { get; set; } = "https://discord.gg/legacyx";
-    /// <summary>A player in a LEGACY-X clan shows the clan tag before the rank in Tab: [WOLF | OPERATOR I].</summary>
+    /// <summary>A player in a LXC clan shows the clan tag before the rank in Tab: [WOLF | OPERATOR I].</summary>
     public bool ClanTag { get; set; } = true;
     /// <summary>Killing the player who killed you last tells both of you "revenge" in the chat.</summary>
     public bool Revenge { get; set; } = true;
@@ -32,7 +32,7 @@ public sealed class LegacyXCommunityConfig : BasePluginConfig
     public bool SmokeGlow { get; set; } = true;
     /// <summary>A one-line Discord invite in everyone's chat every this many minutes (0 = never).</summary>
     public int DiscordAdMinutes { get; set; } = 10;
-    /// <summary>The game's money lines in chat: "prefix" (one short LEGACY-X line), "hide" or "game" (left as they are); LEGACYX_&lt;port&gt;_COMMUNITY_MONEY_LINES per server.</summary>
+    /// <summary>The game's money lines in chat: "prefix" (one short LXC line), "hide" or "game" (left as they are); LEGACYX_&lt;port&gt;_COMMUNITY_MONEY_LINES per server.</summary>
     public string MoneyLines { get; set; } = "prefix";
     public string RadioLines { get; set; } = "prefix";
     public string GameLines { get; set; } = "prefix";
@@ -42,7 +42,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(8) };
     public required LegacyXCommunityConfig Config { get; set; }
-    // SteamID64 -> LEGACY-X rank (1-18) and ranked matches, from the API; re-applied every round
+    // SteamID64 -> LXC rank (1-18) and ranked matches, from the API; re-applied every round
     // because the game resets the scoreboard fields.
     private readonly Dictionary<ulong, (int RankId, int Matches, int Exp, string Name, string Clan)> scoreboardRanks = new();
     // With type 0 the rank name is the clan tag, shown as [OPERATOR I]; with a picture type it is left out (only a clan tag stays). The rank column shows our own rank picture:
@@ -106,7 +106,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         RegisterRadioLines();
         RegisterGameLines();
         RegisterLagMonitor();
-        // The game's own "left the game" line is not shown (owner request 2026-10-24); this one wears the LEGACY-X prefix. It must be a
+        // The game's own "left the game" line is not shown (owner request 2026-10-24); this one wears the LXC prefix. It must be a
         // Pre hook: DontBroadcast set after the event went out (Post) does nothing, so both lines showed.
         RegisterEventHandler<EventPlayerDisconnect>((@event, info) =>
         {
@@ -174,7 +174,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         });
     }
 
-    /// <summary>Tab scoreboard: the player's LEGACY-X rank (1-18) in the rank column, as the 18-step skill-group icon.</summary>
+    /// <summary>Tab scoreboard: the player's LXC rank (1-18) in the rank column, as the 18-step skill-group icon.</summary>
     private async Task LoadScoreboardRankAsync(CCSPlayerController player, bool welcome = false)
     {
         var steamId = player.SteamID;
@@ -227,7 +227,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         {
             if (!player.IsValid || player.SteamID != steamId) return;
             var name = new string(player.PlayerName.Where(c => c >= ' ' && c != '{' && c != '}').ToArray()).Trim();
-            player.PrintToChat(LegacyXChat.System(name.Length > 0 ? $"Welcome to LEGACY-X, {{white}}{name}{{grey}}." : "Welcome to LEGACY-X."));
+            player.PrintToChat(LegacyXChat.System(name.Length > 0 ? $"Welcome to LXC, {{white}}{name}{{grey}}." : "Welcome to LXC."));
             if (rankLine != null) player.PrintToChat(LegacyXChat.System(rankLine));
         });
     }
@@ -245,7 +245,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
 
     /// <summary>
     /// Revenge (owner request 2026-10-18): remember who killed whom and how often; when a player kills the one who killed them
-    /// last, both are told in their own chat as "LEGACY-X | Name 3 vs Name 2" (the kills each has on the other on this map).
+    /// last, both are told in their own chat as "LXC | Name 3 vs Name 2" (the kills each has on the other on this map).
     /// Nobody else sees it, so it is never noise. Not for bots, suicides or team kills.
     /// </summary>
     private HookResult OnRevengeDeath(EventPlayerDeath @event, GameEventInfo info)
@@ -267,7 +267,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         return HookResult.Continue;
     }
 
-    // The one chat line with a red X on purpose (owner's format "LEGACY-X | name N vs name N", "LEGACY-" as in every other line and only the X red, 2026-11-01): LegacyXChat turns red into white, so the
+    // The one chat line with a red X on purpose (owner's format "LXC | name N vs name N", "LEGACY-" as in every other line and only the X red, 2026-11-01): LegacyXChat turns red into white, so the
     // CS2 codes are used here directly. \x07 red (the X of the prefix only), \x08 grey. Each name is in its team's color and a colon sets it apart from its number
     // ("Bat: 3 vs Temuujin: 2"), so a name that ends in digits is not read as part of the count (owner request 2026-10-24).
     internal static string RevengeLine(string killer, int killerTeam, int killerKills, string victim, int victimTeam, int victimKills) =>
@@ -332,7 +332,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
     /// <summary>The rank name as the player's clan tag: shown before the name in Tab, chat and the kill feed.</summary>
     private void ApplyRankTag(CCSPlayerController player, string rankName, string clanTag = "")
     {
-        // Staff (every LEGACY-X staff role carries @css/generic) show their role instead; LegacyX-Admin sets it.
+        // Staff (every LXC staff role carries @css/generic) show their role instead; LegacyX-Admin sets it.
         if (AdminManager.PlayerHasPermissions(new SteamID(player.SteamID), "@css/generic")) return;
         // The scoreboard puts the clan tag in brackets itself: [OPERATOR I] 777.
         // A clan member shows the clan first: [WOLF | OPERATOR I]. The clan part is cut before the rank is.
@@ -394,17 +394,17 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         command.ReplyToCommand($"[{ModuleName}] Tab rank type set to {type} for {scoreboardRanks.Count} ranked player(s). Open Tab to check.");
     }
 
-    [ConsoleCommand("css_discord", "Shows the LEGACY-X Discord invite")]
+    [ConsoleCommand("css_discord", "Shows the LXC Discord invite")]
     public void OnDiscord(CCSPlayerController? player, CommandInfo? command)
     {
         if (player == null || !player.IsValid) return;
         Print(player, $"Join our Discord: {Config.DiscordUrl}");
     }
 
-    [ConsoleCommand("css_rank", "Shows your LEGACY-X rank, EXP and leaderboard position")]
-    [ConsoleCommand("css_xp", "Shows your LEGACY-X rank, EXP and leaderboard position")]
-    [ConsoleCommand("css_level", "Shows your LEGACY-X rank, EXP and leaderboard position")]
-    [ConsoleCommand("css_progress", "Shows your LEGACY-X rank, EXP and leaderboard position")]
+    [ConsoleCommand("css_rank", "Shows your LXC rank, EXP and leaderboard position")]
+    [ConsoleCommand("css_xp", "Shows your LXC rank, EXP and leaderboard position")]
+    [ConsoleCommand("css_level", "Shows your LXC rank, EXP and leaderboard position")]
+    [ConsoleCommand("css_progress", "Shows your LXC rank, EXP and leaderboard position")]
     public void OnProgress(CCSPlayerController? player, CommandInfo? command)
     {
         if (player == null || !player.IsValid) return;

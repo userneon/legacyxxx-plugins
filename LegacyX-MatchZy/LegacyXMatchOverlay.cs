@@ -17,7 +17,7 @@ public partial class MatchZy
     private void ShowLegacyXWelcome(CCSPlayerController player)
     {
         if (!legacyXQuietOverlayEnabled.Value || !IsPlayerValid(player) || player.IsBot || player.IsHLTV) return;
-        player.PrintToCenter($"LEGACY-X\n5v5 · Match{LegacyXMatchLabel()}");
+        player.PrintToCenter($"LXC\n5v5 · Match{LegacyXMatchLabel()}");
     }
 
     private void StartLegacyXMatchOverlay()
@@ -37,7 +37,7 @@ public partial class MatchZy
             KillLegacyXMatchOverlay();
             return;
         }
-        var overlay = $"LEGACY-X · Match{LegacyXMatchLabel()} · Live";
+        var overlay = $"LXC · Match{LegacyXMatchLabel()} · Live";
         foreach (var player in Utilities.GetPlayers().Where(player => IsPlayerValid(player) && !player.IsBot && !player.IsHLTV))
         {
             player.PrintToCenter(overlay);

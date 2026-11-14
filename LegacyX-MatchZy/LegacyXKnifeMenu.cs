@@ -176,7 +176,7 @@ public partial class MatchZy
         var left = Math.Max(0, (int)Math.Ceiling(knifeMenuEndsAt - Server.CurrentTime));
         if (player.TeamNum == knifeWinner)
             return "<font class='fontSize-m' color='#fafafa'>You won the knife round</font><br>"
-                + "<font class='fontSize-m' color='#fafafa'>[<font color='#a78bfa'>1</font>] Stay &nbsp;&nbsp; [<font color='#a78bfa'>2</font>] Switch</font><br>"
+                + "<font class='fontSize-m' color='#fafafa'>[<font color='#e4e4e7'>1</font>] Stay &nbsp;&nbsp; [<font color='#e4e4e7'>2</font>] Switch</font><br>"
                 + $"<font class='fontSize-s' color='#a3a3a3'>{left}s · no answer means stay</font>";
         return $"<font class='fontSize-m' color='#fafafa'>{System.Net.WebUtility.HtmlEncode(knifeWinnerName)} won the knife round</font><br>"
             + $"<font class='fontSize-s' color='#a3a3a3'>choosing a side · {left}s</font>";

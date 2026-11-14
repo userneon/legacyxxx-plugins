@@ -4,5 +4,5 @@
   "EnforceCompetitiveVoiceCvars": true,
   "BlockLivingGlobalChat": true,
   "PreservePluginCommands": true,
-  "ChatPrefix": "{Lime}[LEGACY-X]{Default}"
+  "ChatPrefix": "{Lime}[LXC]{Default}"
 }

@@ -7,7 +7,7 @@ namespace LegacyXCommunity;
 
 /// <summary>
 /// The game's money lines in chat ("+$300: Award for neutralizing an enemy", "+$3250: Team award for winning…") are replaced by one
-/// short line in the LEGACY-X style (owner request 2026-10-25): "LEGACY-X | +$300 · Kill". The money itself is untouched (no
+/// short line in the LXC style (owner request 2026-10-25): "LXC | +$300 · Kill". The money itself is untouched (no
 /// mp_*cashawards change); only the text is. The amount comes from the game's own message. MoneyLines: "prefix" (default),
 /// "hide" (no line at all) or "game" (the game's own line).
 /// </summary>
@@ -27,7 +27,7 @@ public sealed partial class LegacyXCommunity
         try
         {
             var token = message.ReadString("param", 0);
-            // "<name> attacked a teammate" (the game's warning line, only utility can hurt a teammate now): the same words in the LEGACY-X look.
+            // "<name> attacked a teammate" (the game's warning line, only utility can hurt a teammate now): the same words in the LXC look.
             if (!string.IsNullOrEmpty(token) && (token.Contains("teammate_attack", StringComparison.OrdinalIgnoreCase) || token.Contains("attacked_teammate", StringComparison.OrdinalIgnoreCase)))
             {
                 if (string.Equals(Config.MoneyLines, "game", StringComparison.OrdinalIgnoreCase)) return HookResult.Continue;
