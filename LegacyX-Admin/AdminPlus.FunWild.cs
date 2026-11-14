@@ -38,10 +38,12 @@ public partial class AdminPlus
     private const string FxBurst = "particles/legacyx/bounce_burst.vpcf";
     private static readonly Dictionary<string, string> FxTrails = new()
     {
-        ["pulse"] = "particles/legacyx/trail_pulse.vpcf",
-        ["ribbon"] = "particles/legacyx/trail_ribbon.vpcf",
-        ["lightning"] = "particles/legacyx/trail_lightning.vpcf",
-        ["stardust"] = "particles/legacyx/trail_stardust.vpcf",
+        ["classic"] = "particles/legacyx/trail_classic.vpcf",
+        ["crack"] = "particles/legacyx/trail_crack.vpcf",
+        ["electric"] = "particles/legacyx/trail_electric.vpcf",
+        ["laser"] = "particles/legacyx/trail_laser.vpcf",
+        ["water"] = "particles/legacyx/trail_water.vpcf",
+        ["prism"] = "particles/legacyx/trail_prism.vpcf",
     };
     private const string ChickenModel = "models/chicken/chicken.vmdl";
     private static readonly string[] GiftWeapons =
@@ -68,7 +70,7 @@ public partial class AdminPlus
         AddPermCmd("@css/slay", "css_ghost", "<#userid|name|all @ commands>", CmdGhost);
         AddPermCmd("@css/slay", "css_chicken", "<#userid|name|all @ commands>", CmdChicken);
         AddPermCmd("@css/slay", "css_pop", "<#userid|name|all @ commands>", CmdPop);
-        AddPermCmd("@css/slay", "css_aura", "<#userid|name|all @ commands> [pulse|ribbon|lightning|stardust] [seconds]", CmdAura);
+        AddPermCmd("@css/slay", "css_aura", "<#userid|name|all @ commands> [classic|crack|electric|laser|water|prism] [seconds]", CmdAura);
         AddPermCmd("@css/slay", "css_roulette", "", CmdRoulette);
         AddPermCmd("@css/slay", "css_chaos", "[seconds]", CmdChaos);
         RegisterFunTrollCommands();
@@ -123,7 +125,7 @@ public partial class AdminPlus
         return ((int)h) switch { 0 => Color.FromArgb(255, t, 0), 1 => Color.FromArgb(q, 255, 0), 2 => Color.FromArgb(0, 255, t), 3 => Color.FromArgb(0, q, 255), 4 => Color.FromArgb(t, 0, 255), _ => Color.FromArgb(255, 0, q) };
     }
 
-    /// <summary>One of the Workshop addon's effects at `at`, tinted through control point 16 and removed after `seconds` (nothing happens when it cannot be spawned).</summary>
+    /// <summary>One of the Workshop addon's effects at `at`, tinted (control point 1 for the trails, 16 for the burst) and removed after `seconds` (nothing happens when it cannot be spawned).</summary>
     private CParticleSystem? SpawnFx(string effectName, Vector at, Color color, float seconds)
     {
         try
@@ -132,8 +134,12 @@ public partial class AdminPlus
             if (particle == null || !particle.IsValid) return null;
             particle.EffectName = effectName;
             particle.StartActive = true;
-            particle.DataCP = 16;
-            particle.DataCPValue.X = color.R; particle.DataCPValue.Y = color.G; particle.DataCPValue.Z = color.B;
+            if (effectName.Contains("/trail_")) { particle.TintCP = 1; particle.Tint = color; } // the six trails are tinted through control point 1
+            else
+            {
+                particle.DataCP = 16;
+                particle.DataCPValue.X = color.R; particle.DataCPValue.Y = color.G; particle.DataCPValue.Z = color.B;
+            }
             particle.Teleport(at, new QAngle(0, 0, 0), new Vector(0, 0, 0));
             particle.DispatchSpawn();
             AddTimer(seconds, () => { if (particle.IsValid) particle.Remove(); });
@@ -400,8 +406,8 @@ public partial class AdminPlus
 
     private void CmdAura(CCSPlayerController? caller, CommandInfo info)
     {
-        if (!ResolveFunTargets(caller, info, "Usage: css_aura <target> [pulse|ribbon|lightning|stardust] [seconds]", "Fun.Aura.Usage", out var players, out var admin, out var label)) return;
-        var shape = info.ArgCount > 2 && FxTrails.ContainsKey(info.GetArg(2).ToLowerInvariant()) ? info.GetArg(2).ToLowerInvariant() : "pulse";
+        if (!ResolveFunTargets(caller, info, "Usage: css_aura <target> [classic|crack|electric|laser|water|prism] [seconds]", "Fun.Aura.Usage", out var players, out var admin, out var label)) return;
+        var shape = info.ArgCount > 2 && FxTrails.ContainsKey(info.GetArg(2).ToLowerInvariant()) ? info.GetArg(2).ToLowerInvariant() : "classic";
         var seconds = SecondsArg(info, info.ArgCount > 2 && FxTrails.ContainsKey(info.GetArg(2).ToLowerInvariant()) ? 3 : 2, 30f, 3f, 180f) ?? 30f;
         var off = players.All(p => _auraTimers.ContainsKey(p.SteamID));
         foreach (var t in players)

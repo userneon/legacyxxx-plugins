@@ -1,7 +1,6 @@
 using System.Text.Json;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
-using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Entities;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
@@ -13,15 +12,11 @@ namespace LegacyXCommunity;
 /// <summary>
 /// Grenade cosmetics bought on legacyx.cc (Shop → Grenades), read from the player profile with the smoke colour:
 /// <list type="bullet">
-/// <item><b>Grenade trail</b> (owner request 2026-10-25): a line in the worn colour follows every grenade the player throws (HE,
-/// flash, smoke, molotov, incendiary, decoy). <c>grenade_trail</c> is the #rrggbb, <c>grenade_trail_fx</c> the shape: line (thick),
-/// dash, double, helix, comet, rainbow (cycles through colours, ignores the colour), zigzag (two lines zigzagging to either side and
-/// crossing on the way), and with effects along the way (owner request
-/// 2026-10-25): flare (drops burning flares that light the ground they pass), sparks (sparks fly off the line), starfall (twinkling
-/// stars scatter round it) and inferno (all three on a thick line). Premium shapes from the Workshop addon (owner request 2026-10-26,
-/// legacyxxx-workshop, sent to players on connect through MultiAddonManager): ribbon, lightning, pulse and stardust are particle
-/// effects tinted with the player's colour (control point 16, see the workshop's CONTRACT.md) that follow the grenade, with a spark burst
-/// where it bounces; a thin beam line goes under them so a player without the addon still sees a trail.</item>
+/// <item><b>Grenade trail</b> (owner request 2026-10-25, redone 2026-11-14): a particle effect in the worn colour follows every grenade the player throws
+/// (HE, flash, smoke, molotov, incendiary, decoy). <c>grenade_trail</c> is the #rrggbb, <c>grenade_trail_fx</c> the design: classic, crack, electric, laser,
+/// water or prism. They are the Workshop addon's particles (legacyxxx-workshop, built from Letaryat/CS2-CustomTrailAndTracers), sent to players on connect
+/// through MultiAddonManager and tinted through the particle system's tint on control point 1, with a spark burst where the grenade bounces; a thin
+/// beam line goes under them so a player without the addon still sees a trail. The older line, dash, helix, comet and the other beam designs are gone.</item>
 /// <item><b>Per grenade</b> (owner request 2026-10-26): a trail and a light can be worn on one kind of grenade only: HE, flash, smoke, fire
 /// (molotov and incendiary) and decoy. The profile's <c>grenade_slots</c> holds what each wears; the default trail is the fallback.</item>
 /// <item><b>Grenade light</b> (sold separately): a coloured light that flies with the grenade and lights the walls it passes
@@ -33,17 +28,21 @@ namespace LegacyXCommunity;
 public sealed partial class LegacyXCommunity
 {
     private static readonly HashSet<string> GrenadeProjectiles = new() { "hegrenade_projectile", "flashbang_projectile", "smokegrenade_projectile", "molotov_projectile", "incgrenade_projectile", "decoy_projectile" };
-    private static readonly HashSet<string> TrailShapes = new() { "line", "dash", "double", "helix", "comet", "rainbow", "zigzag", "flare", "sparks", "starfall", "inferno", "ribbon", "lightning", "pulse", "stardust", "tube3d" };
-    /// <summary>The Workshop addon's particle effect for each premium shape (legacyxxx-workshop CONTRACT.md).</summary>
+    private static readonly HashSet<string> TrailShapes = new() { "classic", "crack", "electric", "laser", "water", "prism" };
+    /// <summary>The Workshop addon's particle effect for each design (legacyxxx-workshop CONTRACT.md).</summary>
     private static readonly Dictionary<string, string> TrailParticles = new()
     {
-        ["ribbon"] = "particles/legacyx/trail_ribbon.vpcf",
-        ["lightning"] = "particles/legacyx/trail_lightning.vpcf",
-        ["pulse"] = "particles/legacyx/trail_pulse.vpcf",
-        ["stardust"] = "particles/legacyx/trail_stardust.vpcf",
+        ["classic"] = "particles/legacyx/trail_classic.vpcf",
+        ["crack"] = "particles/legacyx/trail_crack.vpcf",
+        ["electric"] = "particles/legacyx/trail_electric.vpcf",
+        ["laser"] = "particles/legacyx/trail_laser.vpcf",
+        ["water"] = "particles/legacyx/trail_water.vpcf",
+        ["prism"] = "particles/legacyx/trail_prism.vpcf",
     };
     private const string BounceBurstParticle = "particles/legacyx/bounce_burst.vpcf";
+    /// <summary>The control point the bounce burst reads its colour from; the six trails are tinted through control point 1 instead.</summary>
     private const int ParticleColourPoint = 16;
+    private const int TrailTintPoint = 1;
     /// <summary>Who threw each grenade with a premium trail, by the grenade's entity index: its bounces get a burst in their colour.</summary>
     private readonly Dictionary<uint, System.Drawing.Color> burstOnBounce = new();
     /// <summary>Which of the five grenade slots a projectile belongs to (owner request 2026-10-26): the molotov and the incendiary share "fire".</summary>
@@ -66,7 +65,6 @@ public sealed partial class LegacyXCommunity
         {
             foreach (var effect in TrailParticles.Values) manifest.AddResource(effect);
             manifest.AddResource(BounceBurstParticle);
-            manifest.AddResource(TubeModel);
         });
         RegisterEventHandler<EventGrenadeBounce>((@event, _) =>
         {
@@ -118,17 +116,15 @@ public sealed partial class LegacyXCommunity
     {
         if (projectile.AbsOrigin is not { } origin) return;
         var last = new Vector(origin.X, origin.Y, origin.Z);
-        var lastLeft = last;
-        var lastRight = last;
         var ticks = 0;
         var still = 0;
         var light = lightColor is { } shade ? SpawnGrenadeLight(last, shade) : null;
-        // A premium shape: its particle effect rides with the grenade, and its bounces burst in the same colour.
+        // The design's particle effect rides with the grenade, and its bounces burst in the same colour.
         CParticleSystem? effect = null;
         var grenadeIndex = projectile.Index;
         if (trail is { } premium && TrailParticles.TryGetValue(premium.Shape, out var effectName))
         {
-            effect = SpawnParticle(effectName, last, premium.Color, TrailMaxTicks * TrailTickSeconds + 1f);
+            effect = SpawnParticle(effectName, last, premium.Color, TrailMaxTicks * TrailTickSeconds + 1f, tintPoint: TrailTintPoint);
             burstOnBounce[grenadeIndex] = premium.Color;
         }
         CounterStrikeSharp.API.Modules.Timers.Timer? timer = null;
@@ -156,93 +152,16 @@ public sealed partial class LegacyXCommunity
             // Resting on the ground: a few still ticks and the trail (and light) are done.
             if (moved < 1f) { if (++still > 5) Stop(); return; }
             still = 0;
-            if (trail is { } look) DrawTrail(look, ticks, last, to, ref lastLeft, ref lastRight);
+            if (trail is { } look) SpawnTrailSegment(last, to, look.Color, 2f, 0.9f); // the thin line a player without the addon sees
             last = to;
         }, TimerFlags.REPEAT);
     }
 
-    private void DrawTrail((System.Drawing.Color Color, string Shape) look, int tick, Vector from, Vector to, ref Vector lastLeft, ref Vector lastRight)
-    {
-        var color = look.Color;
-        switch (look.Shape)
-        {
-            case "dash":
-                if (tick % 3 != 0) SpawnTrailSegment(from, to, color, 5f, 1.3f);
-                break;
-            case "double":
-            case "helix":
-            {
-                // Two strands beside the flight path: side by side (double) or turning round it (helix).
-                var (sx, sy) = Side(from, to);
-                var turn = look.Shape == "helix" ? tick * 0.7 : 0;
-                var r = 7f;
-                var left = new Vector(to.X + sx * r * (float)Math.Cos(turn), to.Y + sy * r * (float)Math.Cos(turn), to.Z + r * (float)Math.Sin(turn));
-                var right = new Vector(to.X - sx * r * (float)Math.Cos(turn), to.Y - sy * r * (float)Math.Cos(turn), to.Z - r * (float)Math.Sin(turn));
-                if (tick > 1) { SpawnTrailSegment(lastLeft, left, color, 3.2f, 1.3f); SpawnTrailSegment(lastRight, right, color, 3.2f, 1.3f); }
-                lastLeft = left;
-                lastRight = right;
-                break;
-            }
-            case "zigzag":
-            {
-                // Two lines that zigzag to either side of the flight, mirrored, so they cross every few ticks.
-                var (sx, sy) = Side(from, to);
-                var phase = tick % 6 / 3f; // 0..2
-                var wave = 1f - Math.Abs(phase - 1f) * 2f; // -1..1, a sharp triangle
-                const float reach = 10f;
-                var left = new Vector(to.X + sx * reach * wave, to.Y + sy * reach * wave, to.Z);
-                var right = new Vector(to.X - sx * reach * wave, to.Y - sy * reach * wave, to.Z);
-                if (tick > 1) { SpawnTrailSegment(lastLeft, left, color, 3.5f, 1.3f); SpawnTrailSegment(lastRight, right, color, 3.5f, 1.3f); }
-                lastLeft = left;
-                lastRight = right;
-                break;
-            }
-            case "comet":
-                SpawnTrailSegment(from, to, color, 10f, 0.5f);
-                break;
-            case "rainbow":
-                SpawnTrailSegment(from, to, Hue(tick * 14 % 360), 6f, 1.4f);
-                break;
-            case "tube3d":
-                if (tick % 2 == 0) SpawnTubeSegment(from, to, color);
-                break;
-            case "flare":
-                SpawnTrailSegment(from, to, color, 5f, 1.3f);
-                if (tick % 5 == 0) { SpawnFlare(to, color, 1.1f); Twinkle(to, System.Drawing.Color.White, 5f, 1.1f); }
-                break;
-            case "sparks":
-                SpawnTrailSegment(from, to, color, 5f, 1.3f);
-                if (tick % 2 == 0) { Spark(to, color); Spark(to, System.Drawing.Color.White); }
-                break;
-            case "starfall":
-                SpawnTrailSegment(from, to, color, 4f, 1.3f);
-                if (tick % 3 == 0) Twinkle(Scatter(to, 22f), tick % 6 == 0 ? System.Drawing.Color.White : color, 4f + Random.Shared.NextSingle() * 4f, 0.7f);
-                break;
-            case "inferno":
-                SpawnTrailSegment(from, to, color, 8f, 0.9f);
-                SpawnTrailSegment(from, to, System.Drawing.Color.White, 2f, 0.6f);
-                if (tick % 2 == 0) Spark(to, color);
-                if (tick % 3 == 0) Twinkle(Scatter(to, 18f), color, 5f, 0.6f);
-                if (tick % 6 == 0) SpawnFlare(to, color, 0.9f);
-                break;
-            case "ribbon":
-            case "lightning":
-            case "pulse":
-            case "stardust":
-                // The particle effect is the trail; this thin line is what a player without the Workshop addon sees.
-                SpawnTrailSegment(from, to, color, 2f, 0.9f);
-                break;
-            default:
-                SpawnTrailSegment(from, to, color, 6f, 1.4f);
-                break;
-        }
-    }
-
     /// <summary>
-    /// One of the Workshop addon's effects at `at`, tinted with `color` through control point 16 (legacyxxx-workshop CONTRACT.md), removed
+    /// One of the Workshop addon's effects at `at`, tinted with `color` (the particle system's tint on `tintPoint`, or data control point 16 for the burst; legacyxxx-workshop CONTRACT.md), removed
     /// after `seconds` whatever happens. Null when it cannot be spawned (the effect is simply missing then, nothing else changes).
     /// </summary>
-    private CParticleSystem? SpawnParticle(string effectName, Vector at, System.Drawing.Color color, float seconds)
+    private CParticleSystem? SpawnParticle(string effectName, Vector at, System.Drawing.Color color, float seconds, int? tintPoint = null)
     {
         try
         {
@@ -250,10 +169,19 @@ public sealed partial class LegacyXCommunity
             if (particle == null || !particle.IsValid) return null;
             particle.EffectName = effectName;
             particle.StartActive = true;
-            particle.DataCP = ParticleColourPoint;
-            particle.DataCPValue.X = color.R;
-            particle.DataCPValue.Y = color.G;
-            particle.DataCPValue.Z = color.B;
+            if (tintPoint is { } point)
+            {
+                // The six trails read their colour from a control point that the particle system's tint fills.
+                particle.TintCP = point;
+                particle.Tint = color;
+            }
+            else
+            {
+                particle.DataCP = ParticleColourPoint;
+                particle.DataCPValue.X = color.R;
+                particle.DataCPValue.Y = color.G;
+                particle.DataCPValue.Z = color.B;
+            }
             particle.Teleport(at, new QAngle(0, 0, 0), new Vector(0, 0, 0));
             particle.DispatchSpawn();
             AddTimer(seconds, () => { if (particle.IsValid) particle.Remove(); });
@@ -264,58 +192,6 @@ public sealed partial class LegacyXCommunity
             Console.WriteLine($"[{ModuleName}] Grenade effect {effectName} failed: {exception.Message}");
             return null;
         }
-    }
-
-    /// <summary>A point a little way off `at` in a random direction (up to `radius` units).</summary>
-    private static Vector Scatter(Vector at, float radius)
-    {
-        float Next() => (Random.Shared.NextSingle() * 2f - 1f) * radius;
-        return new Vector(at.X + Next(), at.Y + Next(), at.Z + Next());
-    }
-
-    /// <summary>A spark flying off the line: a short thin beam outward in a random direction, gone in a moment.</summary>
-    private void Spark(Vector at, System.Drawing.Color color)
-    {
-        var end = Scatter(at, 20f);
-        SpawnTrailSegment(at, new Vector(end.X, end.Y, end.Z - 6f), color, 1.5f, 0.3f);
-    }
-
-    /// <summary>A twinkling star: three short beams crossing at `at`.</summary>
-    private void Twinkle(Vector at, System.Drawing.Color color, float size, float seconds)
-    {
-        SpawnTrailSegment(new Vector(at.X - size, at.Y, at.Z), new Vector(at.X + size, at.Y, at.Z), color, 1.4f, seconds);
-        SpawnTrailSegment(new Vector(at.X, at.Y - size, at.Z), new Vector(at.X, at.Y + size, at.Z), color, 1.4f, seconds);
-        SpawnTrailSegment(new Vector(at.X, at.Y, at.Z - size), new Vector(at.X, at.Y, at.Z + size), color, 1.4f, seconds);
-    }
-
-    /// <summary>A burning flare left behind in the air: a small light that lights the ground and walls near it for a moment.</summary>
-    private void SpawnFlare(Vector at, System.Drawing.Color color, float seconds)
-    {
-        try
-        {
-            var light = Utilities.CreateEntityByName<CBarnLight>("light_omni2");
-            if (light == null || !light.IsValid) return;
-            light.Enabled = true;
-            light.Color = color;
-            light.Brightness = 3f;
-            light.Range = 140f;
-            light.Teleport(at, new QAngle(0, 0, 0), new Vector(0, 0, 0));
-            light.DispatchSpawn();
-            AddTimer(seconds, () => { if (light.IsValid) light.Remove(); });
-        }
-        catch (Exception exception)
-        {
-            Console.WriteLine($"[{ModuleName}] Grenade flare failed: {exception.Message}");
-        }
-    }
-
-    /// <summary>A horizontal unit vector at right angles to the flight (for strands beside it).</summary>
-    private static (float X, float Y) Side(Vector from, Vector to)
-    {
-        var dx = to.X - from.X;
-        var dy = to.Y - from.Y;
-        var length = MathF.Sqrt(dx * dx + dy * dy);
-        return length < 0.01f ? (1f, 0f) : (-dy / length, dx / length);
     }
 
     private static System.Drawing.Color Hue(int degrees)
@@ -345,62 +221,6 @@ public sealed partial class LegacyXCommunity
         {
             Console.WriteLine($"[{ModuleName}] Grenade trail failed: {exception.Message}");
         }
-    }
-
-    // EXPERIMENT (owner request 2026-10-31, "a real 3D tube, not a camera-facing trail"): every other tick a real model (a game cylinder) is put on the flight path,
-    // lying along it, tinted and outlined in the player's colour, and removed after a moment. Unlike a beam or a particle it is a solid object of the world, so it
-    // has depth and is seen from every side. The model's own look (a plain dev cylinder) and its axis and size are guesses: tune the three numbers below in game.
-    private const string TubeModel = "models/dev/dev_cylinder.vmdl";
-    private const float TubeModelScale = 0.12f;      // the model's size is not known: raise or lower until the tube is about 10 units wide
-    private const float TubeAxisPitch = 90f;         // the model's long side is assumed to be up (Z): turned 90 degrees so it lies along the path
-    private const float TubeLifeSeconds = 0.9f;
-
-    private void SpawnTubeSegment(Vector from, Vector to, System.Drawing.Color color)
-    {
-        try
-        {
-            var dx = to.X - from.X; var dy = to.Y - from.Y; var dz = to.Z - from.Z;
-            var flat = (float)Math.Sqrt(dx * dx + dy * dy);
-            if (flat + Math.Abs(dz) < 1f) return;
-            var yaw = (float)(Math.Atan2(dy, dx) * 180.0 / Math.PI);
-            var pitch = (float)(-Math.Atan2(dz, flat) * 180.0 / Math.PI);
-            var prop = Utilities.CreateEntityByName<CDynamicProp>("prop_dynamic_override");
-            if (prop == null || !prop.IsValid) return;
-            prop.SetModel(TubeModel);
-            prop.Render = System.Drawing.Color.FromArgb(200, color);
-            prop.Teleport(new Vector((from.X + to.X) / 2f, (from.Y + to.Y) / 2f, (from.Z + to.Z) / 2f), new QAngle(pitch + TubeAxisPitch, yaw, 0), new Vector(0, 0, 0));
-            prop.DispatchSpawn();
-            prop.AcceptInput("DisableCollision");
-            if (prop.CBodyComponent?.SceneNode is { } node)
-            {
-                node.GetSkeletonInstance().Scale = TubeModelScale;
-                Utilities.SetStateChanged(prop, "CBaseEntity", "m_CBodyComponent");
-            }
-            prop.Glow.GlowColorOverride = color;
-            prop.Glow.GlowRange = 4000;
-            prop.Glow.GlowType = 3;
-            prop.Glow.GlowTeam = -1;
-            Utilities.SetStateChanged(prop, "CBaseModelEntity", "m_Glow");
-            AddTimer(TubeLifeSeconds, () => { if (prop.IsValid) prop.Remove(); });
-        }
-        catch (Exception exception)
-        {
-            Console.WriteLine($"[{ModuleName}] Tube segment failed: {exception.Message}");
-        }
-    }
-
-    /// <summary>For trying the experimental tube: a player with root rights types !tubetest; every grenade they throw then draws it (typed again: off).</summary>
-    [ConsoleCommand("css_tubetest", "Try the experimental 3D tube trail on your own grenades")]
-    public void OnTubeTest(CCSPlayerController? player, CommandInfo command)
-    {
-        if (player == null || !player.IsValid || !AdminManager.PlayerHasPermissions(new SteamID(player.SteamID), "@css/root")) return;
-        var on = !trailLooks.TryGetValue((player.SteamID, "he"), out var current) || current.Shape != "tube3d";
-        foreach (var nade in NadeSlots)
-        {
-            if (on) trailLooks[(player.SteamID, nade)] = (System.Drawing.Color.FromArgb(255, 80, 200, 255), "tube3d");
-            else trailLooks.Remove((player.SteamID, nade));
-        }
-        player.PrintToChat(LegacyX.Shared.Configuration.LegacyXChat.System(on ? "Tube trail is on for your grenades. Type !tubetest again to switch it off." : "Tube trail is off."));
     }
 
     private CBarnLight? SpawnGrenadeLight(Vector at, System.Drawing.Color color)
@@ -438,9 +258,8 @@ public sealed partial class LegacyXCommunity
         foreach (var nade in NadeSlots)
         {
             var slot = slots != null && slots.TryGetValue(nade, out var own) ? own : new GrenadeSlot(trailHex, trailShape, lightHex);
-            var shape = slot.TrailShape is not null && TrailShapes.Contains(slot.TrailShape) ? slot.TrailShape : "line";
+            var shape = slot.TrailShape is not null && TrailShapes.Contains(slot.TrailShape) ? slot.TrailShape : "classic";
             if (ParseSmokeColor(slot.TrailHex) is { } rgb) trailLooks[(steamId, nade)] = (System.Drawing.Color.FromArgb(255, (int)rgb.R, (int)rgb.G, (int)rgb.B), shape);
-            else if (shape == "rainbow") trailLooks[(steamId, nade)] = (System.Drawing.Color.White, shape);
             else trailLooks.Remove((steamId, nade));
             if (ParseSmokeColor(slot.LightHex) is { } glow) grenadeLights[(steamId, nade)] = System.Drawing.Color.FromArgb(255, (int)glow.R, (int)glow.G, (int)glow.B);
             else grenadeLights.Remove((steamId, nade));
