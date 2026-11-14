@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -261,25 +260,6 @@ public partial class AdminPlus
                 if (target == null) return (false, "The player is not on this server.");
                 Server.ExecuteCommand($"css_team {who} {team}");
                 return (true, $"Moved {target.PlayerName} to {(team == "spec" ? "Spectators" : team.ToUpperInvariant())}.");
-            }
-            case "match_load":
-            {
-                // A queued match (the website's matchmaking, matchmaking.ts in the API): the payload carries the MatchZy match file. It is written next to the
-                // server's configs and loaded; MatchZy then puts the ten players on their teams, changes to the map and runs its ready gate.
-                var matchId = StaffText(payload, "matchId");
-                if (!Regex.IsMatch(matchId, "^[0-9a-fA-F-]{36}$")) return (false, "The match id is not valid.");
-                if (payload.ValueKind != JsonValueKind.Object || !payload.TryGetProperty("config", out var config) || config.ValueKind != JsonValueKind.Object) return (false, "The match file is missing.");
-                var fileName = $"legacyx_match_{matchId}.json";
-                try
-                {
-                    File.WriteAllText(Path.Combine(Server.GameDirectory, "csgo", fileName), config.GetRawText(), Encoding.UTF8);
-                }
-                catch (Exception exception)
-                {
-                    return (false, $"Could not write the match file: {exception.Message}");
-                }
-                Server.ExecuteCommand($"matchzy_loadmatch {fileName}");
-                return (true, $"Match {matchId[..8]} loaded.");
             }
             case "round_restore":
                 return (false, "Restoring a round is done in game with MatchZy (.stop, or css_restore as staff).");
