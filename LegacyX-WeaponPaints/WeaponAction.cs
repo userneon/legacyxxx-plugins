@@ -12,12 +12,23 @@ namespace WeaponPaints
 {
 	public partial class WeaponPaints
 	{
+		private static readonly CounterStrikeSharp.API.Core.Capabilities.PluginCapability<Func<ulong, bool>> ShopKnifeModelCapability = new("legacyx:custom_knife_model");
+
+		private static bool WearsShopKnifeModel(CCSPlayerController player)
+		{
+			try { return ShopKnifeModelCapability.Get() is { } asks && asks(player.SteamID); }
+			catch { return false; }
+		}
+
 		private void GivePlayerWeaponSkin(CCSPlayerController player, CBasePlayerWeapon weapon)
 		{
 			if (!Config.Additional.SkinEnabled) return;
 			if (!GPlayerWeaponsInfo.TryGetValue(player.Slot, out _)) return;
 			
 			bool isKnife = weapon.DesignerName.Contains("knife") || weapon.DesignerName.Contains("bayonet");
+
+			// A player who wears a Shop knife model (LegacyX-Community) keeps the default knife under it: their own knife pick would put its model and animations over the Shop model.
+			if (isKnife && WearsShopKnifeModel(player)) return;
 			
 			switch (isKnife)
 			{

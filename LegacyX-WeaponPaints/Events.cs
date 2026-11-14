@@ -308,6 +308,8 @@ namespace WeaponPaints
 			var player = @event.Userid;
 			if (player == null || !player.IsValid || player.IsBot) return HookResult.Continue;
 			if (!@event.Item.Contains("knife")) return HookResult.Continue;
+			// A player who wears a Shop knife model keeps the default knife under it (LegacyX-Community).
+			if (WearsShopKnifeModel(player)) return HookResult.Continue;
 		
 			var weaponDefIndex = (int)@event.Defindex;
 				

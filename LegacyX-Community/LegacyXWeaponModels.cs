@@ -1,5 +1,6 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Core.Capabilities;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Utils;
@@ -66,6 +67,9 @@ public sealed partial class LegacyXCommunity
 
     private void RegisterWeaponModels()
     {
+        // LegacyX-WeaponPaints asks this before it puts the player's own knife pick (a paracord ...) on their knife: a player who wears a Shop knife model keeps the
+        // default knife under it, or the pick's own model and animations replaced the Shop model a moment after it was put on (owner report 2026-11-14).
+        Capabilities.RegisterPluginCapability(new PluginCapability<Func<ulong, bool>>("legacyx:custom_knife_model"), () => steamId => weaponModelsOn && weaponModels.TryGetValue(steamId, out var worn) && worn.ContainsKey("knife"));
         knifeSwapOn = string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SWAP"), "true", StringComparison.OrdinalIgnoreCase);
         Console.WriteLine($"[{ModuleName}] Weapon models: knife swap for the M9/Bayonet animations is {(knifeSwapOn ? "ON" : "off")}.");
         apexSubclassOn = string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_APEX_SUBCLASS"), "true", StringComparison.OrdinalIgnoreCase);
@@ -99,18 +103,18 @@ public sealed partial class LegacyXCommunity
         });
         RegisterEventHandler<EventPlayerSpawn>((@event, _) =>
         {
-            if (@event.Userid is { IsValid: true } player) Server.NextFrame(() => ApplyWeaponModels(player));
+            if (@event.Userid is { IsValid: true } player) ApplyWeaponModelsLater(player);
             return HookResult.Continue;
         });
         // The subclass can only be changed on the knife that is IN HAND (on a holstered weapon it crashed the seller's server), so it is applied when the knife is equipped.
         RegisterEventHandler<EventItemEquip>((@event, _) =>
         {
-            if (@event.Userid is { IsValid: true } player) Server.NextFrame(() => ApplyWeaponModels(player));
+            if (@event.Userid is { IsValid: true } player) ApplyWeaponModelsLater(player);
             return HookResult.Continue;
         });
         RegisterEventHandler<EventItemPickup>((@event, _) =>
         {
-            if (@event.Userid is { IsValid: true } player) Server.NextFrame(() => ApplyWeaponModels(player));
+            if (@event.Userid is { IsValid: true } player) ApplyWeaponModelsLater(player);
             return HookResult.Continue;
         });
         AddCommand("lx_wm_off", "Weapon models: switch off or on (0/1)", (player, command) =>
@@ -196,6 +200,15 @@ public sealed partial class LegacyXCommunity
                 }
         }
         if (set.Count > 0) weaponModels[steamId] = set;
+    }
+
+    /// <summary>Applies the player's models on the next frame and again a little later, after other plugins and the game itself have finished changing the weapon.</summary>
+    private void ApplyWeaponModelsLater(CCSPlayerController player)
+    {
+        if (!weaponModelsOn || !weaponModels.ContainsKey(player.SteamID)) return;
+        Server.NextFrame(() => ApplyWeaponModels(player));
+        foreach (var delay in new[] { 0.25f, 0.8f })
+            AddTimer(delay, () => { if (player.IsValid) ApplyWeaponModels(player); });
     }
 
     /// <summary>Puts `path` on the view model entity that shows `weapon` in `player`'s hands, if the weapon is still the one in hand; says in the log when no view model was found.</summary>
