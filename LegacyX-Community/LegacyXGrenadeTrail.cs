@@ -15,8 +15,9 @@ namespace LegacyXCommunity;
 /// <item><b>Grenade trail</b> (owner request 2026-10-25, redone 2026-11-14): a particle effect in the worn colour follows every grenade the player throws
 /// (HE, flash, smoke, molotov, incendiary, decoy). <c>grenade_trail</c> is the #rrggbb, <c>grenade_trail_fx</c> the design: classic, crack, electric, laser,
 /// water or split. They are the Workshop addon's particles (legacyxxx-workshop, built from Letaryat/CS2-CustomTrailAndTracers), sent to players on connect
-/// through MultiAddonManager and tinted through the particle system's tint on control point 1, with a spark burst where the grenade bounces; a thin
-/// beam line goes under them so a player without the addon still sees a trail. The older line, dash, helix, comet and the other beam designs are gone.</item>
+/// through MultiAddonManager and tinted through the particle system's tint on control point 1, with a spark burst where the grenade bounces. It is one clean
+/// neon line and nothing else (owner request 2026-11-14): no beam under it and no glow, and a particle is drawn with the depth buffer on, so a wall hides it. A player
+/// without the addon sees no trail. The older line, dash, helix, comet and the other beam designs are gone.</item>
 /// <item><b>Per grenade</b> (owner request 2026-10-26): a trail and a light can be worn on one kind of grenade only: HE, flash, smoke, fire
 /// (molotov and incendiary) and decoy. The profile's <c>grenade_slots</c> holds what each wears; the default trail is the fallback.</item>
 /// <item><b>Grenade light</b> (sold separately): a coloured light that flies with the grenade and lights the walls it passes
@@ -152,7 +153,6 @@ public sealed partial class LegacyXCommunity
             // Resting on the ground: a few still ticks and the trail (and light) are done.
             if (moved < 1f) { if (++still > 5) Stop(); return; }
             still = 0;
-            if (trail is { } look) SpawnTrailSegment(last, to, look.Color, 2f, 0.9f); // the thin line a player without the addon sees
             last = to;
         }, TimerFlags.REPEAT);
     }
