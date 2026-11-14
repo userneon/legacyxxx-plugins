@@ -198,6 +198,24 @@ public sealed partial class LegacyXCommunity
         if (set.Count > 0) weaponModels[steamId] = set;
     }
 
+    /// <summary>Puts `path` on the view model entity that shows `weapon` in `player`'s hands, if the weapon is still the one in hand; says in the log when no view model was found.</summary>
+    private void PutViewModel(CCSPlayerController player, CBasePlayerWeapon weapon, string path, string kind)
+    {
+        try
+        {
+            if (!player.IsValid || !weapon.IsValid || player.PlayerPawn.Value?.WeaponServices?.ActiveWeapon.Value?.Handle != weapon.Handle) return;
+            var found = false;
+            foreach (var view in Utilities.FindAllEntitiesByDesignerName<CBaseModelEntity>("predicted_viewmodel"))
+            {
+                if (!view.IsValid || Schema.GetSchemaValue<CHandle<CBasePlayerWeapon>>(view.Handle, "CBaseViewModel", "m_hWeapon").Value?.Handle != weapon.Handle) continue;
+                view.SetModel(path);
+                found = true;
+            }
+            if (!found) Console.WriteLine($"[{ModuleName}] No view model entity shows {player.PlayerName}'s {kind} yet, the first-person model {path} could not be put on.");
+        }
+        catch (Exception problem) { Console.WriteLine($"[{ModuleName}] First-person model for {player.PlayerName} ({kind}) failed: {problem.Message}"); }
+    }
+
     private void ApplyWeaponModels(CCSPlayerController player)
     {
         // Nothing for a player who is choosing a team, spectating or dead: there is no gun in their hands to change.
@@ -279,10 +297,14 @@ public sealed partial class LegacyXCommunity
             {
                 weapon.SetModel(model.World);
                 Console.WriteLine($"[{ModuleName}] Weapon model {model.World} put on {player.PlayerName}'s {kind}.");
-                // The first-person model: the view model entity that is showing this weapon.
+                // The first-person model: the view model entity that is showing this weapon. The game puts the weapon's own view model back while it is being
+                // drawn (the equip animation), so a katana put on at once can vanish from the hand; it is put on again a moment later, twice.
                 if (weapon.Handle == pawn.WeaponServices.ActiveWeapon.Value?.Handle)
-                    foreach (var view in Utilities.FindAllEntitiesByDesignerName<CBaseModelEntity>("predicted_viewmodel"))
-                        if (view.IsValid && Schema.GetSchemaValue<CHandle<CBasePlayerWeapon>>(view.Handle, "CBaseViewModel", "m_hWeapon").Value?.Handle == weapon.Handle) view.SetModel(model.View);
+                {
+                    PutViewModel(player, weapon, model.View, kind);
+                    foreach (var delay in new[] { 0.12f, 0.4f })
+                        AddTimer(delay, () => PutViewModel(player, weapon, model.View, kind));
+                }
             }
             catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Weapon model for {player.PlayerName} ({kind}) failed: {problem.Message}"); }
         }
