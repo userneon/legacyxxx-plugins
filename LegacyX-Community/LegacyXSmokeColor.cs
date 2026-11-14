@@ -23,6 +23,16 @@ public sealed partial class LegacyXCommunity
     private const string SmokeBloomParticle = "particles/legacyx/smoke_bloom.vpcf";
     private const string SmokeMotesParticle = "particles/legacyx/smoke_motes.vpcf";
     private const float SmokeBloomSeconds = 18f;
+    /// <summary>The pictures a smoke can shed, by the key the API sends as smoke_motif (legacyxxx-workshop CONTRACT.md).</summary>
+    private static readonly Dictionary<string, string> SmokeMotifs = new()
+    {
+        ["star"] = "particles/legacyx/smoke_motes_star.vpcf",
+        ["heart"] = "particles/legacyx/smoke_motes_heart.vpcf",
+        ["diamond"] = "particles/legacyx/smoke_motes_diamond.vpcf",
+        ["bolt"] = "particles/legacyx/smoke_motes_bolt.vpcf",
+        ["sparkle"] = "particles/legacyx/smoke_motes_sparkle.vpcf",
+    };
+    private readonly Dictionary<ulong, string> smokeMotifs = new();
     // The colour is held for this many quarter seconds after the throw: longer than any smoke lasts.
     private const int SmokeHoldTicks = 100;
     // A two-colour smoke reaches its second colour after this many quarter seconds (about 20 s: the whole life of the cloud).
@@ -81,7 +91,7 @@ public sealed partial class LegacyXCommunity
                 {
                     var color = System.Drawing.Color.FromArgb(255, (int)tint.R, (int)tint.G, (int)tint.B);
                     SpawnParticle(SmokeBloomParticle, at, color, SmokeBloomSeconds);
-                    SpawnParticle(SmokeMotesParticle, at, color, SmokeBloomSeconds);
+                    SpawnParticle(smokeMotifs.TryGetValue(thrower.SteamID, out var motif) ? SmokeMotifs[motif] : SmokeMotesParticle, at, color, SmokeBloomSeconds);
                 }
             }
             return HookResult.Continue;
@@ -116,7 +126,7 @@ public sealed partial class LegacyXCommunity
         });
         RegisterEventHandler<EventPlayerDisconnect>((@event, _) =>
         {
-            if (@event.Userid is { } left) { smokeRefreshAt.Remove(left.SteamID); smokeColors.Remove(left.SteamID); }
+            if (@event.Userid is { } left) { smokeRefreshAt.Remove(left.SteamID); smokeColors.Remove(left.SteamID); smokeMotifs.Remove(left.SteamID); }
             return HookResult.Continue;
         });
     }
@@ -137,14 +147,17 @@ public sealed partial class LegacyXCommunity
             : null;
 
     /// <summary>Keeps (or drops) a player's worn smoke colour and its optional second colour; only a plain #rrggbb counts. Main thread.</summary>
-    private void StoreSmokeColor(ulong steamId, string? hex, string? hex2 = null)
+    private void StoreSmokeColor(ulong steamId, string? hex, string? hex2 = null, string? motif = null)
     {
         if (ParseSmokeColor(hex) is { } first)
         {
             smokeColors[steamId] = (first, ParseSmokeColor(hex2));
+            // The picture the smoke sheds: one of our own set, else the plain specks.
+            if (motif is not null && SmokeMotifs.ContainsKey(motif)) smokeMotifs[steamId] = motif; else smokeMotifs.Remove(steamId);
             return;
         }
         smokeColors.Remove(steamId);
+        smokeMotifs.Remove(steamId);
     }
 
     private static void HoldSmokeColor(CSmokeGrenadeProjectile projectile, (float R, float G, float B) shade)

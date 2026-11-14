@@ -68,6 +68,7 @@ public sealed partial class LegacyXCommunity
             manifest.AddResource(BounceBurstParticle);
             manifest.AddResource(SmokeBloomParticle);
             manifest.AddResource(SmokeMotesParticle);
+            foreach (var picture in SmokeMotifs.Values) manifest.AddResource(picture);
         });
         RegisterEventHandler<EventGrenadeBounce>((@event, _) =>
         {
