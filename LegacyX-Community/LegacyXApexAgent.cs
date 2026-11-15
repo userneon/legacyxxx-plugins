@@ -4,9 +4,8 @@ using CounterStrikeSharp.API.Core;
 namespace LegacyXCommunity;
 
 /// <summary>
-/// The seller's re-rigged character models (agents/models/bluesen/default_agents/&lt;name&gt;/&lt;name&gt;.vmdl, owner request 2026-11-15): the Apex knives' animations play only on them. Every
-/// player who has one of the game's default agents (characters/models/&lt;name&gt;/&lt;name&gt;.vmdl) is given the pack's model of the SAME name, so they look the same and only the skeleton changes. A player
-/// with another agent (a Skinchanger agent) keeps it. Done once at spawn, never at equip. LEGACYX_COMMUNITY_REPLACE_AGENTS=true switches it on (off by default). The pack's models are found by
+/// The seller's re-rigged character models (agents/models/bluesen/default_agents/&lt;name&gt;/&lt;name&gt;.vmdl, owner request 2026-11-15): the Apex knives' animations play only on them. Only a player
+/// who WEARS an Apex knife is given one of the pack's COMPLETE models (the same agent when the pack has it complete, else one of their team), at spawn, never at equip. LEGACYX_COMMUNITY_REPLACE_AGENTS=true switches it on (off by default). The pack's models are found by
 /// reading the file list of the downloaded Workshop addon (the VPK's directory file); LEGACYX_COMMUNITY_APEX_WORKSHOP_ID is that addon (default 3830785234).
 /// </summary>
 public sealed partial class LegacyXCommunity
@@ -35,46 +34,65 @@ public sealed partial class LegacyXCommunity
         Console.WriteLine($"[{ModuleName}] Agents: the pack's re-rigged character models are {(replaceAgentsOn ? "ON" : "off")} (off by default; LEGACYX_COMMUNITY_REPLACE_AGENTS=true switches them on).");
     }
 
+    // The pack models that are complete (tools/check_model_deps.py: the other 47 miss thirdperson_body_vmorf.vtex_c, 2026-11-15). Only these are given to players.
+    private static readonly HashSet<string> CompleteAgents = new(StringComparer.Ordinal)
+    {
+        "ctm_fbi_varianta", "ctm_fbi_variantc", "ctm_fbi_variantg", "ctm_gendarmerie_variantb", "ctm_sas", "ctm_sas_variantf", "ctm_sas_variantg",
+        "ctm_st6_variante", "ctm_st6_variantj", "ctm_st6_variantk", "ctm_swat_variantg", "ctm_swat_varianth", "ctm_swat_varianti", "ctm_swat_variantj",
+        "tm_balkan_variantf", "tm_balkan_varianth", "tm_balkan_variantl", "tm_jungle_raider_varianta", "tm_jungle_raider_variantd",
+        "tm_leet_varianta", "tm_leet_variantb", "tm_leet_variantc", "tm_leet_variantd", "tm_leet_variante", "tm_leet_variantg", "tm_leet_varianth",
+        "tm_leet_varianti", "tm_leet_variantj", "tm_leet_variantk", "tm_professional_varg", "tm_professional_varh", "tm_professional_vari", "tm_professional_varj",
+    };
+
     private void ReplaceAgentLater(CCSPlayerController player)
     {
         if (!replaceAgentsOn || !weaponModelsOn || player.IsBot) return;
-        // A second look later: the Skinchanger agent (WeaponPaints) is put on a moment after the spawn, and a player who has one must keep it.
+        // Only a player who wears an Apex knife needs the pack's character model (its animations play only on it): everybody else keeps their own.
+        if (!WearsApexKnife(player.SteamID)) return;
+        // A second look later: the Skinchanger agent (WeaponPaints) is put on a moment after the spawn.
         foreach (var delay in new[] { 0.7f, 2.0f })
             AddTimer(delay, () => ReplaceAgent(player));
     }
+
+    private bool WearsApexKnife(ulong steamId) =>
+        apexSubclassOn && weaponModels.TryGetValue(steamId, out var set) && set.TryGetValue("knife", out var knife) && KnifeSubclass(knife.World) is not null;
 
     private void ReplaceAgent(CCSPlayerController player)
     {
         try
         {
-            if (!player.IsValid || !player.PawnIsAlive || player.TeamNum is not (2 or 3)) return;
+            if (!player.IsValid || !player.PawnIsAlive || player.TeamNum is not (2 or 3) || !WearsApexKnife(player.SteamID)) return;
             var pawn = player.PlayerPawn.Value;
             if (pawn is null || !pawn.IsValid) return;
             if (agentSetAt.TryGetValue(player.SteamID, out var last) && (DateTime.UtcNow - last).TotalSeconds < 1.0) return;
-            var current = CurrentModel(pawn)?.ToLowerInvariant();
-            const string defaultFolder = "characters/models/";
-            if (current is null || !current.StartsWith(defaultFolder, StringComparison.Ordinal) || !current.EndsWith(".vmdl", StringComparison.Ordinal))
-            {
-                // not a default agent (a Skinchanger agent, or the model could not be read): left alone
-                if (agentMissLogged.Add("other:" + (current ?? "unreadable"))) Console.WriteLine($"[{ModuleName}] Agents: {player.PlayerName}'s model is {current ?? "(not readable)"}, not one of the game's default agents: left alone.");
-                return;
-            }
-            var name = Path.GetFileNameWithoutExtension(current);
             var pack = AgentPack();
             if (pack is null) return;
-            // The game's agents have variants (ctm_fbi_variantb): the pack's model of the base name (ctm_fbi) is the one that fits; else a pack name that starts like it.
-            var baseName = System.Text.RegularExpressions.Regex.Replace(name, "_variant.*$", "");
-            if (!pack.TryGetValue(name, out var target) && !pack.TryGetValue(baseName, out target))
-                target = pack.Where(entry => entry.Key.StartsWith(baseName, StringComparison.Ordinal) || baseName.StartsWith(entry.Key, StringComparison.Ordinal)).Select(entry => entry.Value).FirstOrDefault();
+            var current = CurrentModel(pawn)?.ToLowerInvariant();
+            // Already one of the pack's models: nothing to do.
+            if (current is not null && pack.Values.Any(path => string.Equals(path, current, StringComparison.OrdinalIgnoreCase))) return;
+            // The player's own agent (characters/models/<name>/<name>.vmdl): the pack's model of the same name when it is complete, else a complete one of their team.
+            var name = current is not null && current.StartsWith("characters/models/", StringComparison.Ordinal) ? Path.GetFileNameWithoutExtension(current) : "";
+            string? target = null;
+            if (name.Length > 0)
+            {
+                var baseName = System.Text.RegularExpressions.Regex.Replace(name, "_variant.*$", "");
+                target = new[] { name, baseName }.Where(n => CompleteAgents.Contains(n) && pack.ContainsKey(n)).Select(n => pack[n]).FirstOrDefault();
+            }
             if (target is null)
             {
-                if (agentMissLogged.Add(name)) Console.WriteLine($"[{ModuleName}] Agents: {player.PlayerName} has {current}, and the pack has no model for \"{name}\" (pack: {string.Join(", ", pack.Keys.Take(40))}).");
-                return;
+                var prefix = player.TeamNum == 3 ? "ctm_" : "tm_";
+                var options = CompleteAgents.Where(n => n.StartsWith(prefix, StringComparison.Ordinal) && !(prefix == "tm_" && n.StartsWith("ctm_", StringComparison.Ordinal)) && pack.ContainsKey(n)).OrderBy(n => n, StringComparer.Ordinal).ToList();
+                if (options.Count == 0)
+                {
+                    if (agentMissLogged.Add("none:" + prefix)) Console.WriteLine($"[{ModuleName}] Agents: the pack has no complete model for team {player.TeamNum} (pack: {string.Join(", ", pack.Keys.Take(40))}).");
+                    return;
+                }
+                target = pack[options[(int)(player.SteamID % (ulong)options.Count)]];
             }
             agentSetAt[player.SteamID] = DateTime.UtcNow;
             if (agentPrecached.Add(target)) TryPrecache(target);
             pawn.SetModel(target);
-            Console.WriteLine($"[{ModuleName}] Agent {name} of {player.PlayerName} is now the pack's {target}.");
+            Console.WriteLine($"[{ModuleName}] {player.PlayerName} wears an Apex knife: agent {(name.Length > 0 ? name : current ?? "?")} is now the pack's {target}.");
         }
         catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Agent replacement failed: {problem.Message}"); }
     }
@@ -103,7 +121,7 @@ public sealed partial class LegacyXCommunity
         try { Server.PrecacheModel(path); } catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not precache {path}: {problem.Message}"); }
     }
 
-    /// <summary>The character models (.vmdl, folder named like the file) under a folder of a VPK v1/v2 directory file.</summary>
+    /// <summary>Every character model (.vmdl) under a folder of a VPK v1/v2 directory file (the variants sit in the agent's folder: ctm_fbi/ctm_fbi_varianta.vmdl).</summary>
     private static List<string> ReadVpkModels(string file, string folder)
     {
         var found = new List<string>();
@@ -137,7 +155,7 @@ public sealed partial class LegacyXCommunity
                     reader.ReadUInt32();                        // crc
                     var preload = reader.ReadUInt16();
                     stream.Position += 2 + 4 + 4 + 2 + preload; // archive, offset, length, terminator, preload bytes
-                    if (extension == "vmdl_c" && directory.StartsWith(folder, StringComparison.Ordinal) && directory.EndsWith("/" + name, StringComparison.Ordinal))
+                    if (extension == "vmdl_c" && directory.StartsWith(folder, StringComparison.Ordinal))
                         found.Add($"{directory}/{name}.vmdl");
                 }
             }
