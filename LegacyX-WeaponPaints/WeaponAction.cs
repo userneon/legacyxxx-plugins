@@ -20,6 +20,15 @@ namespace WeaponPaints
 			catch { return false; }
 		}
 
+		private static readonly CounterStrikeSharp.API.Core.Capabilities.PluginCapability<Func<ulong, string?>> ShopKnifePickCapability = new("legacyx:shop_knife_pick");
+
+		/// <summary>The knife (designer name, e.g. weapon_knife_cord) a worn Shop knife model is made for, or null: a katana made for the paracord's skeleton puts the paracord under it by itself.</summary>
+		private static string? ShopKnifePick(CCSPlayerController player)
+		{
+			try { return ShopKnifePickCapability.Get() is { } asks ? asks(player.SteamID) : null; }
+			catch { return null; }
+		}
+
 		private void GivePlayerWeaponSkin(CCSPlayerController player, CBasePlayerWeapon weapon)
 		{
 			if (!Config.Additional.SkinEnabled) return;
@@ -30,14 +39,16 @@ namespace WeaponPaints
 			// A player who wears a Shop knife model (LegacyX-Community) keeps the default knife under it: their own knife pick would put its model and animations over the Shop model.
 			if (isKnife && WearsShopKnifeModel(player)) return;
 			
+			var shopPick = isKnife ? ShopKnifePick(player) : null;
+
 			switch (isKnife)
 			{
-				case true when !HasChangedKnife(player, out var _):
+				case true when shopPick is null && !HasChangedKnife(player, out var _):
 					return;
 				
 				case true:
 				{
-					var newDefIndex = WeaponDefindex.FirstOrDefault(x => x.Value == GPlayersKnife[player.Slot][player.Team]);
+					var newDefIndex = WeaponDefindex.FirstOrDefault(x => x.Value == (shopPick ?? GPlayersKnife[player.Slot][player.Team]));
 					if (newDefIndex.Key == 0) return;
 
 					if (weapon.AttributeManager.Item.ItemDefinitionIndex != newDefIndex.Key)

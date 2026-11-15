@@ -313,7 +313,7 @@ namespace WeaponPaints
 		
 			var weaponDefIndex = (int)@event.Defindex;
 				
-			if (!HasChangedKnife(player, out var _) || !HasChangedPaint(player, weaponDefIndex, out var _))
+			if (ShopKnifePick(player) is null && (!HasChangedKnife(player, out var _) || !HasChangedPaint(player, weaponDefIndex, out var _)))
 				return HookResult.Continue;
 			
 			if (player is { Connected: PlayerConnectedState.Connected, PawnIsAlive: true, PlayerPawn.IsValid: true })

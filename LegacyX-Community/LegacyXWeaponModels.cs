@@ -70,6 +70,9 @@ public sealed partial class LegacyXCommunity
         // LegacyX-WeaponPaints asks this before it puts the player's own knife pick (a paracord ...) on their knife: a player who wears a Shop knife model keeps the
         // default knife under it, or the pick's own model and animations replaced the Shop model a moment after it was put on (owner report 2026-11-14).
         // Only a knife without an animation base (the Apex prefab knives): a model made for the paracord's skeleton sits on the knife pick (the paracord) the skinchanger gives.
+        // A knife model made for another knife's animations (the katanas, made for the paracord) puts that knife under it by itself: the skinchanger plugin asks which one.
+        Capabilities.RegisterPluginCapability(new PluginCapability<Func<ulong, string?>>("legacyx:shop_knife_pick"), () => steamId =>
+            weaponModelsOn && weaponModels.TryGetValue(steamId, out var worn) && worn.TryGetValue("knife", out var knife) && knife.AnimBase is { } baseName && AnimKnives.TryGetValue(baseName, out var designer) ? designer : null);
         Capabilities.RegisterPluginCapability(new PluginCapability<Func<ulong, bool>>("legacyx:custom_knife_model"), () => steamId => weaponModelsOn && weaponModels.TryGetValue(steamId, out var worn) && worn.TryGetValue("knife", out var knife) && knife.AnimBase is null);
         knifeSwapOn = string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SWAP"), "true", StringComparison.OrdinalIgnoreCase);
         Console.WriteLine($"[{ModuleName}] Weapon models: knife swap for the M9/Bayonet animations is {(knifeSwapOn ? "ON" : "off")}.");
