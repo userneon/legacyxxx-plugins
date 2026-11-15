@@ -16,6 +16,7 @@ public sealed partial class LegacyXCommunity
     private DateTime agentPackSearchedAt = DateTime.MinValue;
     private string agentWorkshopId = "3830785234";
     private readonly Dictionary<ulong, DateTime> agentSetAt = new();
+    private readonly HashSet<string> agentMissLogged = new(StringComparer.Ordinal);
     private readonly HashSet<string> agentPrecached = new(StringComparer.OrdinalIgnoreCase);
 
     private void RegisterAgentReplacement()
@@ -52,10 +53,24 @@ public sealed partial class LegacyXCommunity
             if (agentSetAt.TryGetValue(player.SteamID, out var last) && (DateTime.UtcNow - last).TotalSeconds < 1.0) return;
             var current = CurrentModel(pawn)?.ToLowerInvariant();
             const string defaultFolder = "characters/models/";
-            if (current is null || !current.StartsWith(defaultFolder, StringComparison.Ordinal) || !current.EndsWith(".vmdl", StringComparison.Ordinal)) return;   // not a default agent: left alone
+            if (current is null || !current.StartsWith(defaultFolder, StringComparison.Ordinal) || !current.EndsWith(".vmdl", StringComparison.Ordinal))
+            {
+                // not a default agent (a Skinchanger agent, or the model could not be read): left alone
+                if (agentMissLogged.Add("other:" + (current ?? "unreadable"))) Console.WriteLine($"[{ModuleName}] Agents: {player.PlayerName}'s model is {current ?? "(not readable)"}, not one of the game's default agents: left alone.");
+                return;
+            }
             var name = Path.GetFileNameWithoutExtension(current);
             var pack = AgentPack();
-            if (pack is null || !pack.TryGetValue(name, out var target)) return;
+            if (pack is null) return;
+            // The game's agents have variants (ctm_fbi_variantb): the pack's model of the base name (ctm_fbi) is the one that fits; else a pack name that starts like it.
+            var baseName = System.Text.RegularExpressions.Regex.Replace(name, "_variant.*$", "");
+            if (!pack.TryGetValue(name, out var target) && !pack.TryGetValue(baseName, out target))
+                target = pack.Where(entry => entry.Key.StartsWith(baseName, StringComparison.Ordinal) || baseName.StartsWith(entry.Key, StringComparison.Ordinal)).Select(entry => entry.Value).FirstOrDefault();
+            if (target is null)
+            {
+                if (agentMissLogged.Add(name)) Console.WriteLine($"[{ModuleName}] Agents: {player.PlayerName} has {current}, and the pack has no model for \"{name}\" (pack: {string.Join(", ", pack.Keys.Take(40))}).");
+                return;
+            }
             agentSetAt[player.SteamID] = DateTime.UtcNow;
             if (agentPrecached.Add(target)) TryPrecache(target);
             pawn.SetModel(target);
