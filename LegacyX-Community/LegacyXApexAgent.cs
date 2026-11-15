@@ -14,8 +14,12 @@ public sealed partial class LegacyXCommunity
     private DateTime apexAgentSearchedAt = DateTime.MinValue;
     private string apexWorkshopId = "3830785234";
 
+    // Off unless LEGACYX_COMMUNITY_APEX_AGENT=true (2026-11-15: players' games crashed after it was switched on: a character model changed in the middle of a round is untested).
+    private bool apexAgentOn;
+
     private string? ApexAgentFor(int team)
     {
+        if (!apexAgentOn) return null;
         var set = team == 3 ? apexAgentCt : apexAgentT;
         if (set is not null) return set;
         if (apexAgentFoundCt is null || apexAgentFoundT is null) SearchApexAgents();

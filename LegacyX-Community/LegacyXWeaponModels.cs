@@ -93,9 +93,10 @@ public sealed partial class LegacyXCommunity
         // root-owned folders, not this.)
         apexSubclassOn = !string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_APEX_SUBCLASS"), "false", StringComparison.OrdinalIgnoreCase);
         var apexEnv = LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load();
+        apexAgentOn = string.Equals(apexEnv.Get("LEGACYX_COMMUNITY_APEX_AGENT"), "true", StringComparison.OrdinalIgnoreCase);
         apexAgentCt = ApexAgentPath(apexEnv.Get("LEGACYX_COMMUNITY_APEX_AGENT_CT"));
         apexAgentT = ApexAgentPath(apexEnv.Get("LEGACYX_COMMUNITY_APEX_AGENT_T"));
-        Console.WriteLine($"[{ModuleName}] Weapon models: Apex knife wearers get the character model CT={apexAgentCt ?? "(own)"} T={apexAgentT ?? "(own)"}.");
+        Console.WriteLine($"[{ModuleName}] Weapon models: Apex character model is {(apexAgentOn ? "ON" : "off (LEGACYX_COMMUNITY_APEX_AGENT=true turns it on)")}, CT={apexAgentCt ?? "(own)"} T={apexAgentT ?? "(own)"}.");
         Console.WriteLine($"[{ModuleName}] Weapon models: Apex knife subclass (weapons.vdata prefabs) is {(apexSubclassOn ? "ON" : "off (LEGACYX_COMMUNITY_APEX_SUBCLASS=false), the model is put on with SetModel")}.");
         foreach (var pair in LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SUBCLASS").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
