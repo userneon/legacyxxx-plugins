@@ -69,7 +69,8 @@ public sealed partial class LegacyXCommunity
     {
         // LegacyX-WeaponPaints asks this before it puts the player's own knife pick (a paracord ...) on their knife: a player who wears a Shop knife model keeps the
         // default knife under it, or the pick's own model and animations replaced the Shop model a moment after it was put on (owner report 2026-11-14).
-        Capabilities.RegisterPluginCapability(new PluginCapability<Func<ulong, bool>>("legacyx:custom_knife_model"), () => steamId => weaponModelsOn && weaponModels.TryGetValue(steamId, out var worn) && worn.ContainsKey("knife"));
+        // Only a knife without an animation base (the Apex prefab knives): a model made for the paracord's skeleton sits on the knife pick (the paracord) the skinchanger gives.
+        Capabilities.RegisterPluginCapability(new PluginCapability<Func<ulong, bool>>("legacyx:custom_knife_model"), () => steamId => weaponModelsOn && weaponModels.TryGetValue(steamId, out var worn) && worn.TryGetValue("knife", out var knife) && knife.AnimBase is null);
         knifeSwapOn = string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SWAP"), "true", StringComparison.OrdinalIgnoreCase);
         Console.WriteLine($"[{ModuleName}] Weapon models: knife swap for the M9/Bayonet animations is {(knifeSwapOn ? "ON" : "off")}.");
         // On unless LEGACYX_COMMUNITY_APEX_SUBCLASS=false: the seller's scripts/weapons.vdata_c is in the published Workshop addon (owner, 2026-11-14), so the Apex knives
@@ -288,36 +289,8 @@ public sealed partial class LegacyXCommunity
                 catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Knife subclass {subclass} for {player.PlayerName} failed: {problem.Message}"); }
                 continue;
             }
-            if (kind == "knife" && model.AnimBase is { } baseName && animBaseSubclass.TryGetValue(baseName, out var baseSubclass))
-            {
-                // A custom knife made for another knife's animations (a katana for the paracord) and NOT removed or swapped: the knife in hand gets that knife's weapon subclass
-                // (its animation class), which also resets the model to the prefab's, so the knife's own model goes back on a moment later.
-                if (weapon.Handle != pawn.WeaponServices.ActiveWeapon.Value?.Handle) continue;
-                if (knifeSubclassAt.TryGetValue(player.SteamID, out var changedAt) && (DateTime.UtcNow - changedAt).TotalSeconds < 1.5) continue;
-                knifeSubclassAt[player.SteamID] = DateTime.UtcNow;
-                try
-                {
-                    weapon.AcceptInput("ChangeSubclass", value: baseSubclass);
-                    Console.WriteLine($"[{ModuleName}] Knife subclass {baseSubclass} ({baseName} animations) put on {player.PlayerName}'s knife in hand.");
-                }
-                catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Knife subclass {baseSubclass} for {player.PlayerName} failed: {problem.Message}"); continue; }
-                var steam = player.SteamID;
-                AddTimer(0.3f, () =>
-                {
-                    var again = Utilities.GetPlayers().FirstOrDefault(candidate => candidate.IsValid && candidate.SteamID == steam);
-                    var hand = again?.PlayerPawn.Value?.WeaponServices?.ActiveWeapon.Value;
-                    if (again is null || hand is not { IsValid: true } || hand.Handle != weapon.Handle) return;
-                    try
-                    {
-                        hand.SetModel(model.World);
-                        foreach (var view in Utilities.FindAllEntitiesByDesignerName<CBaseModelEntity>("predicted_viewmodel"))
-                            if (view.IsValid && Schema.GetSchemaValue<CHandle<CBasePlayerWeapon>>(view.Handle, "CBaseViewModel", "m_hWeapon").Value?.Handle == hand.Handle) view.SetModel(model.View);
-                        Console.WriteLine($"[{ModuleName}] Weapon model {model.World} put back on {again.PlayerName}'s knife after the subclass.");
-                    }
-                    catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Putting {model.World} back failed: {problem.Message}"); }
-                });
-                continue;
-            }
+            // A knife model made for another knife's animations (a katana on the paracord's skeleton) is NOT given a weapon subclass any more (owner, 2026-11-15): its own
+            // model goes on with SetModel and plays that knife's animations through the skeleton it was made for. Only the Apex prefab knives (above) use a subclass.
             try
             {
                 weapon.SetModel(model.World);
