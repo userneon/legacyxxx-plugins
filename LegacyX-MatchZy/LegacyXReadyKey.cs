@@ -17,7 +17,7 @@ public partial class MatchZy
     // The game draws its own "Warmup" text in the same place as PrintToCenterHtml, so the two replaced each other. Redrawing every few
     // ticks keeps ours on top; if the game's text still shows through, lx_ready_hint alert moves ours to the alert line, off hides it.
     private const int LegacyXReadyRedrawTicks = 6;
-    private string legacyXReadyHint = "html";
+    private string legacyXReadyHint = "panorama";
 
     [ConsoleCommand("lx_ready_hint", "Press R to ready line: lx_ready_hint html|alert|panorama|off")]
     public void OnReadyHintCommand(CCSPlayerController? player, CommandInfo command)

@@ -102,4 +102,4 @@ The Status plugin reports the server's GOTV address with its heartbeat: `LEGACYX
 
 ## Ready card (2026-11-13)
 
-`lx_ready_hint panorama` draws "Press R to ready" as a Panorama card (legacyx_ready in the Workshop addon) through the LegacyX-Hud plugin (`lx_ready_hud <slot> yes|no <ready> <needed>` / `off`) instead of the centre HTML text. The default stays `html` until the Workshop addon with the new layout is published; then set `lx_ready_hint panorama`. Not compiled or tested in game yet.
+`lx_ready_hint panorama` draws "Press R to ready" as a Panorama card (legacyx_ready in the Workshop addon) through the LegacyX-Hud plugin (`lx_ready_hud <slot> yes|no <ready> <needed>` / `off`) instead of the centre HTML text. Since 2026-11-15 the default is `panorama` (owner request); `lx_ready_hint html` brings the centre text back, e.g. while the Workshop addon is not on the players' side. Not compiled or tested in game yet.
