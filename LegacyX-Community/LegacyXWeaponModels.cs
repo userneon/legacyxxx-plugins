@@ -65,6 +65,16 @@ public sealed partial class LegacyXCommunity
         return parts.Length == 2 && parts[0] == parts[1] && parts[0].StartsWith("apex_", StringComparison.Ordinal) ? parts[0] : null;
     }
 
+    /// <summary>The prefab of a katana (models/memni4ik/katana/blood/knife_blood_katana_ag2.vmdl -> katana_blood): tools/make_katana_prefabs.py in the Workshop repo writes it into weapons.vdata as a copy of weapon_knife_cord with the katana's model, so it plays the paracord's animations.</summary>
+    private static string? KatanaSubclass(string world)
+    {
+        const string prefix = "models/memni4ik/katana/";
+        if (!world.StartsWith(prefix, StringComparison.Ordinal) || !world.EndsWith("_katana_ag2.vmdl", StringComparison.Ordinal)) return null;
+        var parts = world[prefix.Length..].Split('/');
+        if (parts.Length != 2 || parts[0].Length == 0 || !parts[0].All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '_')) return null;
+        return parts[1] == $"knife_{parts[0]}_katana_ag2.vmdl" ? "katana_" + parts[0] : null;
+    }
+
     private void RegisterWeaponModels()
     {
         // LegacyX-WeaponPaints asks this before it puts the player's own knife pick (a paracord ...) on their knife: a player who wears a Shop knife model keeps the
@@ -278,7 +288,7 @@ public sealed partial class LegacyXCommunity
             var name = weapon.DesignerName;
             var kind = name.Contains("knife", StringComparison.Ordinal) || name.Contains("bayonet", StringComparison.Ordinal) ? "knife" : name == "weapon_deagle" ? "deagle" : name == "weapon_ak47" ? "ak47" : null;
             if (kind is null || !set.TryGetValue(kind, out var model)) continue;
-            if (kind == "knife" && apexSubclassOn && KnifeSubclass(model.World) is { } subclass)
+            if (kind == "knife" && apexSubclassOn && (KnifeSubclass(model.World) ?? KatanaSubclass(model.World)) is { } subclass)
             {
                 // A prefab knife: only the knife in hand can be changed; its model, animation class and skeleton then come from the vdata, so no SetModel on top (that would keep the vanilla animations).
                 if (weapon.Handle != pawn.WeaponServices.ActiveWeapon.Value?.Handle) continue;
