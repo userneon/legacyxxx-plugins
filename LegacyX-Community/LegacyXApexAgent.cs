@@ -5,7 +5,7 @@ namespace LegacyXCommunity;
 
 /// <summary>
 /// The seller's re-rigged character models (agents/models/bluesen/default_agents/&lt;name&gt;/&lt;name&gt;.vmdl, owner request 2026-11-15): the Apex knives' animations play only on them. Only a player
-/// who WEARS an Apex knife is given one of the pack's COMPLETE models (the same agent when the pack has it complete, else one of their team), at spawn, never at equip. LEGACYX_COMMUNITY_REPLACE_AGENTS=true switches it on (off by default). The pack's models are found by
+/// who WEARS an Apex knife is given one of the pack's COMPLETE models (the same agent when the pack has it complete, else a random one of their team), at spawn, never at equip. LEGACYX_COMMUNITY_REPLACE_AGENTS=true switches it on (off by default). The pack's models are found by
 /// reading the file list of the downloaded Workshop addon (the VPK's directory file); LEGACYX_COMMUNITY_APEX_WORKSHOP_ID is that addon (default 3830785234).
 /// </summary>
 public sealed partial class LegacyXCommunity
@@ -70,7 +70,7 @@ public sealed partial class LegacyXCommunity
             var current = CurrentModel(pawn)?.ToLowerInvariant();
             // Already one of the pack's models: nothing to do.
             if (current is not null && pack.Values.Any(path => string.Equals(path, current, StringComparison.OrdinalIgnoreCase))) return;
-            // The player's own agent (characters/models/<name>/<name>.vmdl): the pack's model of the same name when it is complete, else a complete one of their team.
+            // The player's own agent (characters/models/<name>/<name>.vmdl): the pack's model of the same name when it is complete, else a random complete one of their team.
             var name = current is not null && current.StartsWith("characters/models/", StringComparison.Ordinal) ? Path.GetFileNameWithoutExtension(current) : "";
             string? target = null;
             if (name.Length > 0)
@@ -87,7 +87,7 @@ public sealed partial class LegacyXCommunity
                     if (agentMissLogged.Add("none:" + prefix)) Console.WriteLine($"[{ModuleName}] Agents: the pack has no complete model for team {player.TeamNum} (pack: {string.Join(", ", pack.Keys.Take(40))}).");
                     return;
                 }
-                target = pack[options[(int)(player.SteamID % (ulong)options.Count)]];
+                target = pack[options[Random.Shared.Next(options.Count)]];   // random among the team's complete models, a new pick at every spawn
             }
             agentSetAt[player.SteamID] = DateTime.UtcNow;
             if (agentPrecached.Add(target)) TryPrecache(target);
