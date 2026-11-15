@@ -221,15 +221,24 @@ public sealed partial class LegacyXCommunity
         {
             if (!player.IsValid || !weapon.IsValid || player.PlayerPawn.Value?.WeaponServices?.ActiveWeapon.Value?.Handle != weapon.Handle) return;
             var found = false;
+            // The view model entities that show this weapon (also found by their weapon handle).
             foreach (var view in Utilities.FindAllEntitiesByDesignerName<CBaseModelEntity>("predicted_viewmodel"))
             {
                 if (!view.IsValid || Schema.GetSchemaValue<CHandle<CBasePlayerWeapon>>(view.Handle, "CBaseViewModel", "m_hWeapon").Value?.Handle != weapon.Handle) continue;
-                view.SetModel(path);
+                SetViewModel(view, path);
                 found = true;
             }
             if (!found) Console.WriteLine($"[{ModuleName}] No view model entity shows {player.PlayerName}'s {kind} yet, the first-person model {path} could not be put on.");
         }
         catch (Exception problem) { Console.WriteLine($"[{ModuleName}] First-person model for {player.PlayerName} ({kind}) failed: {problem.Message}"); }
+    }
+
+    /// <summary>The model on a view model entity, told to the clients too (the engine does not send a changed model by itself).</summary>
+    private static void SetViewModel(CBaseModelEntity view, string path)
+    {
+        view.SetModel(path);
+        Utilities.SetStateChanged(view, "CBaseEntity", "m_nModelIndex");
+        Utilities.SetStateChanged(view, "CBaseModelEntity", "m_vecViewOffset");
     }
 
     private void ApplyWeaponModels(CCSPlayerController player)
