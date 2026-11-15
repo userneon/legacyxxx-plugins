@@ -82,6 +82,8 @@ public sealed class LegacyXEnvironment
 
     private string? PortDefault(string key)
     {
+        var derived = FromDomain(key);
+        if (derived != null) return derived;
         if (InstancePort is not { } port) return null;
         // Machines with their own install can set LEGACYX_SERVER_ID_PREFIX so their ports don't collide.
         if (key.Equals("LEGACYX_SERVER_ID", StringComparison.OrdinalIgnoreCase)) return $"{Get("LEGACYX_SERVER_ID_PREFIX", "srv").Trim()}-{port}";
@@ -89,6 +91,27 @@ public sealed class LegacyXEnvironment
         {
             var host = Get("LEGACYX_SERVER_HOST").Trim();
             return host.Length > 0 ? $"{host}:{port}" : null;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// The site's addresses come from the one DOMAIN / DISCORD_INVITE line the API and the bot read too (owner request
+    /// 2026-11-15: write each thing once). A value set under its own name still wins; this only fills the gap.
+    /// </summary>
+    private string? FromDomain(string key)
+    {
+        if (key.Equals("LEGACYX_API_BASE_URL", StringComparison.OrdinalIgnoreCase))
+        {
+            var api = Get("API_URL").Trim().TrimEnd('/');
+            if (api.Length > 0) return api;
+            var domain = Get("DOMAIN").Trim();
+            return Uri.TryCreate(domain, UriKind.Absolute, out var uri) ? $"https://api.{uri.Host}" : null;
+        }
+        if (key.Equals("LEGACYX_COMMUNITY_DISCORD_URL", StringComparison.OrdinalIgnoreCase))
+        {
+            var invite = Get("DISCORD_INVITE").Trim();
+            return invite.Length > 0 ? invite : null;
         }
         return null;
     }
