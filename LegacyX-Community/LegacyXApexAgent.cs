@@ -4,47 +4,83 @@ using CounterStrikeSharp.API.Core;
 namespace LegacyXCommunity;
 
 /// <summary>
-/// The re-rigged character models of the seller's Apex pack (agents/models/bluesen/..., owner request 2026-11-15: "make the model change by itself"): the Apex knives' animations
-/// play only on them, so a player who wears an Apex knife is given the one of their team. LEGACYX_COMMUNITY_APEX_AGENT_CT / _T name the models; when they are empty the plugin finds
-/// them itself in the file list of the Workshop addon the server has downloaded (the VPK's directory file), the first ctm_* and tm_* model whose folder has the same name as the file.
+/// The seller's re-rigged character models (agents/models/bluesen/default_agents/&lt;name&gt;/&lt;name&gt;.vmdl, owner request 2026-11-15): the Apex knives' animations play only on them. Every
+/// player who has one of the game's default agents (characters/models/&lt;name&gt;/&lt;name&gt;.vmdl) is given the pack's model of the SAME name, so they look the same and only the skeleton changes. A player
+/// with another agent (a Skinchanger agent) keeps it. Done once at spawn, never at equip. LEGACYX_COMMUNITY_REPLACE_AGENTS=false switches it off. The pack's models are found by
+/// reading the file list of the downloaded Workshop addon (the VPK's directory file); LEGACYX_COMMUNITY_APEX_WORKSHOP_ID is that addon (default 3830785234).
 /// </summary>
 public sealed partial class LegacyXCommunity
 {
-    private string? apexAgentFoundCt, apexAgentFoundT;
-    private DateTime apexAgentSearchedAt = DateTime.MinValue;
-    private string apexWorkshopId = "3830785234";
+    private bool replaceAgentsOn = true;
+    private Dictionary<string, string>? agentPack;            // default agent name -> the pack's model path
+    private DateTime agentPackSearchedAt = DateTime.MinValue;
+    private string agentWorkshopId = "3830785234";
+    private readonly Dictionary<ulong, DateTime> agentSetAt = new();
+    private readonly HashSet<string> agentPrecached = new(StringComparer.OrdinalIgnoreCase);
 
-    // Off unless LEGACYX_COMMUNITY_APEX_AGENT=true (2026-11-15: players' games crashed after it was switched on: a character model changed in the middle of a round is untested).
-    private bool apexAgentOn;
-
-    private string? ApexAgentFor(int team)
+    private void RegisterAgentReplacement()
     {
-        if (!apexAgentOn) return null;
-        var set = team == 3 ? apexAgentCt : apexAgentT;
-        if (set is not null) return set;
-        if (apexAgentFoundCt is null || apexAgentFoundT is null) SearchApexAgents();
-        return team == 3 ? apexAgentFoundCt : apexAgentFoundT;
+        var env = LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load();
+        replaceAgentsOn = !string.Equals(env.Get("LEGACYX_COMMUNITY_REPLACE_AGENTS"), "false", StringComparison.OrdinalIgnoreCase);
+        var id = env.Get("LEGACYX_COMMUNITY_APEX_WORKSHOP_ID").Trim();
+        if (id.Length is > 0 and <= 20 && id.All(char.IsAsciiDigit)) agentWorkshopId = id;
+        // Without a restart: `lx_agents 0` stops giving the pack's models from the next spawn on (the console of the server only), `lx_agents 1` starts again.
+        AddCommand("lx_agents", "Agents: the pack's re-rigged character models (lx_agents 0/1)", (caller, command) =>
+        {
+            if (caller != null) return;
+            if (command.ArgCount >= 2) replaceAgentsOn = command.GetArg(1) != "0";
+            Console.WriteLine($"[{ModuleName}] Agents: the pack's character models are {(replaceAgentsOn ? "ON" : "off")}.");
+        });
+        Console.WriteLine($"[{ModuleName}] Agents: the pack's re-rigged character models are {(replaceAgentsOn ? "ON" : "off")} (LEGACYX_COMMUNITY_REPLACE_AGENTS=false switches them off).");
     }
 
-    /// <summary>Reads the VPK's file list at most once a minute (the addon may be downloaded after the plugin started).</summary>
-    private void SearchApexAgents()
+    private void ReplaceAgentLater(CCSPlayerController player)
     {
-        if ((DateTime.UtcNow - apexAgentSearchedAt).TotalSeconds < 60) return;
-        apexAgentSearchedAt = DateTime.UtcNow;
+        if (!replaceAgentsOn || !weaponModelsOn || player.IsBot) return;
+        // A second look later: the Skinchanger agent (WeaponPaints) is put on a moment after the spawn, and a player who has one must keep it.
+        foreach (var delay in new[] { 0.7f, 2.0f })
+            AddTimer(delay, () => ReplaceAgent(player));
+    }
+
+    private void ReplaceAgent(CCSPlayerController player)
+    {
         try
         {
-            var env = LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_APEX_WORKSHOP_ID").Trim();
-            if (env.Length is > 0 and <= 20 && env.All(char.IsAsciiDigit)) apexWorkshopId = env;
-            var vpk = Path.GetFullPath(Path.Combine(Server.GameDirectory, "..", "bin", "linuxsteamrt64", "steamapps", "workshop", "content", "730", apexWorkshopId, $"{apexWorkshopId}_dir.vpk"));
-            if (!File.Exists(vpk)) { Console.WriteLine($"[{ModuleName}] Apex agents: {vpk} is not there yet (the Workshop addon is not downloaded)."); return; }
-            var models = ReadVpkModels(vpk, "agents/models/bluesen/");
-            var ct = models.Where(path => Path.GetFileName(path).StartsWith("ctm_", StringComparison.Ordinal)).OrderBy(path => path, StringComparer.Ordinal).FirstOrDefault();
-            var t = models.Where(path => Path.GetFileName(path).StartsWith("tm_", StringComparison.Ordinal)).OrderBy(path => path, StringComparer.Ordinal).FirstOrDefault();
-            if (apexAgentFoundCt is null && ct is not null && ValidModelPath(ct)) { apexAgentFoundCt = ct; weaponModelPaths.Add(ct); TryPrecache(ct); }
-            if (apexAgentFoundT is null && t is not null && ValidModelPath(t)) { apexAgentFoundT = t; weaponModelPaths.Add(t); TryPrecache(t); }
-            Console.WriteLine($"[{ModuleName}] Apex agents found in the addon: CT={apexAgentFoundCt ?? "none"} T={apexAgentFoundT ?? "none"} ({models.Count} character model(s) in agents/models/bluesen).");
+            if (!player.IsValid || !player.PawnIsAlive || player.TeamNum is not (2 or 3)) return;
+            var pawn = player.PlayerPawn.Value;
+            if (pawn is null || !pawn.IsValid) return;
+            if (agentSetAt.TryGetValue(player.SteamID, out var last) && (DateTime.UtcNow - last).TotalSeconds < 1.0) return;
+            var current = CurrentModel(pawn)?.ToLowerInvariant();
+            const string defaultFolder = "characters/models/";
+            if (current is null || !current.StartsWith(defaultFolder, StringComparison.Ordinal) || !current.EndsWith(".vmdl", StringComparison.Ordinal)) return;   // not a default agent: left alone
+            var name = Path.GetFileNameWithoutExtension(current);
+            var pack = AgentPack();
+            if (pack is null || !pack.TryGetValue(name, out var target)) return;
+            agentSetAt[player.SteamID] = DateTime.UtcNow;
+            if (agentPrecached.Add(target)) TryPrecache(target);
+            pawn.SetModel(target);
+            Console.WriteLine($"[{ModuleName}] Agent {name} of {player.PlayerName} is now the pack's {target}.");
         }
-        catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Apex agents: could not read the addon's file list: {problem.Message}"); }
+        catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Agent replacement failed: {problem.Message}"); }
+    }
+
+    /// <summary>The pack's models by default agent name, read from the addon's file list (at most once a minute until found).</summary>
+    private Dictionary<string, string>? AgentPack()
+    {
+        if (agentPack is not null) return agentPack;
+        if ((DateTime.UtcNow - agentPackSearchedAt).TotalSeconds < 60) return null;
+        agentPackSearchedAt = DateTime.UtcNow;
+        try
+        {
+            var vpk = Path.GetFullPath(Path.Combine(Server.GameDirectory, "..", "bin", "linuxsteamrt64", "steamapps", "workshop", "content", "730", agentWorkshopId, $"{agentWorkshopId}_dir.vpk"));
+            if (!File.Exists(vpk)) { Console.WriteLine($"[{ModuleName}] Agents: {vpk} is not there yet (the Workshop addon is not downloaded)."); return null; }
+            var pack = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var path in ReadVpkModels(vpk, "agents/models/bluesen/")) pack.TryAdd(Path.GetFileNameWithoutExtension(path), path);
+            Console.WriteLine($"[{ModuleName}] Agents: {pack.Count} re-rigged character model(s) in the addon: {string.Join(", ", pack.Keys.Take(30))}.");
+            agentPack = pack;
+            return pack;
+        }
+        catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Agents: could not read the addon's file list: {problem.Message}"); return null; }
     }
 
     private void TryPrecache(string path)

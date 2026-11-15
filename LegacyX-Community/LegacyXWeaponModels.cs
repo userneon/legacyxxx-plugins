@@ -50,10 +50,6 @@ public sealed partial class LegacyXCommunity
     // The Apex prefab knives (ChangeSubclass) need scripts/weapons.vdata_c in the published addon; until it is there the knife keeps its model through SetModel as before.
     // On unless LEGACYX_COMMUNITY_APEX_SUBCLASS=false.
     private bool apexSubclassOn;
-    // The Apex knives' own animations play only on the seller's re-rigged character models (owner test 2026-11-15, lx_wm_agent: the animation played): a player who wears an Apex knife
-    // is given the one of their team. Paths of LEGACYX_COMMUNITY_APEX_AGENT_CT / _T (agents/models/bluesen/.../x.vmdl); empty = the player keeps their own character model.
-    private string? apexAgentCt, apexAgentT;
-    private readonly Dictionary<ulong, DateTime> apexAgentSetAt = new();
     // anim_base -> the weapon prefab (weapons.vdata) whose animation class that knife has, from LEGACYX_COMMUNITY_KNIFE_SUBCLASS="paracord=<prefab>,karambit=<prefab>". Nothing is guessed: a base without an entry is left alone.
     private readonly Dictionary<string, string> animBaseSubclass = new(StringComparer.OrdinalIgnoreCase);
 
@@ -68,14 +64,6 @@ public sealed partial class LegacyXCommunity
         if (!world.StartsWith(prefix, StringComparison.Ordinal) || !world.EndsWith(".vmdl", StringComparison.Ordinal)) return null;
         var parts = world[prefix.Length..^5].Split('/');
         return parts.Length == 2 && parts[0] == parts[1] && parts[0].StartsWith("apex_", StringComparison.Ordinal) ? parts[0] : null;
-    }
-
-    private string? ApexAgentPath(string? raw)
-    {
-        var path = (raw ?? "").Trim().ToLowerInvariant();
-        if (path.Length == 0 || !ValidModelPath(path)) return null;
-        weaponModelPaths.Add(path);   // precached with the other weapon models
-        return path;
     }
 
     private void RegisterWeaponModels()
@@ -93,11 +81,7 @@ public sealed partial class LegacyXCommunity
         // take their animations from their prefabs. (It was switched off for a day while a server that would not start was looked into: that was a CS2 update that failed on
         // root-owned folders, not this.)
         apexSubclassOn = !string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_APEX_SUBCLASS"), "false", StringComparison.OrdinalIgnoreCase);
-        var apexEnv = LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load();
-        apexAgentOn = string.Equals(apexEnv.Get("LEGACYX_COMMUNITY_APEX_AGENT"), "true", StringComparison.OrdinalIgnoreCase);
-        apexAgentCt = ApexAgentPath(apexEnv.Get("LEGACYX_COMMUNITY_APEX_AGENT_CT"));
-        apexAgentT = ApexAgentPath(apexEnv.Get("LEGACYX_COMMUNITY_APEX_AGENT_T"));
-        Console.WriteLine($"[{ModuleName}] Weapon models: Apex character model is {(apexAgentOn ? "ON" : "off (LEGACYX_COMMUNITY_APEX_AGENT=true turns it on)")}, CT={apexAgentCt ?? "(own)"} T={apexAgentT ?? "(own)"}.");
+        RegisterAgentReplacement();
         Console.WriteLine($"[{ModuleName}] Weapon models: Apex knife subclass (weapons.vdata prefabs) is {(apexSubclassOn ? "ON" : "off (LEGACYX_COMMUNITY_APEX_SUBCLASS=false), the model is put on with SetModel")}.");
         foreach (var pair in LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SUBCLASS").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
@@ -128,7 +112,7 @@ public sealed partial class LegacyXCommunity
         });
         RegisterEventHandler<EventPlayerSpawn>((@event, _) =>
         {
-            if (@event.Userid is { IsValid: true } player) ApplyWeaponModelsLater(player);
+            if (@event.Userid is { IsValid: true } player) { ApplyWeaponModelsLater(player); ReplaceAgentLater(player); }
             return HookResult.Continue;
         });
         // The subclass can only be changed on the knife that is IN HAND (on a holstered weapon it crashed the seller's server), so it is applied when the knife is equipped.
@@ -278,14 +262,6 @@ public sealed partial class LegacyXCommunity
         if (!weaponModelsOn || !player.IsValid || player.IsBot || !player.PawnIsAlive || player.TeamNum < 2 || !weaponModels.TryGetValue(player.SteamID, out var set)) return;
         var pawn = player.PlayerPawn.Value;
         if (pawn is null || !pawn.IsValid || pawn.WeaponServices is null) return;
-        // An Apex knife plays its animations only on the re-rigged character model of the seller's pack: the player's team model of that pack goes on (once per few seconds, not at every equip).
-        if (apexSubclassOn && set.TryGetValue("knife", out var apexKnife) && KnifeSubclass(apexKnife.World) is not null && ApexAgentFor(player.TeamNum) is { } agentPath
-            && (!apexAgentSetAt.TryGetValue(player.SteamID, out var agentAt) || (DateTime.UtcNow - agentAt).TotalSeconds > 3))
-        {
-            apexAgentSetAt[player.SteamID] = DateTime.UtcNow;
-            try { pawn.SetModel(agentPath); Console.WriteLine($"[{ModuleName}] Character model {agentPath} put on {player.PlayerName} for the Apex knife."); }
-            catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Character model {agentPath} for {player.PlayerName} failed: {problem.Message}"); }
-        }
         // A knife model made for the M9 or Bayonet animations needs that knife under it: swap the player's knife for it (once, then the model goes on).
         if (knifeSwapOn && set.TryGetValue("knife", out var knifeModel) && knifeModel.AnimBase is { } animBase && AnimKnives.TryGetValue(animBase, out var wanted)
             && (!knifeSwappedAt.TryGetValue(player.SteamID, out var swapped) || (DateTime.UtcNow - swapped).TotalSeconds > 5))
