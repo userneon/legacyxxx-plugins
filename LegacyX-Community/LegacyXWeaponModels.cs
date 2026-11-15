@@ -268,7 +268,7 @@ public sealed partial class LegacyXCommunity
         var pawn = player.PlayerPawn.Value;
         if (pawn is null || !pawn.IsValid || pawn.WeaponServices is null) return;
         // An Apex knife plays its animations only on the re-rigged character model of the seller's pack: the player's team model of that pack goes on (once per few seconds, not at every equip).
-        if (apexSubclassOn && set.TryGetValue("knife", out var apexKnife) && KnifeSubclass(apexKnife.World) is not null && (player.TeamNum == 3 ? apexAgentCt : apexAgentT) is { } agentPath
+        if (apexSubclassOn && set.TryGetValue("knife", out var apexKnife) && KnifeSubclass(apexKnife.World) is not null && ApexAgentFor(player.TeamNum) is { } agentPath
             && (!apexAgentSetAt.TryGetValue(player.SteamID, out var agentAt) || (DateTime.UtcNow - agentAt).TotalSeconds > 3))
         {
             apexAgentSetAt[player.SteamID] = DateTime.UtcNow;
