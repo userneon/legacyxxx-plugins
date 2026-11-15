@@ -78,8 +78,12 @@ public partial class AdminPlus
         // The Workshop addon's effects and the chicken must be precached when the map loads, or spawning them does nothing.
         RegisterListener<Listeners.OnServerPrecacheResources>(manifest =>
         {
-            manifest.AddResource(FxBurst);
-            foreach (var effect in FxTrails.Values) manifest.AddResource(effect);
+            // The Workshop's particle files only when the addon with them is published (LEGACYX_WORKSHOP_FX=true): a missing file can stop the server starting.
+            if (string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_WORKSHOP_FX"), "true", StringComparison.OrdinalIgnoreCase))
+            {
+                manifest.AddResource(FxBurst);
+                foreach (var effect in FxTrails.Values) manifest.AddResource(effect);
+            }
             manifest.AddResource(ChickenModel);
         });
         RegisterEventHandler<EventPlayerDeath>((@event, _) =>
@@ -128,6 +132,7 @@ public partial class AdminPlus
     /// <summary>One of the Workshop addon's effects at `at`, tinted (control point 1 for the trails, 16 for the burst) and removed after `seconds` (nothing happens when it cannot be spawned).</summary>
     private CParticleSystem? SpawnFx(string effectName, Vector at, Color color, float seconds)
     {
+        if (!string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_WORKSHOP_FX"), "true", StringComparison.OrdinalIgnoreCase)) return null;
         try
         {
             var particle = Utilities.CreateEntityByName<CParticleSystem>("info_particle_system");

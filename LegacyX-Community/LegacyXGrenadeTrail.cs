@@ -43,6 +43,8 @@ public sealed partial class LegacyXCommunity
     private const string BounceBurstParticle = "particles/legacyx/bounce_burst.vpcf";
     /// <summary>The control point the bounce burst reads its colour from; the six trails are tinted through control point 1 instead.</summary>
     private const int ParticleColourPoint = 16;
+    /// <summary>True when LEGACYX_WORKSHOP_FX=true: the Workshop addon with the particle effects is published, so they may be precached and spawned. Off by default.</summary>
+    private static bool WorkshopFx => string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_WORKSHOP_FX"), "true", StringComparison.OrdinalIgnoreCase);
     private const int TrailTintPoint = 1;
     /// <summary>Who threw each grenade with a premium trail, by the grenade's entity index: its bounces get a burst in their colour.</summary>
     private readonly Dictionary<uint, System.Drawing.Color> burstOnBounce = new();
@@ -64,6 +66,9 @@ public sealed partial class LegacyXCommunity
         // The addon's effects must be precached when the map loads, or spawning them does nothing.
         RegisterListener<Listeners.OnServerPrecacheResources>(manifest =>
         {
+            // Only once the Workshop addon with these files is published (LEGACYX_WORKSHOP_FX=true in the central .env): precaching a file the addon does not have
+            // can stop a map from loading, and it keeps the server from starting.
+            if (!WorkshopFx) return;
             foreach (var effect in TrailParticles.Values) manifest.AddResource(effect);
             manifest.AddResource(BounceBurstParticle);
             manifest.AddResource(SmokeBloomParticle);
@@ -166,6 +171,7 @@ public sealed partial class LegacyXCommunity
     /// </summary>
     private CParticleSystem? SpawnParticle(string effectName, Vector at, System.Drawing.Color color, float seconds, int? tintPoint = null)
     {
+        if (!WorkshopFx) return null;
         try
         {
             var particle = Utilities.CreateEntityByName<CParticleSystem>("info_particle_system");
