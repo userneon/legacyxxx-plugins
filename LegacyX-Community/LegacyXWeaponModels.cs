@@ -47,7 +47,7 @@ public sealed partial class LegacyXCommunity
     // When each player's knife last got its weapon subclass: at most once every 1.5 s, so a subclass change that makes the game announce the knife again cannot start a loop.
     private readonly Dictionary<ulong, DateTime> knifeSubclassAt = new();
     // The Apex prefab knives (ChangeSubclass) need scripts/weapons.vdata_c in the published addon; until it is there the knife keeps its model through SetModel as before.
-    // Off unless LEGACYX_COMMUNITY_APEX_SUBCLASS=true.
+    // On unless LEGACYX_COMMUNITY_APEX_SUBCLASS=false.
     private bool apexSubclassOn;
     // anim_base -> the weapon prefab (weapons.vdata) whose animation class that knife has, from LEGACYX_COMMUNITY_KNIFE_SUBCLASS="paracord=<prefab>,karambit=<prefab>". Nothing is guessed: a base without an entry is left alone.
     private readonly Dictionary<string, string> animBaseSubclass = new(StringComparer.OrdinalIgnoreCase);
@@ -72,9 +72,11 @@ public sealed partial class LegacyXCommunity
         Capabilities.RegisterPluginCapability(new PluginCapability<Func<ulong, bool>>("legacyx:custom_knife_model"), () => steamId => weaponModelsOn && weaponModels.TryGetValue(steamId, out var worn) && worn.ContainsKey("knife"));
         knifeSwapOn = string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SWAP"), "true", StringComparison.OrdinalIgnoreCase);
         Console.WriteLine($"[{ModuleName}] Weapon models: knife swap for the M9/Bayonet animations is {(knifeSwapOn ? "ON" : "off")}.");
-        // Off unless LEGACYX_COMMUNITY_APEX_SUBCLASS=true (it was on by default for a day, then it went back to opt-in while a server start failure was looked into).
-        apexSubclassOn = string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_APEX_SUBCLASS"), "true", StringComparison.OrdinalIgnoreCase);
-        Console.WriteLine($"[{ModuleName}] Weapon models: Apex knife subclass (weapons.vdata prefabs) is {(apexSubclassOn ? "ON" : "off (set LEGACYX_COMMUNITY_APEX_SUBCLASS=true), the model is put on with SetModel")}.");
+        // On unless LEGACYX_COMMUNITY_APEX_SUBCLASS=false: the seller's scripts/weapons.vdata_c is in the published Workshop addon (owner, 2026-11-14), so the Apex knives
+        // take their animations from their prefabs. (It was switched off for a day while a server that would not start was looked into: that was a CS2 update that failed on
+        // root-owned folders, not this.)
+        apexSubclassOn = !string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_APEX_SUBCLASS"), "false", StringComparison.OrdinalIgnoreCase);
+        Console.WriteLine($"[{ModuleName}] Weapon models: Apex knife subclass (weapons.vdata prefabs) is {(apexSubclassOn ? "ON" : "off (LEGACYX_COMMUNITY_APEX_SUBCLASS=false), the model is put on with SetModel")}.");
         foreach (var pair in LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SUBCLASS").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             var parts = pair.Split('=', 2, StringSplitOptions.TrimEntries);
