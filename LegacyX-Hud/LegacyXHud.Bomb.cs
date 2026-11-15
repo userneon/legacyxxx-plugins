@@ -23,13 +23,24 @@ public sealed partial class LegacyXHud
 
     private void RegisterBomb()
     {
-        RegisterEventHandler<EventBombPlanted>((_, _) => { ShowBomb("planted", "BOMB PLANTED", "", BombPicture); return HookResult.Continue; });
+        RegisterEventHandler<EventBombPlanted>((_, _) => { ShowBomb("planted", "BOMB PLANTED", "The bomb has been planted", BombPicture, $"{PlantedSeconds()} seconds till detonation"); return HookResult.Continue; });
         RegisterEventHandler<EventBombDefused>((e, _) =>
         {
             var name = e.Userid is { IsValid: true } defuser ? CleanBombName(defuser.PlayerName) : "";
-            ShowBomb("defused", "BOMB DEFUSED", name, DefuseAgentPicture);
+            ShowBomb("defused", "BOMB DEFUSED", name, DefuseAgentPicture, "");
             return HookResult.Continue;
         });
+    }
+
+    /// <summary>The seconds the bomb takes to go off (mp_c4timer, the game's own line says it too), as a whole number; 40 when the setting cannot be read.</summary>
+    private static int PlantedSeconds()
+    {
+        try
+        {
+            var seconds = CounterStrikeSharp.API.Modules.Cvars.ConVar.Find("mp_c4timer")?.GetPrimitiveValue<float>() ?? 40f;
+            return seconds is >= 1 and <= 600 ? (int)Math.Round(seconds) : 40;
+        }
+        catch { return 40; }
     }
 
     /// <summary>A name for a label: no control characters, at most 24 characters.</summary>
@@ -39,7 +50,7 @@ public sealed partial class LegacyXHud
         return name.Length > 24 ? name[..24] : name;
     }
 
-    private void ShowBomb(string kind, string title, string sub, string? agentPicture)
+    private void ShowBomb(string kind, string title, string sub, string? agentPicture, string sub2)
     {
         var panel = Ensure(ref bombHud, bombLayout, "lx_bomb");
         if (panel is null) return;
@@ -52,6 +63,8 @@ public sealed partial class LegacyXHud
             if (!OpenFor(panel, player)) continue;
             Sv(panel, player, "bomb_title", title);
             Sv(panel, player, "bomb_sub", sub);
+            Sv(panel, player, "bomb_sub2", sub2);
+            Sc(panel, player, "bomb_sub2", "hidden", sub2.Length == 0);
             SetState(panel, player, "bomb_bar", "kind", kind);
             Sc(panel, player, "bomb_agent", "hidden", agentPicture is null);
             Ss(panel, player, "bomb_agent", "ag", agentPicture);
