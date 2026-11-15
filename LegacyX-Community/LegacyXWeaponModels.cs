@@ -46,6 +46,7 @@ public sealed partial class LegacyXCommunity
     private readonly Dictionary<ulong, DateTime> knifeSwappedAt = new();
     // When each player's knife last got its weapon subclass: at most once every 1.5 s, so a subclass change that makes the game announce the knife again cannot start a loop.
     private readonly Dictionary<ulong, DateTime> knifeSubclassAt = new();
+    private readonly Dictionary<ulong, DateTime> weaponApplyAt = new();
     // The Apex prefab knives (ChangeSubclass) need scripts/weapons.vdata_c in the published addon; until it is there the knife keeps its model through SetModel as before.
     // On unless LEGACYX_COMMUNITY_APEX_SUBCLASS=false.
     private bool apexSubclassOn;
@@ -227,9 +228,18 @@ public sealed partial class LegacyXCommunity
     }
 
     /// <summary>Applies the player's models on the next frame and again a little later, after other plugins and the game itself have finished changing the weapon.</summary>
+    private static string? CurrentModel(CBaseEntity entity)
+    {
+        try { return entity.CBodyComponent?.SceneNode?.GetSkeletonInstance()?.ModelState.ModelName; }
+        catch { return null; }
+    }
+
     private void ApplyWeaponModelsLater(CCSPlayerController player)
     {
         if (!weaponModelsOn || !weaponModels.ContainsKey(player.SteamID)) return;
+        // At most one series a second per player (2026-11-15: the log showed the same SetModel lines dozens of times a second and players' games closed; something kept announcing the weapons again).
+        if (weaponApplyAt.TryGetValue(player.SteamID, out var last) && (DateTime.UtcNow - last).TotalSeconds < 1.0) return;
+        weaponApplyAt[player.SteamID] = DateTime.UtcNow;
         Server.NextFrame(() => ApplyWeaponModels(player));
         foreach (var delay in new[] { 0.25f, 0.8f })
             AddTimer(delay, () => { if (player.IsValid) ApplyWeaponModels(player); });
@@ -321,6 +331,8 @@ public sealed partial class LegacyXCommunity
             // model goes on with SetModel and plays that knife's animations through the skeleton it was made for. Only the Apex prefab knives (above) use a subclass.
             try
             {
+                // A weapon that already has the model is left alone: setting it again is announced to every client again.
+                if (string.Equals(CurrentModel(weapon), model.World, StringComparison.OrdinalIgnoreCase)) continue;
                 weapon.SetModel(model.World);
                 Console.WriteLine($"[{ModuleName}] Weapon model {model.World} put on {player.PlayerName}'s {kind}.");
                 // The first-person model: the view model entity that is showing this weapon. The game puts the weapon's own view model back while it is being
