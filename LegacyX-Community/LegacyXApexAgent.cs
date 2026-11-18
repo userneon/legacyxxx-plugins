@@ -48,7 +48,12 @@ public sealed partial class LegacyXCommunity
     {
         if (!replaceAgentsOn || !weaponModelsOn || player.IsBot) return;
         // Only a player who wears an Apex knife needs the pack's character model (its animations play only on it): everybody else keeps their own.
-        if (!WearsApexKnife(player.SteamID)) return;
+        if (!WearsApexKnife(player.SteamID))
+        {
+            // Said once per player, so "the env is on but nothing happens" shows why in the server log: the knife is not an Apex one, or the weapon models have not loaded for the player yet.
+            if (agentMissLogged.Add("knife:" + player.SteamID)) Console.WriteLine($"[{ModuleName}] Agents: {player.PlayerName} is not given the pack's agent: no Apex knife worn (apex subclass {(apexSubclassOn ? "on" : "OFF")}, weapon models loaded: {weaponModels.ContainsKey(player.SteamID)}).");
+            return;
+        }
         // A second look later: the Skinchanger agent (WeaponPaints) is put on a moment after the spawn.
         foreach (var delay in new[] { 0.7f, 2.0f })
             AddTimer(delay, () => ReplaceAgent(player));
