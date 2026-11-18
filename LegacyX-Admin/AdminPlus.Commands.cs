@@ -26,7 +26,11 @@ public partial class AdminPlus
         { "ancient", "de_ancient" },
         { "dust2", "de_dust2" },
         { "anubis", "de_anubis" },
-        { "train", "de_train" }
+        { "train", "de_train" },
+        // The New Year Workshop map (owner request 2026-11-18, community servers): "workshop/<id>" makes ForceChangeMap run host_workshop_map. Item 3359123851 is
+        // "de_mirage_winter" by daniel029pl, about 1.5 GB: every player downloads it the first time. Both spellings work, in chat and in css_map.
+        { "de_winter_mirage", "workshop/3359123851" },
+        { "de_mirage_winter", "workshop/3359123851" },
     };
 
     private static HashSet<string> InstalledMaps = new();

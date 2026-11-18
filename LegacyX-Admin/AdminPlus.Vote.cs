@@ -148,11 +148,12 @@ public partial class AdminPlus
         }
 
         string mapName = info.GetArg(1);
+        string shownName = mapName;
         if (MapAliases.TryGetValue(mapName, out var aliasMap))
             mapName = aliasMap;
 
         _voteMapName = mapName;
-        string question = Localizer["VoteMap.Question", mapName];
+        string question = Localizer["VoteMap.Question", shownName];
         List<string> options = new() { Localizer["Vote.Yes"], Localizer["Vote.No"] };
 
         StartVote(question, options, caller, VoteType.Map);
@@ -563,13 +564,19 @@ public partial class AdminPlus
             if (!string.IsNullOrEmpty(_voteMapName))
             {
                 string mapToChange = _voteMapName;
-                PlayerExtensions.PrintToAll(Localizer["VoteMap.Changed", mapToChange]);
+                PlayerExtensions.PrintToAll(Localizer["VoteMap.Changed", mapToChange.StartsWith("workshop/", StringComparison.OrdinalIgnoreCase) ? "the Workshop map" : mapToChange]);
                 
                 AddTimer(4.0f, () =>
                 {
                     try
                     {
-                        Server.ExecuteCommand($"changelevel {mapToChange}");
+                        // A Workshop map ("workshop/<id>") is loaded with host_workshop_map; the id must be a plain number, since the line goes to the console.
+                        if (mapToChange.StartsWith("workshop/", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (ulong.TryParse(mapToChange["workshop/".Length..], out var workshopId)) Server.ExecuteCommand($"host_workshop_map {workshopId}");
+                            else LogError($"Map change: bad Workshop id {mapToChange}");
+                        }
+                        else Server.ExecuteCommand($"changelevel {mapToChange}");
                     }
                     catch (Exception ex)
                     {
