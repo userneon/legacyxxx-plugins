@@ -95,7 +95,8 @@ namespace WeaponPaints
 		public bool EnableInGameMenus { get; set; } = false;
 
 		[JsonPropertyName("Website")]
-		public string Website { get; set; } = "lxc.mn/skinchanger";
+		// Empty (or the old default "lxc.mn/skinchanger"): the site is the DOMAIN line of the .env, /skinchanger. Write another address here only to override it.
+		public string Website { get; set; } = "";
 
 		[JsonPropertyName("CmdRefreshCooldownSeconds")]
 		public int CmdRefreshCooldownSeconds { get; set; } = 3;

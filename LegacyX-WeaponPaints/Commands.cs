@@ -87,7 +87,10 @@ public partial class WeaponPaints
 
 		if (!string.IsNullOrEmpty(Localizer["wp_info_website"]))
 		{
-			player!.Print(Localizer["wp_info_website", Config.Website]);
+			var website = string.IsNullOrWhiteSpace(Config.Website) || Config.Website == "lxc.mn/skinchanger"
+				? LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().SiteHost() + "/skinchanger"
+				: Config.Website;
+			player!.Print(Localizer["wp_info_website", website]);
 		}
 		if (!string.IsNullOrEmpty(Localizer["wp_info_refresh"]))
 		{

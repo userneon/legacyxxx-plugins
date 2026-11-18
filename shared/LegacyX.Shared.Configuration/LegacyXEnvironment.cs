@@ -80,6 +80,18 @@ public sealed class LegacyXEnvironment
         return PortDefault(key) ?? fallback;
     }
 
+    /// <summary>
+    /// The site's host name for the texts players read ("lxc.mn"), from the one DOMAIN line (owner request 2026-11-18: every address from one place). A DOMAIN written
+    /// without "https://" works too. <paramref name="fallback"/> is used only when DOMAIN is not set or is not an address.
+    /// </summary>
+    public string SiteHost(string fallback = "lxc.mn")
+    {
+        var domain = Get("DOMAIN").Trim();
+        if (domain.Length == 0) return fallback;
+        if (!domain.Contains("://", StringComparison.Ordinal)) domain = "https://" + domain;
+        return Uri.TryCreate(domain, UriKind.Absolute, out var uri) && uri.Host.Length > 0 ? uri.Host : fallback;
+    }
+
     private string? PortDefault(string key)
     {
         var derived = FromDomain(key);

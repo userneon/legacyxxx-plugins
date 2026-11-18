@@ -427,7 +427,7 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
         var (status, found) = await FetchProfileAsync(player.SteamID.ToString());
         if (status == System.Net.HttpStatusCode.NotFound)
         {
-            Print(player, "No rank yet. Play a 5v5 match to get one at {white}lxc.mn{grey}.");
+            Print(player, "No rank yet. Play a 5v5 match to get one at {white}" + LegacyXEnvironmentLoader.Load().SiteHost() + "{grey}.");
             return;
         }
         if (found is not { } profile)

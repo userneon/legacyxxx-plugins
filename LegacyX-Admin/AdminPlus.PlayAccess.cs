@@ -76,7 +76,7 @@ public partial class AdminPlus
                 reason = "not signed in on the website";
                 lines =
                 [
-                    "You are not signed in. Sign in with Steam at {white}lxc.mn{grey}, then press {white}Connect{grey} on the website.",
+                    "You are not signed in. Sign in with Steam at {white}" + LegacyXEnvironmentLoader.Load().SiteHost() + "{grey}, then press {white}Connect{grey} on the website.",
                     "Your LXC account is your Steam account: it keeps your rank, skins and stats.",
                 ];
             }
