@@ -308,7 +308,13 @@ public sealed partial class LegacyXCommunity
             try
             {
                 // A weapon that already has the model is left alone: setting it again is announced to every client again.
-                if (string.Equals(CurrentModel(weapon), model.World, StringComparison.OrdinalIgnoreCase)) continue;
+                if (string.Equals(CurrentModel(weapon), model.World, StringComparison.OrdinalIgnoreCase))
+                {
+                    // The world model is on, but the game puts the weapon's own view model back while it is drawn: skipping the weapon here left the world model (the shadow)
+                    // and an empty hand (audit 2026-11-18). The view model is put on again here, as every series did before 24d1ccb8 (the one-second limit of ApplyWeaponModelsLater keeps it rare).
+                    if (weapon.Handle == pawn.WeaponServices.ActiveWeapon.Value?.Handle) PutViewModel(player, weapon, model.View, kind);
+                    continue;
+                }
                 weapon.SetModel(model.World);
                 Console.WriteLine($"[{ModuleName}] Weapon model {model.World} put on {player.PlayerName}'s {kind}.");
                 // The first-person model: the view model entity that is showing this weapon. The game puts the weapon's own view model back while it is being
