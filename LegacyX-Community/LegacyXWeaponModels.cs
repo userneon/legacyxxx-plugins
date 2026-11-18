@@ -243,6 +243,23 @@ public sealed partial class LegacyXCommunity
                 SetViewModel(view, path);
                 found = true;
             }
+            if (!found)
+            {
+                // The lookup above finds nothing on the server (journalctl 2026-11-18: "No view model entity shows ... yet" on every try, so only the world model, the shadow, was put on).
+                // The player's own first-person model is reached from the pawn itself: its view model services hold the handle of it.
+                var pawn = player.PlayerPawn.Value;
+                if (pawn is not null)
+                {
+                    var services = Schema.GetSchemaValue<nint>(pawn.Handle, "CBasePlayerPawn", "m_pViewModelServices");
+                    if (services != 0)
+                    {
+                        // m_hViewModel[0] is the player's weapon view model; a handle's low 15 bits are the entity index.
+                        var handle = (uint)System.Runtime.InteropServices.Marshal.ReadInt32(services + Schema.GetSchemaOffset("CPlayer_ViewModelServices", "m_hViewModel"));
+                        var view = handle == uint.MaxValue ? null : Utilities.GetEntityFromIndex<CBaseModelEntity>((int)(handle & 0x7FFF));
+                        if (view is not null && view.IsValid) { SetViewModel(view, path); found = true; }
+                    }
+                }
+            }
             if (!found) Console.WriteLine($"[{ModuleName}] No view model entity shows {player.PlayerName}'s {kind} yet, the first-person model {path} could not be put on.");
         }
         catch (Exception problem) { Console.WriteLine($"[{ModuleName}] First-person model for {player.PlayerName} ({kind}) failed: {problem.Message}"); }
