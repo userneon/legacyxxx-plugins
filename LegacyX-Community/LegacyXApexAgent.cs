@@ -48,7 +48,12 @@ public sealed partial class LegacyXCommunity
     {
         if (!replaceAgentsOn || !weaponModelsOn || player.IsBot) return;
         // Only a player who wears an Apex knife needs the pack's character model (its animations play only on it): everybody else keeps their own.
-        if (!WearsApexKnife(player.SteamID)) return;
+        if (!WearsApexKnife(player.SteamID))
+        {
+            // Said once per player, so "the env is on but nothing happens" shows why in the server log: the knife is not an Apex one, or the weapon models have not loaded for the player yet.
+            if (agentMissLogged.Add("knife:" + player.SteamID)) Console.WriteLine($"[{ModuleName}] Agents: {player.PlayerName} is not given the pack's agent: no Apex knife worn (apex subclass {(apexSubclassOn ? "on" : "OFF")}, weapon models loaded: {weaponModels.ContainsKey(player.SteamID)}).");
+            return;
+        }
         // A second look later: the Skinchanger agent (WeaponPaints) is put on a moment after the spawn.
         foreach (var delay in new[] { 0.7f, 2.0f })
             AddTimer(delay, () => ReplaceAgent(player));
@@ -105,8 +110,11 @@ public sealed partial class LegacyXCommunity
         agentPackSearchedAt = DateTime.UtcNow;
         try
         {
-            var vpk = Path.GetFullPath(Path.Combine(Server.GameDirectory, "..", "bin", "linuxsteamrt64", "steamapps", "workshop", "content", "730", agentWorkshopId, $"{agentWorkshopId}_dir.vpk"));
-            if (!File.Exists(vpk)) { Console.WriteLine($"[{ModuleName}] Agents: {vpk} is not there yet (the Workshop addon is not downloaded)."); return null; }
+            var folder = Path.GetFullPath(Path.Combine(Server.GameDirectory, "..", "bin", "linuxsteamrt64", "steamapps", "workshop", "content", "730", agentWorkshopId));
+            // The addon is a split archive (<id>_dir.vpk) or a single file (<id>.vpk): whichever is there; else any .vpk in its folder.
+            var vpk = new[] { $"{agentWorkshopId}_dir.vpk", $"{agentWorkshopId}.vpk" }.Select(n => Path.Combine(folder, n)).FirstOrDefault(File.Exists)
+                      ?? (Directory.Exists(folder) ? Directory.GetFiles(folder, "*.vpk").OrderBy(n => n, StringComparer.Ordinal).FirstOrDefault() : null);
+            if (vpk is null) { Console.WriteLine($"[{ModuleName}] Agents: no .vpk in {folder} yet (the Workshop addon {agentWorkshopId} is not downloaded)."); return null; }
             var pack = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var path in ReadVpkModels(vpk, "agents/models/bluesen/")) pack.TryAdd(Path.GetFileNameWithoutExtension(path), path);
             Console.WriteLine($"[{ModuleName}] Agents: {pack.Count} re-rigged character model(s) in the addon: {string.Join(", ", pack.Keys.Take(30))}.");
