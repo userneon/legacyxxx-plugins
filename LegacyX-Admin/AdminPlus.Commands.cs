@@ -31,12 +31,13 @@ public partial class AdminPlus
 
     /// <summary>
     /// The New Year Workshop map (owner request 2026-11-18): !map de_winter_mirage (or de_mirage_winter) loads it. The item id is LEGACYX_WINTER_MAP_ID in the .env, so a
-    /// different map (or none: "off" or "0") needs no new build, only a restart. Without the key it is 3359123851, "de_mirage_winter" by daniel029pl, about 1.5 GB: every
+    /// different map (or none: "off" or "0") needs no new build, only a restart. Without the key it is 3609803878, "de_mirage_christmas | Winter Mirage" by NexEnd, about 480 MB (owner, 2026-11-18: the first pick,
+    /// de_mirage_winter 3359123851 of about 1.5 GB made 300 fps PCs drop to 20-30 fps and 60 fps ones to 1-3 fps): every
     /// player downloads it the first time. "workshop/&lt;id&gt;" makes ForceChangeMap run host_workshop_map.
     /// </summary>
     private const string WinterMapEnvKey = "LEGACYX_WINTER_MAP_ID";
-    private const string DefaultWinterMapId = "3359123851";
-    private static readonly string[] WinterMapNames = { "de_winter_mirage", "de_mirage_winter" };
+    private const string DefaultWinterMapId = "3609803878";
+    private static readonly string[] WinterMapNames = { "de_winter_mirage", "de_mirage_winter", "de_mirage_christmas" };
 
     private static void ApplyWinterMapFromEnvironment()
     {
