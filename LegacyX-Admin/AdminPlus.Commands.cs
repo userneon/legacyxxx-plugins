@@ -26,12 +26,30 @@ public partial class AdminPlus
         { "ancient", "de_ancient" },
         { "dust2", "de_dust2" },
         { "anubis", "de_anubis" },
-        { "train", "de_train" },
-        // The New Year Workshop map (owner request 2026-11-18, community servers): "workshop/<id>" makes ForceChangeMap run host_workshop_map. Item 3359123851 is
-        // "de_mirage_winter" by daniel029pl, about 1.5 GB: every player downloads it the first time. Both spellings work, in chat and in css_map.
-        { "de_winter_mirage", "workshop/3359123851" },
-        { "de_mirage_winter", "workshop/3359123851" },
+        { "train", "de_train" }
     };
+
+    /// <summary>
+    /// The New Year Workshop map (owner request 2026-11-18): !map de_winter_mirage (or de_mirage_winter) loads it. The item id is LEGACYX_WINTER_MAP_ID in the .env, so a
+    /// different map (or none: "off" or "0") needs no new build, only a restart. Without the key it is 3359123851, "de_mirage_winter" by daniel029pl, about 1.5 GB: every
+    /// player downloads it the first time. "workshop/&lt;id&gt;" makes ForceChangeMap run host_workshop_map.
+    /// </summary>
+    private const string WinterMapEnvKey = "LEGACYX_WINTER_MAP_ID";
+    private const string DefaultWinterMapId = "3359123851";
+    private static readonly string[] WinterMapNames = { "de_winter_mirage", "de_mirage_winter" };
+
+    private static void ApplyWinterMapFromEnvironment()
+    {
+        foreach (var name in WinterMapNames) MapAliases.Remove(name);
+        string value;
+        try { value = LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get(WinterMapEnvKey).Trim(); }
+        catch (Exception ex) { LogError($"reading {WinterMapEnvKey}: {ex.Message}"); value = ""; }
+        if (value == "0" || value.Equals("off", StringComparison.OrdinalIgnoreCase)) return;
+        var id = value.Length == 0 ? DefaultWinterMapId : value;
+        // The id ends up in a console line: only a plain number.
+        if (!ulong.TryParse(id, out _)) { LogError($"{WinterMapEnvKey} is not a number: the winter map is off"); return; }
+        foreach (var name in WinterMapNames) MapAliases[name] = $"workshop/{id}";
+    }
 
     private static HashSet<string> InstalledMaps = new();
     
@@ -100,7 +118,8 @@ public partial class AdminPlus
         AddCommand("money", Localizer["Money.Usage"], CmdMoney);
         AddCommand("armor", Localizer["Armor.Usage"], CmdArmor);
 
-        foreach (var alias in MapAliases.Keys)
+        ApplyWinterMapFromEnvironment();
+        foreach (var alias in MapAliases.Keys.ToList())
         {
             _pluginChatCommands.Add(alias);
             AddCommand(alias, $"Change map alias: {alias}", (caller, info) =>
