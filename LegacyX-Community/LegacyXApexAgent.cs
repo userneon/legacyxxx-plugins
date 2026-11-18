@@ -105,8 +105,13 @@ public sealed partial class LegacyXCommunity
         agentPackSearchedAt = DateTime.UtcNow;
         try
         {
-            var vpk = Path.GetFullPath(Path.Combine(Server.GameDirectory, "..", "bin", "linuxsteamrt64", "steamapps", "workshop", "content", "730", agentWorkshopId, $"{agentWorkshopId}_dir.vpk"));
-            if (!File.Exists(vpk)) { Console.WriteLine($"[{ModuleName}] Agents: {vpk} is not there yet (the Workshop addon is not downloaded)."); return null; }
+            // Server.GameDirectory is /home/cs2/cs2/game on this server (journalctl 2026-11-18), and the Workshop item sits at game/bin/linuxsteamrt64/..., so the folder next to
+            // the game directory ("..") was never right here. Both places are tried, the game directory's own bin first.
+            var relative = new[] { "bin", "linuxsteamrt64", "steamapps", "workshop", "content", "730", agentWorkshopId, $"{agentWorkshopId}_dir.vpk" };
+            var candidates = new[] { Server.GameDirectory, Path.Combine(Server.GameDirectory, ".."), Path.Combine(Server.GameDirectory, "..", "..") }
+                .Select(root => Path.GetFullPath(Path.Combine(new[] { root }.Concat(relative).ToArray()))).ToList();
+            var vpk = candidates.FirstOrDefault(File.Exists);
+            if (vpk is null) { Console.WriteLine($"[{ModuleName}] Agents: the Workshop addon's {agentWorkshopId}_dir.vpk is not there yet, looked in: {string.Join(" | ", candidates)}."); return null; }
             var pack = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var path in ReadVpkModels(vpk, "agents/models/bluesen/")) pack.TryAdd(Path.GetFileNameWithoutExtension(path), path);
             Console.WriteLine($"[{ModuleName}] Agents: {pack.Count} re-rigged character model(s) in the addon: {string.Join(", ", pack.Keys.Take(30))}.");
