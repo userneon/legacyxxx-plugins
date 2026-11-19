@@ -46,6 +46,9 @@ public sealed partial class LegacyXCommunity
     private readonly Dictionary<ulong, DateTime> knifeSwappedAt = new();
     // When each player's knife last got its weapon subclass: at most once every 1.5 s, so a subclass change that makes the game announce the knife again cannot start a loop.
     private readonly Dictionary<ulong, DateTime> knifeSubclassAt = new();
+    // The knife entity that already has its Apex subclass (player -> entity index and subclass): a subclass is put on a knife ONCE, not every time the knife is drawn again (each ChangeSubclass
+    // re-sets the weapon's model, animation class and skeleton: repeated at every knife/gun switch it was a visible hitch, owner 2026-11-19). Cleared at spawn and when the profile is read again.
+    private readonly Dictionary<ulong, (uint Index, string Subclass)> knifeSubclassDone = new();
     private readonly Dictionary<ulong, DateTime> weaponApplyAt = new();
     // The Apex prefab knives (ChangeSubclass) need scripts/weapons.vdata_c in the published addon; until it is there the knife keeps its model through SetModel as before.
     // On unless LEGACYX_COMMUNITY_APEX_SUBCLASS=false.
@@ -112,7 +115,7 @@ public sealed partial class LegacyXCommunity
         });
         RegisterEventHandler<EventPlayerSpawn>((@event, _) =>
         {
-            if (@event.Userid is { IsValid: true } player) { ApplyWeaponModelsLater(player); ReplaceAgentLater(player); }
+            if (@event.Userid is { IsValid: true } player) { knifeSubclassDone.Remove(player.SteamID); ApplyWeaponModelsLater(player); ReplaceAgentLater(player); }
             return HookResult.Continue;
         });
         // The subclass can only be changed on the knife that is IN HAND (on a holstered weapon it crashed the seller's server), so it is applied when the knife is equipped.
@@ -191,6 +194,7 @@ public sealed partial class LegacyXCommunity
     private void StoreWeaponModels(ulong steamId, JsonElement? profile)
     {
         weaponModels.Remove(steamId);
+        knifeSubclassDone.Remove(steamId);
         if (profile is not { } found || !found.TryGetProperty("weapon_models", out var all) || all.ValueKind != JsonValueKind.Object) return;
         var set = new Dictionary<string, WeaponModel>();
         foreach (var weapon in new[] { "knife", "deagle", "ak47" })
@@ -310,11 +314,13 @@ public sealed partial class LegacyXCommunity
             {
                 // A prefab knife: only the knife in hand can be changed; its model, animation class and skeleton then come from the vdata, so no SetModel on top (that would keep the vanilla animations).
                 if (weapon.Handle != pawn.WeaponServices.ActiveWeapon.Value?.Handle) continue;
+                if (knifeSubclassDone.TryGetValue(player.SteamID, out var done) && done.Index == weapon.Index && done.Subclass == subclass) continue;
                 if (knifeSubclassAt.TryGetValue(player.SteamID, out var changed) && (DateTime.UtcNow - changed).TotalSeconds < 1.5) continue;
                 knifeSubclassAt[player.SteamID] = DateTime.UtcNow;
                 try
                 {
                     weapon.AcceptInput("ChangeSubclass", value: subclass);
+                    knifeSubclassDone[player.SteamID] = (weapon.Index, subclass);
                     Console.WriteLine($"[{ModuleName}] Knife subclass {subclass} put on {player.PlayerName}'s knife in hand.");
                 }
                 catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Knife subclass {subclass} for {player.PlayerName} failed: {problem.Message}"); }
