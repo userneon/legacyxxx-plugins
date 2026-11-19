@@ -229,7 +229,7 @@ public sealed partial class LegacyXCommunity
         if (weaponApplyAt.TryGetValue(player.SteamID, out var last) && (DateTime.UtcNow - last).TotalSeconds < 1.0) return;
         weaponApplyAt[player.SteamID] = DateTime.UtcNow;
         Server.NextFrame(() => ApplyWeaponModels(player));
-        foreach (var delay in new[] { 0.25f, 0.8f })
+        foreach (var delay in new[] { 0.25f, 0.8f, 2.0f })
             AddTimer(delay, () => { if (player.IsValid) ApplyWeaponModels(player); });
     }
 
@@ -314,7 +314,10 @@ public sealed partial class LegacyXCommunity
             {
                 // A prefab knife: only the knife in hand can be changed; its model, animation class and skeleton then come from the vdata, so no SetModel on top (that would keep the vanilla animations).
                 if (weapon.Handle != pawn.WeaponServices.ActiveWeapon.Value?.Handle) continue;
-                if (knifeSubclassDone.TryGetValue(player.SteamID, out var done) && done.Index == weapon.Index && done.Subclass == subclass) continue;
+                // Already done AND still true: this knife entity got the subclass and its model is the Apex model. Not repeated at every knife/gun switch (a hitch). When the model is NOT the Apex
+                // model any more (the subclass did not take, another plugin put the pick back, a reconnect), it is put on again.
+                if (knifeSubclassDone.TryGetValue(player.SteamID, out var done) && done.Index == weapon.Index && done.Subclass == subclass
+                    && string.Equals(CurrentModel(weapon), model.World, StringComparison.OrdinalIgnoreCase)) continue;
                 if (knifeSubclassAt.TryGetValue(player.SteamID, out var changed) && (DateTime.UtcNow - changed).TotalSeconds < 1.5) continue;
                 knifeSubclassAt[player.SteamID] = DateTime.UtcNow;
                 try
