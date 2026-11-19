@@ -5,12 +5,12 @@ namespace LegacyXCommunity;
 
 /// <summary>
 /// The seller's re-rigged character models (agents/models/bluesen/default_agents/&lt;name&gt;/&lt;name&gt;.vmdl, owner request 2026-11-15): the Apex knives' animations play only on them. Only a player
-/// who WEARS an Apex knife is given one of the pack's COMPLETE models (the same agent when the pack has it complete, else a random one of their team), at spawn, never at equip. LEGACYX_COMMUNITY_REPLACE_AGENTS=true switches it on (off by default). The pack's models are found by
+/// who WEARS an Apex knife is given one of the pack's COMPLETE models (the same agent when the pack has it complete, else a random one of their team), at spawn, never at equip. on by default; LEGACYX_COMMUNITY_REPLACE_AGENTS=false switches it off. The pack's models are found by
 /// reading the file list of the downloaded Workshop addon (the VPK's directory file); LEGACYX_COMMUNITY_APEX_WORKSHOP_ID is that addon (default 3830785234).
 /// </summary>
 public sealed partial class LegacyXCommunity
 {
-    private bool replaceAgentsOn;   // off unless LEGACYX_COMMUNITY_REPLACE_AGENTS=true: the pack's agents are not in the published addon any more (2026-11-15, players' games crashed while loading it)
+    private bool replaceAgentsOn = true;   // on by default (owner 2026-11-19: the agent must be given by itself); LEGACYX_COMMUNITY_REPLACE_AGENTS=false switches it off. Only the pack's COMPLETE models are ever given
     private Dictionary<string, string>? agentPack;            // default agent name -> the pack's model path
     private DateTime agentPackSearchedAt = DateTime.MinValue;
     private string agentWorkshopId = "3830785234";
@@ -21,7 +21,7 @@ public sealed partial class LegacyXCommunity
     private void RegisterAgentReplacement()
     {
         var env = LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load();
-        replaceAgentsOn = string.Equals(env.Get("LEGACYX_COMMUNITY_REPLACE_AGENTS"), "true", StringComparison.OrdinalIgnoreCase);
+        replaceAgentsOn = !string.Equals(env.Get("LEGACYX_COMMUNITY_REPLACE_AGENTS").Trim(), "false", StringComparison.OrdinalIgnoreCase);
         var id = env.Get("LEGACYX_COMMUNITY_APEX_WORKSHOP_ID").Trim();
         if (id.Length is > 0 and <= 20 && id.All(char.IsAsciiDigit)) agentWorkshopId = id;
         // Without a restart: `lx_agents 0` stops giving the pack's models from the next spawn on (the console of the server only), `lx_agents 1` starts again.
@@ -31,7 +31,7 @@ public sealed partial class LegacyXCommunity
             if (command.ArgCount >= 2) replaceAgentsOn = command.GetArg(1) != "0";
             Console.WriteLine($"[{ModuleName}] Agents: the pack's character models are {(replaceAgentsOn ? "ON" : "off")}.");
         });
-        Console.WriteLine($"[{ModuleName}] Agents: the pack's re-rigged character models are {(replaceAgentsOn ? "ON" : "off")} (off by default; LEGACYX_COMMUNITY_REPLACE_AGENTS=true switches them on).");
+        Console.WriteLine($"[{ModuleName}] Agents: the pack's re-rigged character models are {(replaceAgentsOn ? "ON" : "off")} (on by default; LEGACYX_COMMUNITY_REPLACE_AGENTS=false switches them off).");
     }
 
     // The pack models that are complete (tools/check_model_deps.py: the other 47 miss thirdperson_body_vmorf.vtex_c, 2026-11-15). Only these are given to players.
