@@ -54,8 +54,8 @@ public sealed partial class LegacyXCommunity
             if (agentMissLogged.Add("knife:" + player.SteamID)) Console.WriteLine($"[{ModuleName}] Agents: {player.PlayerName} is not given the pack's agent: no Apex knife worn (apex subclass {(apexSubclassOn ? "on" : "OFF")}, weapon models loaded: {weaponModels.ContainsKey(player.SteamID)}).");
             return;
         }
-        // A second look later: the Skinchanger agent (WeaponPaints) is put on a moment after the spawn.
-        foreach (var delay in new[] { 0.7f, 2.0f })
+        // More looks later: the Skinchanger agent (WeaponPaints) is put on a moment after the spawn, and the player's profile (their worn knife) can arrive after the spawn: LoadScoreboardRankAsync calls this again when it does.
+        foreach (var delay in new[] { 0.7f, 2.0f, 4.5f })
             AddTimer(delay, () => ReplaceAgent(player));
     }
 
