@@ -121,7 +121,15 @@ public sealed partial class LegacyXCommunity
         // The subclass can only be changed on the knife that is IN HAND (on a holstered weapon it crashed the seller's server), so it is applied when the knife is equipped.
         RegisterEventHandler<EventItemEquip>((@event, _) =>
         {
-            if (@event.Userid is { IsValid: true } player) ApplyWeaponModelsLater(player);
+            if (@event.Userid is { IsValid: true } player)
+            {
+                // A knife drawn: its model / Apex subclass goes on at once (the next frame), not only after the series below (owner 2026-11-20: for the first seconds the plain knife was in the hand,
+                // then it changed). ApplyWeaponModels leaves a knife that already has its model alone, so the extra call costs nothing.
+                var item = @event.Item ?? "";
+                if (item.Contains("knife", StringComparison.Ordinal) || item.Contains("bayonet", StringComparison.Ordinal))
+                    Server.NextFrame(() => { if (player.IsValid) ApplyWeaponModels(player); });
+                ApplyWeaponModelsLater(player);
+            }
             return HookResult.Continue;
         });
         RegisterEventHandler<EventItemPickup>((@event, _) =>
