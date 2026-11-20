@@ -69,6 +69,23 @@ public sealed partial class LegacyXCommunity
         return parts.Length == 2 && parts[0] == parts[1] && parts[0].StartsWith("apex_", StringComparison.Ordinal) ? parts[0] : null;
     }
 
+    /// <summary>
+    /// Runs one engine call and says in the log when it took 15 ms or more (a 64-tick frame is 15.6 ms): the log then shows which call freezes the server, and for how long
+    /// (owner 2026-11-20: other servers run 195 custom models and re-rigged agents without trouble, this one hitches). Turn off with LEGACYX_COMMUNITY_SLOW_CALL_LOG=false.
+    /// </summary>
+    private void Timed(string what, Action action)
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        try { action(); }
+        finally
+        {
+            watch.Stop();
+            if (slowCallLog && watch.ElapsedMilliseconds >= 15)
+                Console.WriteLine($"[{ModuleName}] SLOW CALL: {what} took {watch.ElapsedMilliseconds} ms ({Utilities.GetPlayers().Count(p => p.IsValid && !p.IsBot && !p.IsHLTV)} players)");
+        }
+    }
+    private bool slowCallLog = true;
+
     private void RegisterWeaponModels()
     {
         // LegacyX-WeaponPaints asks this before it puts the player's own knife pick (a paracord ...) on their knife: a player who wears a Shop knife model keeps the
@@ -78,6 +95,7 @@ public sealed partial class LegacyXCommunity
         Capabilities.RegisterPluginCapability(new PluginCapability<Func<ulong, string?>>("legacyx:shop_knife_pick"), () => steamId =>
             weaponModelsOn && weaponModels.TryGetValue(steamId, out var worn) && worn.TryGetValue("knife", out var knife) && knife.AnimBase is { } baseName && AnimKnives.TryGetValue(baseName, out var designer) ? designer : null);
         Capabilities.RegisterPluginCapability(new PluginCapability<Func<ulong, bool>>("legacyx:custom_knife_model"), () => steamId => weaponModelsOn && weaponModels.TryGetValue(steamId, out var worn) && worn.TryGetValue("knife", out var knife) && knife.AnimBase is null);
+        slowCallLog = !string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_SLOW_CALL_LOG"), "false", StringComparison.OrdinalIgnoreCase);
         knifeSwapOn = string.Equals(LegacyX.Shared.Configuration.LegacyXEnvironmentLoader.Load().Get("LEGACYX_COMMUNITY_KNIFE_SWAP"), "true", StringComparison.OrdinalIgnoreCase);
         Console.WriteLine($"[{ModuleName}] Weapon models: knife swap for the M9/Bayonet animations is {(knifeSwapOn ? "ON" : "off")}.");
         // On unless LEGACYX_COMMUNITY_APEX_SUBCLASS=false: the seller's scripts/weapons.vdata_c is in the published Workshop addon (owner, 2026-11-14), so the Apex knives
@@ -104,7 +122,7 @@ public sealed partial class LegacyXCommunity
         RegisterListener<Listeners.OnMapStart>(_ => Server.NextFrame(() =>
         {
             foreach (var path in weaponModelPaths)
-                try { Server.PrecacheModel(path); } catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not precache {path}: {problem.Message}"); }
+                try { Timed($"PrecacheModel {path}", () => Server.PrecacheModel(path)); } catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not precache {path}: {problem.Message}"); }
         }));
         // A player types !wm to see what the server has for them (the console commands below are for the server's own console only).
         AddCommand("css_wm", "Weapon models: what is worn", (player, _) =>
@@ -217,7 +235,7 @@ public sealed partial class LegacyXCommunity
                 if (weaponModelPaths.Add(path))
                 {
                     // A model this server has not precached yet: try to load it now; it is also kept for the next map.
-                    try { Server.PrecacheModel(path); } catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not precache {path}: {problem.Message}"); }
+                    try { Timed($"PrecacheModel {path}", () => Server.PrecacheModel(path)); } catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not precache {path}: {problem.Message}"); }
                 }
         }
         if (set.Count > 0) weaponModels[steamId] = set;
@@ -280,7 +298,7 @@ public sealed partial class LegacyXCommunity
     /// <summary>The model on a view model entity, told to the clients too (the engine does not send a changed model by itself).</summary>
     private static void SetViewModel(CBaseModelEntity view, string path)
     {
-        view.SetModel(path);
+        Timed($"view model SetModel {path}", () => view.SetModel(path));
         Utilities.SetStateChanged(view, "CBaseEntity", "m_nModelIndex");
         Utilities.SetStateChanged(view, "CBaseModelEntity", "m_vecViewOffset");
     }
@@ -330,7 +348,7 @@ public sealed partial class LegacyXCommunity
                 knifeSubclassAt[player.SteamID] = DateTime.UtcNow;
                 try
                 {
-                    weapon.AcceptInput("ChangeSubclass", value: subclass);
+                    Timed($"ChangeSubclass {subclass}", () => weapon.AcceptInput("ChangeSubclass", value: subclass));
                     knifeSubclassDone[player.SteamID] = (weapon.Index, subclass);
                     Console.WriteLine($"[{ModuleName}] Knife subclass {subclass} put on {player.PlayerName}'s knife in hand.");
                 }
@@ -349,7 +367,7 @@ public sealed partial class LegacyXCommunity
                     if (weapon.Handle == pawn.WeaponServices.ActiveWeapon.Value?.Handle) PutViewModel(player, weapon, model.View, kind);
                     continue;
                 }
-                weapon.SetModel(model.World);
+                Timed($"weapon SetModel {model.World}", () => weapon.SetModel(model.World));
                 Console.WriteLine($"[{ModuleName}] Weapon model {model.World} put on {player.PlayerName}'s {kind}.");
                 // The first-person model: the view model entity that is showing this weapon. The game puts the weapon's own view model back while it is being
                 // drawn (the equip animation), so a katana put on at once can vanish from the hand; it is put on again a moment later, twice.

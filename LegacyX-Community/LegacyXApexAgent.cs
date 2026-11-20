@@ -96,7 +96,7 @@ public sealed partial class LegacyXCommunity
             }
             agentSetAt[player.SteamID] = DateTime.UtcNow;
             if (agentPrecached.Add(target)) TryPrecache(target);
-            pawn.SetModel(target);
+            Timed($"agent SetModel {target}", () => pawn.SetModel(target));
             Console.WriteLine($"[{ModuleName}] {player.PlayerName} wears an Apex knife: agent {(name.Length > 0 ? name : current ?? "?")} is now the pack's {target}.");
         }
         catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Agent replacement failed: {problem.Message}"); }
@@ -128,7 +128,7 @@ public sealed partial class LegacyXCommunity
 
     private void TryPrecache(string path)
     {
-        try { Server.PrecacheModel(path); } catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not precache {path}: {problem.Message}"); }
+        try { Timed($"PrecacheModel {path}", () => Server.PrecacheModel(path)); } catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not precache {path}: {problem.Message}"); }
     }
 
     /// <summary>Every character model (.vmdl) under a folder of a VPK v1/v2 directory file (the variants sit in the agent's folder: ctm_fbi/ctm_fbi_varianta.vmdl).</summary>
