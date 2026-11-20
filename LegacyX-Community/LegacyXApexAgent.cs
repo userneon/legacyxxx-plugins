@@ -98,8 +98,41 @@ public sealed partial class LegacyXCommunity
             if (agentPrecached.Add(target)) TryPrecache(target);
             Timed($"agent SetModel {target}", () => pawn.SetModel(target));
             Console.WriteLine($"[{ModuleName}] {player.PlayerName} wears an Apex knife: agent {(name.Length > 0 ? name : current ?? "?")} is now the pack's {target}.");
+            RefreshGlovesAfterAgent(player);
         }
         catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Agent replacement failed: {problem.Message}"); }
+    }
+
+    /// <summary>
+    /// The gloves are put on by WeaponPaints at the spawn (next frame, then 0.08 s later); this plugin changes the player's model 0.7 s and 2 s after the spawn, and the gloves
+    /// are not given again (owner 2026-11-20: with lx_agents 0 the gloves are there, with the pack's agent they are gone). The same refresh WeaponPaints uses when it changes a glove
+    /// ("lastinv" twice, 0.08 s apart, and the first_or_third_person body group off and on) is done once after the model change.
+    /// </summary>
+    private void RefreshGlovesAfterAgent(CCSPlayerController player)
+    {
+        AddTimer(0.1f, () =>
+        {
+            try
+            {
+                var pawn = player.PlayerPawn.Value;
+                if (!player.IsValid || !player.PawnIsAlive || pawn is null || !pawn.IsValid) return;
+                player.ExecuteClientCommand("lastinv");
+                AddTimer(0.08f, () =>
+                {
+                    try
+                    {
+                        var current = player.PlayerPawn.Value;
+                        if (!player.IsValid || !player.PawnIsAlive || current is null || !current.IsValid) return;
+                        player.ExecuteClientCommand("lastinv");
+                        current.AcceptInput("SetBodygroup", value: "first_or_third_person,0");
+                        AddTimer(0.2f, () => { if (player.IsValid && player.PawnIsAlive && player.PlayerPawn.Value is { IsValid: true } again) again.AcceptInput("SetBodygroup", value: "first_or_third_person,1"); });
+                        Console.WriteLine($"[{ModuleName}] Gloves refreshed for {player.PlayerName} after the agent model change.");
+                    }
+                    catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Glove refresh (second step) failed: {problem.Message}"); }
+                });
+            }
+            catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Glove refresh failed: {problem.Message}"); }
+        });
     }
 
     /// <summary>The pack's models by default agent name, read from the addon's file list (at most once a minute until found).</summary>
