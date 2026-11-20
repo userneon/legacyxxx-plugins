@@ -16,8 +16,12 @@ namespace LegacyXHud;
 public sealed partial class LegacyXHud
 {
     private const int SkinTypeSlots = 25;
-    private const int SkinItemSlots = 300;         // every skin of a pick is in one list that scrolls (the most any pick has; the cards are in the menu layout)
-    private const int ItemsPerTick = 20;        // skin cards drawn per tick: all 300 at once (about 2700 changes into the layout entity in one frame) overflowed its serializer and crashed the server (2026-11-19 14:16)
+    // THE LIMIT THAT CRASHED THE SERVER (log 2026-11-19 14:16:17): "CFlattenedSerializer::EncodeField overflowed CCSCustomHudLayout m_vecDialogVariableNames[194/195]" then "FATAL ERROR: PackEntity".
+    // The layout entity can hold 195 distinct variable NAMES, and every skin card sets two (sk_itemN_name, sk_itemN_rar); the names stay on the entity once set. The menu also uses 4 + up to 35 tile names
+    // (sk_wN_name) + up to 50 type names (sk_typeN_name, _n). So 4 + 35 + 50 + 2 x cards must stay under 195: 48 cards = 185. The layout has 300 cards, all `hidden` by default, so the rest simply stay hidden.
+    // To show more skins the cards must REUSE variable names (a window that scrolls over the list), not add new ones.
+    private const int SkinItemSlots = 48;
+    private const int ItemsPerTick = 20;        // skin cards drawn per tick (kept small so one frame never carries hundreds of changes)
     private const int SkinPage = 100;              // skins asked of the backend at a time (MENU_SKIN_PAGE there); the next page is asked for as soon as one arrives
     private const int TileSlots = 35;            // 4 columns of 8 guns, then Agent, Gloves, Knife
     private static readonly int[] ColumnStart = { 0, 8, 16, 24, 32 };
@@ -641,7 +645,7 @@ public sealed partial class LegacyXHud
         var tile = view.Picked;
         var agent = tile?.Slot == "agent";
         Sv(panel, player, "sk_title", PickedName(view));
-        Sv(panel, player, "sk_sub", view.Loading ? "" : agent ? $"{view.Total} agents" : $"{view.Total} skins");   // no "0 skins" while the page is still on its way
+        Sv(panel, player, "sk_sub", view.Loading ? "" : agent ? $"{view.Total} agents" : view.Total > SkinItemSlots ? $"{view.Total} skins, first {SkinItemSlots} shown" : $"{view.Total} skins");   // no "0 skins" while the page is still on its way
         Sc(panel, player, "sk_remove", "hidden", tile?.Eq is null);
         var model = tile is null ? null : tile.Slot == "weapon" ? tile.Model : SkinModel(view.TypeClass);
         Ss(panel, player, "sk_head_pic", "hp", HeadPicture(tile, model, view.Team, PickedClass(view)));
