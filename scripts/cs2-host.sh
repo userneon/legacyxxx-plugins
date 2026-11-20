@@ -19,7 +19,7 @@
 #       make this repository's .env (edit it with `nano .env`) the file the plugins read: the servers' .env
 #       becomes a link to it. Run once; after that a restart is all an edit needs.
 #   sudo ./scripts/cs2-host.sh autoupdate on|off|check
-#       every 10 minutes (on by default after install): a new CS2 build, and the CounterStrikeSharp release
+#       every AUTOUPDATE_INTERVAL (default 75 minutes; on by default after install): a new CS2 build, and the CounterStrikeSharp release
 #       that follows it, are applied at once; other updates (plugins from git, CounterStrikeSharp alone)
 #       wait for AUTOUPDATE_HOUR (default 5, local time). Log: journalctl -u legacyx-cs2-autoupdate
 #       A new CS2 build is announced on Discord when found ("CS2 update released") and again once CounterStrikeSharp
@@ -60,6 +60,7 @@ AUTOUPDATE_UNIT="/etc/systemd/system/legacyx-cs2-autoupdate"
 # Updates that are not forced by a CS2 release (plugins, a newer CounterStrikeSharp) wait for this
 # local hour so they do not cut matches short.
 AUTOUPDATE_HOUR="${AUTOUPDATE_HOUR:-5}"
+AUTOUPDATE_INTERVAL="${AUTOUPDATE_INTERVAL:-75min}"   # how often the updater looks (owner 2026-11-20: every 10 minutes was too busy for a 2-core VPS; 60-90 minutes is enough)
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
  
 say() { printf '==> %s\n' "$*"; }
@@ -561,7 +562,7 @@ latest_cs2_build() {
  
 git_repo() { git -c safe.directory="$REPO" -C "$REPO" "$@"; }
  
-# One pass of the automatic updater (the timer runs it every 10 minutes). A new CS2 build is applied at
+# One pass of the automatic updater (the timer runs it every AUTOUPDATE_INTERVAL, 75 minutes by default). A new CS2 build is applied at
 # once (players on the new client cannot join an outdated server anyway); a CounterStrikeSharp release
 # that follows it is applied at once too, since plugins are down until it arrives. Everything else
 # (a newer CounterStrikeSharp on its own, new LEGACY-X plugin commits) waits for AUTOUPDATE_HOUR.
@@ -670,21 +671,26 @@ Wants=network-online.target
 Type=oneshot
 Environment=AUTOUPDATE_HOUR=$AUTOUPDATE_HOUR
 ExecStart=$REPO/scripts/cs2-host.sh autoupdate check
+# The check (steamcmd, git) must never take CPU or disk from the game servers on a small VPS.
+Nice=19
+CPUWeight=20
+IOSchedulingClass=idle
 EOF
       cat > "$AUTOUPDATE_UNIT.timer" <<EOF
 [Unit]
-Description=LEGACY-X CS2 automatic update check every 10 minutes
+Description=LEGACY-X CS2 automatic update check every $AUTOUPDATE_INTERVAL
  
 [Timer]
 OnBootSec=5min
-OnUnitActiveSec=10min
+OnUnitActiveSec=$AUTOUPDATE_INTERVAL
+RandomizedDelaySec=120
  
 [Install]
 WantedBy=timers.target
 EOF
       systemctl daemon-reload
       systemctl enable --now legacyx-cs2-autoupdate.timer >/dev/null
-      say "Automatic updates on: checked every 10 minutes; non-urgent updates at ${AUTOUPDATE_HOUR}:00. Log: journalctl -u legacyx-cs2-autoupdate"
+      say "Automatic updates on: checked every $AUTOUPDATE_INTERVAL; non-urgent updates at ${AUTOUPDATE_HOUR}:00. Log: journalctl -u legacyx-cs2-autoupdate"
       ;;
     off)
       systemctl disable --now legacyx-cs2-autoupdate.timer >/dev/null 2>&1 || true
