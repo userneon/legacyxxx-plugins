@@ -17,6 +17,7 @@ public sealed partial class LegacyXHud
 {
     private const int SkinTypeSlots = 25;
     private const int SkinItemSlots = 300;         // every skin of a pick is in one list that scrolls (the most any pick has; the cards are in the menu layout)
+    private const int ItemsPerTick = 20;        // skin cards drawn per tick: all 300 at once (about 2700 changes into the layout entity in one frame) overflowed its serializer and crashed the server (2026-11-19 14:16)
     private const int SkinPage = 100;              // skins asked of the backend at a time (MENU_SKIN_PAGE there); the next page is asked for as soon as one arrives
     private const int TileSlots = 35;            // 4 columns of 8 guns, then Agent, Gloves, Knife
     private static readonly int[] ColumnStart = { 0, 8, 16, 24, 32 };
@@ -52,6 +53,7 @@ public sealed partial class LegacyXHud
         public int Selected = -1;
         public bool Busy;
         public bool EquipAgain;                            // a click came while one was being saved: save the latest pick after it
+        public int RenderSeq;                              // which drawing of the skin list is current: the later slices of an older one stop
     }
 
     private readonly Dictionary<int, SkinView> skinViews = new();
@@ -644,7 +646,23 @@ public sealed partial class LegacyXHud
         var model = tile is null ? null : tile.Slot == "weapon" ? tile.Model : SkinModel(view.TypeClass);
         Ss(panel, player, "sk_head_pic", "hp", HeadPicture(tile, model, view.Team, PickedClass(view)));
         var eq = tile?.Eq;
-        for (var i = 0; i < SkinItemSlots; i++)
+        // The cards are drawn a slice at a time, a few ticks apart, never all in one frame; a newer drawing (or a closed menu) stops the later slices.
+        var seq = ++view.RenderSeq;
+        RenderItemSlice(panel, player, view, tile, agent, model, eq, 0, ItemsPerTick);
+        for (int start = ItemsPerTick, n = 1; start < SkinItemSlots; start += ItemsPerTick, n++)
+        {
+            var sliceStart = start;
+            AddTimer(0.04f * n, () =>
+            {
+                if (view.RenderSeq != seq || !player.IsValid || !skinViews.TryGetValue(player.Slot, out var current) || !ReferenceEquals(current, view) || !panel.IsOpenFor(player)) return;
+                RenderItemSlice(panel, player, view, tile, agent, model, eq, sliceStart, sliceStart + ItemsPerTick);
+            });
+        }
+    }
+
+    private void RenderItemSlice(PanelHandle panel, CCSPlayerController player, SkinView view, Tile? tile, bool agent, string? model, Equipped? eq, int first, int last)
+    {
+        for (var i = first; i < last && i < SkinItemSlots; i++)
         {
             var has = i < view.Items.Count && tile is not null;
             Sc(panel, player, $"sk_item{i}", "hidden", !has);
