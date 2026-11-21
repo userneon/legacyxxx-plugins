@@ -53,6 +53,7 @@ public sealed partial class LegacyXCommunity
     private readonly Dictionary<ulong, int> knifeSubclassTries = new();
     // When a pick's model was last put on a weapon entity (player, entity index): used only to tell in the log that something changed it back.
     private readonly Dictionary<(ulong, uint), DateTime> modelSetAt = new();
+    private readonly Dictionary<ulong, DateTime> profileReloadedAt = new();
     private readonly Dictionary<ulong, DateTime> weaponApplyAt = new();
     // The Apex prefab knives (ChangeSubclass) need scripts/weapons.vdata_c in the published addon; until it is there the knife keeps its model through SetModel as before.
     // On unless LEGACYX_COMMUNITY_APEX_SUBCLASS=false.
@@ -151,6 +152,20 @@ public sealed partial class LegacyXCommunity
                 if (item.Contains("knife", StringComparison.Ordinal) || item.Contains("bayonet", StringComparison.Ordinal))
                     Server.NextFrame(() => { if (player.IsValid) ApplyWeaponModels(player); });
                 ApplyWeaponModelsLater(player);
+            }
+            return HookResult.Continue;
+        });
+        // The site (Skinchanger, Shop) can change a worn model any time, but the profile used to be read only when a player joined and when a match ended, so a model worn
+        // during play never reached the game (owner 2026-11-22). It is read again for every player at each round start (at most once in 15 s per player).
+        RegisterEventHandler<EventRoundStart>((_, _) =>
+        {
+            var now = DateTime.UtcNow;
+            foreach (var each in Utilities.GetPlayers())
+            {
+                if (!each.IsValid || each.IsBot || each.SteamID == 0) continue;
+                if (profileReloadedAt.TryGetValue(each.SteamID, out var before) && (now - before).TotalSeconds < 15) continue;
+                profileReloadedAt[each.SteamID] = now;
+                _ = LoadScoreboardRankAsync(each);
             }
             return HookResult.Continue;
         });
