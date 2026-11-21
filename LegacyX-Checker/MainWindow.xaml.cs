@@ -37,7 +37,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Footer.Text = $"LEGACY-X Checker {App.Version}. It installs nothing and is meant for one check: it removes itself after sending its result.";
+        Footer.Text = $"LXC Checker {App.Version}. It installs nothing and is meant for one check: it removes itself after sending its result.";
         WhatItDoes.Text =
             "• The programs on your drives: what each one does (unsigned ones are read to see whether they reach into another program, such as a game).\n" +
             "• The programs running right now, and what ran recently (Windows Prefetch and the Recent list).\n" +
@@ -47,7 +47,7 @@ public partial class MainWindow : Window
         WhatIsSent.Text =
             "• The names of anything that looks like a cheat, with a shortened path (your user name is hidden).\n" +
             "• The Steam IDs found on this PC, how many files were looked at, and how long it took.\n" +
-            "• The hardware fingerprint, kept by LEGACY-X staff with your account so they can tell whether another account played on the same PC.\n" +
+            "• The hardware fingerprint, kept by LXC staff with your account so they can tell whether another account played on the same PC.\n" +
             "• The same list is saved on your Desktop, so you can read exactly what was found.\n" +
             "• When the result has been sent, this program deletes itself from your PC. Your Desktop report stays.";
         NotSent.Text = "The contents of your files, the pages you visited, your browser history, passwords and cookies, screenshots, or anything you type.";
@@ -220,7 +220,7 @@ public partial class MainWindow : Window
         try
         {
             var info = await _api.GetCodeAsync(_code);
-            RequestedBy.Text = $"{info.RequestedBy} of LEGACY-X asked you to run this check.";
+            RequestedBy.Text = $"{info.RequestedBy} of LXC asked you to run this check.";
             ShowPanel(ConsentPanel, 2);
         }
         catch (CheckApiException problem)
@@ -403,7 +403,7 @@ public partial class MainWindow : Window
         try
         {
             var builder = new StringBuilder();
-            builder.AppendLine($"LEGACY-X Checker {App.Version} - {DateTime.Now:yyyy-MM-dd HH:mm}");
+            builder.AppendLine($"LXC Checker {App.Version} - {DateTime.Now:yyyy-MM-dd HH:mm}");
             builder.AppendLine($"Files looked at: {report.FilesScanned:N0}   Time: {report.DurationSeconds} s");
             builder.AppendLine($"Steam IDs found on this PC: {(report.SteamIds.Count == 0 ? "none" : string.Join(", ", report.SteamIds))}");
             foreach (var account in report.SteamAccounts)

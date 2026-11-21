@@ -174,7 +174,7 @@ public static class ContentAnalyzer
         }
         lines.Add("");
         lines.Add(result.Reason);
-        lines.Add("The verdict (detection, suspicion or nothing) is made by the LEGACY-X server from these facts and is shown in the Checks page.");
+        lines.Add("The verdict (detection, suspicion or nothing) is made by the LXC server from these facts and is shown in the Checks page.");
         return string.Join("\n", lines);
     }
 

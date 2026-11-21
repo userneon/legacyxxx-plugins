@@ -1,4 +1,4 @@
-# LEGACY-X Checker
+# LXC Checker
 
 A small Windows program a player runs when staff (Admin, Manager or Owner) ask for a check. The website makes a one-time code
 (Checks page, or *Staff → Ask for a check* on a profile); the player types it in, sees who asked, agrees, and the program scans
