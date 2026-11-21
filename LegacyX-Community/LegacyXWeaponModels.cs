@@ -273,67 +273,18 @@ public sealed partial class LegacyXCommunity
                 SetViewModel(view, path);
                 found = true;
             }
-            if (!found)
+            if (!found && DateTime.UtcNow - lastNoViewModelLog > TimeSpan.FromMinutes(2))
             {
-                // The lookup above finds nothing on the server (journalctl 2026-11-18: "No view model entity shows ... yet" on every try, so only the world model, the shadow, was put on).
-                // The player's own first-person model is reached from the pawn itself: its view model services hold the handle of it.
-                var pawn = player.PlayerPawn.Value;
-                if (pawn is not null)
-                {
-                    var services = Schema.GetSchemaValue<nint>(pawn.Handle, "CBasePlayerPawn", "m_pViewModelServices");
-                    if (services != 0)
-                    {
-                        // m_hViewModel[0] is the player's weapon view model; a handle's low 15 bits are the entity index.
-                        var handle = (uint)System.Runtime.InteropServices.Marshal.ReadInt32(services + Schema.GetSchemaOffset("CPlayer_ViewModelServices", "m_hViewModel"));
-                        var view = handle == uint.MaxValue ? null : Utilities.GetEntityFromIndex<CBaseModelEntity>((int)(handle & 0x7FFF));
-                        if (view is not null && view.IsValid) { SetViewModel(view, path); found = true; }
-                    }
-                }
-            }
-            if (!found)
-            {
-                Console.WriteLine($"[{ModuleName}] No view model entity shows {player.PlayerName}'s {kind} yet, the first-person model {path} could not be put on.");
-                LogViewModelDiagnosis(player, weapon);
+                // journalctl 2026-11-21: no server-side view model entity of any kind exists (the diagnosis listed none), so there is nothing to put the first-person model on; the weapon's own model (set by the caller) is what
+                // the player sees in hand, and the katanas show. Said once in two minutes, not on every try (it was dozens of lines a minute). The earlier fallback that read the pawn's view model services from raw memory is gone: its handles were garbage.
+                lastNoViewModelLog = DateTime.UtcNow;
+                Console.WriteLine($"[{ModuleName}] No server-side view model entity exists: the first-person picture is the weapon's own model ({kind}, {path}). This line is shown once in two minutes.");
             }
         }
         catch (Exception problem) { Console.WriteLine($"[{ModuleName}] First-person model for {player.PlayerName} ({kind}) failed: {problem.Message}"); }
     }
 
-    private readonly Dictionary<ulong, DateTime> viewDiagAt = new();
-
-    /// <summary>Says WHY no first-person model could be found (journalctl 2026-11-20: the lookup by weapon handle and the pawn's own view model services both found nothing): which view model entities exist and what they hold. At most once per 15 s per player.</summary>
-    private void LogViewModelDiagnosis(CCSPlayerController player, CBasePlayerWeapon weapon)
-    {
-        if (viewDiagAt.TryGetValue(player.SteamID, out var last) && (DateTime.UtcNow - last).TotalSeconds < 15) return;
-        viewDiagAt[player.SteamID] = DateTime.UtcNow;
-        try
-        {
-            var lines = new List<string>();
-            var pawn = player.PlayerPawn.Value;
-            lines.Add($"this weapon index {weapon.Index}, pawn index {pawn?.Index}, alive {player.PawnIsAlive}, team {player.TeamNum}");
-            var byName = Utilities.GetAllEntities().Where(entity => entity.DesignerName.Contains("viewmodel", StringComparison.OrdinalIgnoreCase)).GroupBy(entity => entity.DesignerName).Select(group => $"{group.Key} x{group.Count()}");
-            lines.Add("entities with viewmodel in the name: " + (string.Join(", ", byName) is { Length: > 0 } names ? names : "none"));
-            foreach (var view in Utilities.FindAllEntitiesByDesignerName<CBaseModelEntity>("predicted_viewmodel").Take(6))
-            {
-                var held = Schema.GetSchemaValue<CHandle<CBasePlayerWeapon>>(view.Handle, "CBaseViewModel", "m_hWeapon");
-                lines.Add($"predicted_viewmodel {view.Index}: valid {view.IsValid}, weapon handle index {(held.IsValid ? held.Index.ToString() : "none")}, model {CurrentModel(view) ?? "?"}");
-            }
-            var services = pawn is null ? 0 : Schema.GetSchemaValue<nint>(pawn.Handle, "CBasePlayerPawn", "m_pViewModelServices");
-            if (services == 0) lines.Add("pawn view model services: null");
-            else
-            {
-                var offset = Schema.GetSchemaOffset("CPlayer_ViewModelServices", "m_hViewModel");
-                for (var slot = 0; slot < 2; slot++)
-                {
-                    var raw = (uint)System.Runtime.InteropServices.Marshal.ReadInt32(services + offset + 4 * slot);
-                    var entity = raw == uint.MaxValue ? null : Utilities.GetEntityFromIndex<CBaseEntity>((int)(raw & 0x7FFF));
-                    lines.Add($"pawn view model slot {slot}: handle {raw:X}, entity {(entity is null ? "none" : entity.DesignerName + " valid " + entity.IsValid)}");
-                }
-            }
-            Console.WriteLine($"[{ModuleName}] View model diagnosis: " + string.Join(" | ", lines));
-        }
-        catch (Exception problem) { Console.WriteLine($"[{ModuleName}] View model diagnosis failed: {problem.Message}"); }
-    }
+    private DateTime lastNoViewModelLog = DateTime.MinValue;
 
     /// <summary>The model on a view model entity, told to the clients too (the engine does not send a changed model by itself).</summary>
     private void SetViewModel(CBaseModelEntity view, string path)
