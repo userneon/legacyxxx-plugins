@@ -50,7 +50,9 @@ public sealed partial class LegacyXCommunity
     // re-sets the weapon's model, animation class and skeleton: repeated at every knife/gun switch it was a visible hitch, owner 2026-11-19). Cleared at spawn and when the profile is read again.
     private readonly Dictionary<ulong, (uint Index, string Subclass)> knifeSubclassDone = new();
     // How many times the subclass was put on this knife entity: the log of 2026-11-21 showed it put on again and again every 2 s (the model name read back right after ChangeSubclass need not equal the pick's path), so after 2 tries it is left alone.
-    private readonly Dictionary<ulong, int> knifeSubclassTries = new();
+    private readonly Dictionary<ulong, int> knifeSubclassTries = new();
+    // When a pick's model was last put on a weapon entity (player, entity index): used only to tell in the log that something changed it back.
+    private readonly Dictionary<(ulong, uint), DateTime> modelSetAt = new();
     private readonly Dictionary<ulong, DateTime> weaponApplyAt = new();
     // The Apex prefab knives (ChangeSubclass) need scripts/weapons.vdata_c in the published addon; until it is there the knife keeps its model through SetModel as before.
     // On unless LEGACYX_COMMUNITY_APEX_SUBCLASS=false.
@@ -368,6 +370,11 @@ public sealed partial class LegacyXCommunity
                     if (weapon.Handle == pawn.WeaponServices.ActiveWeapon.Value?.Handle) PutViewModel(player, weapon, model.View, kind);
                     continue;
                 }
+                // Diagnosis (owner 2026-11-22: "something puts the model back"): when this very weapon already got the pick's model before, say WHAT it has now and how long ago we set it.
+                var currentNow = CurrentModel(weapon);
+                if (modelSetAt.TryGetValue((player.SteamID, weapon.Index), out var setBefore) && (DateTime.UtcNow - setBefore).TotalSeconds < 120)
+                    Console.WriteLine($"[{ModuleName}] Model of {player.PlayerName}'s {kind} was changed back by something: now {currentNow ?? "?"}, pick {model.World}, set {(DateTime.UtcNow - setBefore).TotalSeconds:0.0} s ago.");
+                modelSetAt[(player.SteamID, weapon.Index)] = DateTime.UtcNow;
                 Timed($"weapon SetModel {model.World}", () => weapon.SetModel(model.World));
                 Console.WriteLine($"[{ModuleName}] Weapon model {model.World} put on {player.PlayerName}'s {kind}.");
                 // The first-person model: the view model entity that is showing this weapon. The game puts the weapon's own view model back while it is being
