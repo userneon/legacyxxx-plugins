@@ -165,6 +165,9 @@ namespace WeaponPaints
 			{
 				GivePlayerGloves(player);
 			});
+			// Again a little later: the gloves are sometimes not on (the data not read yet, or the model was changed after them; owner 2026-11-22).
+			foreach (var delay in new[] { 1.5f, 4.0f })
+				AddTimer(delay, () => { if (player.IsValid && player.PawnIsAlive) GivePlayerGloves(player); });
 			GivePlayerPin(player);
 
 			return HookResult.Continue;

@@ -55,7 +55,7 @@ public sealed partial class LegacyXCommunity
             return;
         }
         // More looks later: the Skinchanger agent (WeaponPaints) is put on a moment after the spawn, and the player's profile (their worn knife) can arrive after the spawn: LoadScoreboardRankAsync calls this again when it does.
-        foreach (var delay in new[] { 0.7f, 2.0f, 4.5f })
+        foreach (var delay in new[] { 0.7f, 2.0f, 4.5f, 8.0f })
             AddTimer(delay, () => ReplaceAgent(player));
     }
 

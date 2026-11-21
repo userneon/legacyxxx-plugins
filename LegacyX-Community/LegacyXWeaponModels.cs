@@ -152,6 +152,12 @@ public sealed partial class LegacyXCommunity
             }
             return HookResult.Continue;
         });
+        // The end of the freeze time: everybody's models are checked once more (a player who spawned while loading is in the game by now).
+        RegisterEventHandler<EventRoundFreezeEnd>((_, _) =>
+        {
+            foreach (var each in Utilities.GetPlayers()) if (each.IsValid && !each.IsBot && each.PawnIsAlive) { ApplyWeaponModelsLater(each); ReplaceAgentLater(each); }
+            return HookResult.Continue;
+        });
         RegisterEventHandler<EventItemPickup>((@event, _) =>
         {
             if (@event.Userid is { IsValid: true } player) ApplyWeaponModelsLater(player);
@@ -257,7 +263,8 @@ public sealed partial class LegacyXCommunity
         if (weaponApplyAt.TryGetValue(player.SteamID, out var last) && (DateTime.UtcNow - last).TotalSeconds < 1.0) return;
         weaponApplyAt[player.SteamID] = DateTime.UtcNow;
         Server.NextFrame(() => ApplyWeaponModels(player));
-        foreach (var delay in new[] { 0.25f, 0.8f, 2.0f })
+        // The last tries (3.5 s .. 10 s) are for a player whose game is still loading (owner 2026-11-22: the models and gloves are put on only sometimes). ApplyWeaponModels leaves what is already right alone.
+        foreach (var delay in new[] { 0.25f, 0.8f, 2.0f, 3.5f, 6.0f, 10.0f })
             AddTimer(delay, () => { if (player.IsValid) ApplyWeaponModels(player); });
     }
 
