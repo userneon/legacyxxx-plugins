@@ -1,8 +1,8 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <!-- Installs for the current user only (no administrator needed), starts the checker, and is removed again by the checker itself once the result is sent. -->
-  <Package Name="LEGACY-X Checker" Manufacturer="LEGACY-X" Version="1.0.0.0" UpgradeCode="6f0c7f7e-3c1b-4a54-9a0e-6a8d4f1f2c11" Scope="perUser" Compressed="yes">
+  <Package Name="LXC Checker" Manufacturer="LXC" Version="1.0.0.0" UpgradeCode="6f0c7f7e-3c1b-4a54-9a0e-6a8d4f1f2c11" Scope="perUser" Compressed="yes">
     <!-- Every rebuilt installer replaces an older one, even with the same version number (otherwise Windows says "another version is already installed"). -->
-    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer LEGACY-X Checker is already installed." />
+    <MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer LXC Checker is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <StandardDirectory Id="LocalAppDataFolder">
@@ -17,7 +17,7 @@
       </Directory>
     </StandardDirectory>
 
-    <Feature Id="Main" Title="LEGACY-X Checker" Level="1">
+    <Feature Id="Main" Title="LXC Checker" Level="1">
       <ComponentRef Id="CheckerProgram" />
     </Feature>
 

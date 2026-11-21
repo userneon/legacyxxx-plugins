@@ -43,7 +43,7 @@ public sealed class CheckApi
         }
         catch (HttpRequestException problem)
         {
-            throw new CheckApiException(Describe(problem, "Could not reach the LEGACY-X server. Check your internet connection."));
+            throw new CheckApiException(Describe(problem, "Could not reach the LXC server. Check your internet connection."));
         }
         catch (TaskCanceledException) when (!cancel.IsCancellationRequested)
         {

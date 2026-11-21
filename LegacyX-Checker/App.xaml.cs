@@ -24,7 +24,7 @@ public partial class App : Application
         if (AlreadyUsed())
         {
             // The check was sent but the removal did not finish (or someone copied the program back): it does not run again.
-            MessageBox.Show("This program has already been used for a check and cannot run again. Ask staff for a new check.", "LEGACY-X Checker", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("This program has already been used for a check and cannot run again. Ask staff for a new check.", "LXC Checker", MessageBoxButton.OK, MessageBoxImage.Information);
             RemoveSelf();
             Shutdown();
             return;
@@ -51,7 +51,7 @@ public partial class App : Application
         {
             // The Desktop can be read-only.
         }
-        MessageBox.Show("The shared text of the samples was written to LegacyX-Checker-common.txt on the Desktop.", "LEGACY-X Checker: common", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show("The shared text of the samples was written to LegacyX-Checker-common.txt on the Desktop.", "LXC Checker: common", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private static void ExplainFile(string path)
@@ -74,7 +74,7 @@ public partial class App : Application
         {
             // The Desktop can be read-only: the message box below still shows it.
         }
-        MessageBox.Show(text, "LEGACY-X Checker: explain", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(text, "LXC Checker: explain", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     public const string Version = "1.0.0";
@@ -156,7 +156,7 @@ public partial class App : Application
             foreach (var name in uninstall.GetSubKeyNames())
             {
                 using var entry = uninstall.OpenSubKey(name);
-                if (entry?.GetValue("DisplayName") as string == "LEGACY-X Checker" && name.StartsWith("{") && name.EndsWith("}")) return name;
+                if (entry?.GetValue("DisplayName") as string is "LXC Checker" or "LEGACY-X Checker" && name.StartsWith("{") && name.EndsWith("}")) return name;
             }
         }
         catch
