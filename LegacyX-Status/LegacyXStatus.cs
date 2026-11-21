@@ -27,8 +27,8 @@ public sealed class LegacyXStatus : BasePlugin
     private StatusSettings settings = StatusSettings.Disabled;
     private int sending;
 
-    public override string ModuleAuthor => "LEGACY-X";
-    public override string ModuleName => "LEGACY-X Status";
+    public override string ModuleAuthor => "LXC";
+    public override string ModuleName => "LXC Status";
     public override string ModuleVersion => "0.1.0-legacyx.1";
 
     public override void Load(bool hotReload)

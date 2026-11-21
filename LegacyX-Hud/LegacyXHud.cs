@@ -30,8 +30,8 @@ public sealed partial class LegacyXHud : BasePlugin
     private bool reconnectOnMap;
     private bool firstMapSeen;
 
-    public override string ModuleAuthor => "LEGACY-X";
-    public override string ModuleName => "LEGACY-X Hud";
+    public override string ModuleAuthor => "LXC";
+    public override string ModuleName => "LXC Hud";
     public override string ModuleVersion => "0.5.0-legacyx.1";
 
     public override void Load(bool hotReload)

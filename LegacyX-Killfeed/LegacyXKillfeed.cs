@@ -28,8 +28,8 @@ public sealed class LegacyXKillfeed : BasePlugin
     private long counter;
     private int sending;
 
-    public override string ModuleAuthor => "LEGACY-X";
-    public override string ModuleName => "LEGACY-X Killfeed";
+    public override string ModuleAuthor => "LXC";
+    public override string ModuleName => "LXC Killfeed";
     public override string ModuleVersion => "0.1.0-legacyx.1";
 
     public override void Load(bool hotReload)

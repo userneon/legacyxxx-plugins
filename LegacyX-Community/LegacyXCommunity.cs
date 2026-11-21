@@ -63,8 +63,8 @@ public sealed partial class LegacyXCommunity : BasePlugin, IPluginConfig<LegacyX
     // SteamID64 -> when the player last got the welcome, so a map change does not repeat it.
     private readonly Dictionary<ulong, DateTime> welcomed = new();
 
-    public override string ModuleAuthor => "LEGACY-X Community";
-    public override string ModuleName => "LEGACY-X Community";
+    public override string ModuleAuthor => "LXC Community";
+    public override string ModuleName => "LXC Community";
     public override string ModuleVersion => "0.1.0-legacyx.1";
 
     public void OnConfigParsed(LegacyXCommunityConfig config)

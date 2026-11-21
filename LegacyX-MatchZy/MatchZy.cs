@@ -13,13 +13,13 @@ namespace MatchZy
     public partial class MatchZy : BasePlugin
     {
 
-        public override string ModuleName => "LEGACY-X MatchZy";
+        public override string ModuleName => "LXC MatchZy";
 
         public override string ModuleVersion => "0.8.15-legacyx.1";
 
-        public override string ModuleAuthor => "LEGACY-X Community (upstream MatchZy by WD-)";
+        public override string ModuleAuthor => "LXC Community (upstream MatchZy by WD-)";
 
-        public override string ModuleDescription => "LEGACY-X 5v5 competitive matches, ready gate, stats and random map lifecycle";
+        public override string ModuleDescription => "LXC 5v5 competitive matches, ready gate, stats and random map lifecycle";
 
         public string chatPrefix = $" {ChatColors.White}LXC •{ChatColors.Grey}";
         public string adminChatPrefix = $" {ChatColors.White}LXC • {ChatColors.Red}ADMIN{ChatColors.Grey}";

@@ -31,9 +31,9 @@ namespace AdminPlus;
 [MinimumApiVersion(78)]
 public partial class AdminPlus : BasePlugin
 {
-    public override string ModuleName => "LEGACY-X Admin";
+    public override string ModuleName => "LXC Admin";
     public override string ModuleVersion => "1.0.8-legacyx.1";
-    public override string ModuleAuthor => "LEGACY-X Community · upstream debr1sj (MIT)";
+    public override string ModuleAuthor => "LXC Community · upstream debr1sj (MIT)";
 
     internal static Dictionary<string, (long expiry, string line, string nick, string ip)> SteamBans = new();
     internal static Dictionary<string, (long expiry, string line, string nick)> IpBans = new();

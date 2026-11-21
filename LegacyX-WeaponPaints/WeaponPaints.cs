@@ -19,9 +19,9 @@ namespace WeaponPaints;
 
 	public WeaponPaintsConfig Config { get; set; } = new();
     private static WeaponPaintsConfig _config { get; set; } = new();
-		public override string ModuleAuthor => "Nereziel & daffyy; LEGACY-X fork";
-		public override string ModuleDescription => "LEGACY-X website-controlled CS2 cosmetics bridge";
-			public override string ModuleName => "LEGACY-X WeaponPaints";
+		public override string ModuleAuthor => "Nereziel & daffyy; LXC fork";
+		public override string ModuleDescription => "LXC website-controlled CS2 cosmetics bridge";
+			public override string ModuleName => "LXC WeaponPaints";
 		public override string ModuleVersion => "3.3a-legacyx.1";
 
 		public override void Load(bool hotReload)

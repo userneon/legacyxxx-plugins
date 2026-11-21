@@ -45,8 +45,8 @@ public class AFKManagerConfig : BasePluginConfig
 public class AFKManager : BasePlugin, IPluginConfig<AFKManagerConfig>
 {
     #region definitions
-    public override string ModuleAuthor => "LEGACY-X Community (upstream NiGHT757/AFKManager)";
-    public override string ModuleName => "LEGACY-X AFKManager";
+    public override string ModuleAuthor => "LXC Community (upstream NiGHT757/AFKManager)";
+    public override string ModuleName => "LXC AFKManager";
     public override string ModuleVersion => "0.2.8-legacyx.1";
 
     public required AFKManagerConfig Config { get; set; }

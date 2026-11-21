@@ -21,8 +21,8 @@ public sealed class LegacyXSpectatorComms : BasePlugin, IPluginConfig<LegacyXSpe
 {
     public required LegacyXSpectatorCommsConfig Config { get; set; }
 
-    public override string ModuleAuthor => "LEGACY-X Community";
-    public override string ModuleName => "LEGACY-X Spectator";
+    public override string ModuleAuthor => "LXC Community";
+    public override string ModuleName => "LXC Spectator";
     public override string ModuleVersion => "0.1.0-legacyx.1";
 
     public void OnConfigParsed(LegacyXSpectatorCommsConfig config)
