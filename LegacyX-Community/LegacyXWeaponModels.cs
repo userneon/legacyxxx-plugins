@@ -49,6 +49,8 @@ public sealed partial class LegacyXCommunity
     // The knife entity that already has its Apex subclass (player -> entity index and subclass): a subclass is put on a knife ONCE, not every time the knife is drawn again (each ChangeSubclass
     // re-sets the weapon's model, animation class and skeleton: repeated at every knife/gun switch it was a visible hitch, owner 2026-11-19). Cleared at spawn and when the profile is read again.
     private readonly Dictionary<ulong, (uint Index, string Subclass)> knifeSubclassDone = new();
+    // How many times the subclass was put on this knife entity: the log of 2026-11-21 showed it put on again and again every 2 s (the model name read back right after ChangeSubclass need not equal the pick's path), so after 2 tries it is left alone.
+    private readonly Dictionary<ulong, int> knifeSubclassTries = new();
     private readonly Dictionary<ulong, DateTime> weaponApplyAt = new();
     // The Apex prefab knives (ChangeSubclass) need scripts/weapons.vdata_c in the published addon; until it is there the knife keeps its model through SetModel as before.
     // On unless LEGACYX_COMMUNITY_APEX_SUBCLASS=false.
@@ -334,12 +336,13 @@ public sealed partial class LegacyXCommunity
                 // Already done AND still true: this knife entity got the subclass and its model is the Apex model. Not repeated at every knife/gun switch (a hitch). When the model is NOT the Apex
                 // model any more (the subclass did not take, another plugin put the pick back, a reconnect), it is put on again.
                 if (knifeSubclassDone.TryGetValue(player.SteamID, out var done) && done.Index == weapon.Index && done.Subclass == subclass
-                    && string.Equals(CurrentModel(weapon), model.World, StringComparison.OrdinalIgnoreCase)) continue;
+                    && (string.Equals(CurrentModel(weapon), model.World, StringComparison.OrdinalIgnoreCase) || knifeSubclassTries.GetValueOrDefault(player.SteamID) >= 2)) continue;
                 if (knifeSubclassAt.TryGetValue(player.SteamID, out var changed) && (DateTime.UtcNow - changed).TotalSeconds < 1.5) continue;
                 knifeSubclassAt[player.SteamID] = DateTime.UtcNow;
                 try
                 {
                     Timed($"ChangeSubclass {subclass}", () => weapon.AcceptInput("ChangeSubclass", value: subclass));
+                    knifeSubclassTries[player.SteamID] = knifeSubclassDone.TryGetValue(player.SteamID, out var before) && before.Index == weapon.Index ? knifeSubclassTries.GetValueOrDefault(player.SteamID) + 1 : 1;
                     knifeSubclassDone[player.SteamID] = (weapon.Index, subclass);
                     Console.WriteLine($"[{ModuleName}] Knife subclass {subclass} put on {player.PlayerName}'s knife in hand.");
                 }
