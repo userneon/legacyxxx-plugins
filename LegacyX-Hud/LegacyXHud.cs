@@ -161,7 +161,18 @@ public sealed partial class LegacyXHud : BasePlugin
 
     private HookResult OnPlayerDisconnect(EventPlayerDisconnect e, GameEventInfo info)
     {
-        if (e.Userid is { } player) ForgetMenuState(player.Slot, everything: true);
+        if (e.Userid is { } player)
+        {
+            ForgetMenuState(player.Slot, everything: true);
+            readyShown.Remove(player.Slot);
+            // Every card this player had open is closed for the slot, so a player who joins the same slot again (a crash and a quick return) is not taken for one who still has the
+            // card on the screen: the ready card ("Press R to ready") was not drawn for a player who came back after a crash (owner 2026-11-20).
+            foreach (var card in new[] { menu, knifeHud, knifeHudWin, introHud, bombHud, expHud, welcomeHud, trollHud, hintHud, readyHud })
+            {
+                try { if (card is not null && card.IsOpenFor(player)) card.Close(player); }
+                catch (Exception problem) { Console.WriteLine($"[{ModuleName}] Could not close a card of slot {player.Slot}: {problem.Message}"); }
+            }
+        }
         return HookResult.Continue;
     }
 
